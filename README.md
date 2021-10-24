@@ -6,13 +6,11 @@ sudo apt-get install g++ make
 
 Usage:
 ~~~
-:::shell
 make v1-core
 ~~~
 
 Optional:
 ~~~
-:::shell
 make v1-lib
 ~~~
 
@@ -21,7 +19,6 @@ Download: https://mwiede.de/v1-script/download/v1-dev-0.96-extensions.tar.gz and
 **Compile PCRE**
 
 ~~~
-:::shell
 cd extensions/regex/pcre-8.43/
 ./configure  --enable-static --with-pic --enable-utf8
 make
@@ -30,7 +27,6 @@ make
 **Compile OpenSSL**
 
 ~~~
-:::shell
 cd extensions/ssl/openssl-1.0.2u/
 ./config -fPIC no-shared
 make
@@ -39,7 +35,6 @@ make
 **Compile GDLib**
 
 ~~~
-:::shell
 cd extensions/gd/libgd-2.3.0/
 ./configure 
 make 
@@ -50,7 +45,6 @@ Note! libgd require other libraries such as libjpeg, libpng ... you have to inst
 
 **Compile the V1 extensions**
 ~~~
-:::shell
 make v1-extensions
 ~~~
 
@@ -58,7 +52,6 @@ make v1-extensions
 Create archives and install library:
 
 ~~~
-:::shell
 sudo make install
 make clean
 ~~~
