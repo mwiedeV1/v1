@@ -49,7 +49,7 @@ make v1-extensions
 ~~~
 
 
-**Create archives and install library***
+**Create archives and install library**
 
 ~~~
 sudo make install
