@@ -1,0 +1,159 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Array functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Array functions</h1>
+<p>The following array functions are supported. The array functions are compatible with theire PHP pendants. See also <a href="datatypes.html">Datatypes</a> and  <a href="datatype-functions.html">Datatype functions</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>assign</strong> (mixed&amp; <em>var1</em>...)</td>
+<td>undefined</td>
+<td>The special language construct assign() is the V1 pendant to <strong>list()</strong> in PHP and assign one or more variables with corresponding array values. Usage: assign (var1, var2, varN) = array ("Value1", "Value2", "Value3");</td>
+</tr>
+<tr>
+<td><strong>count</strong> (array &amp;<em>list</em>)</td>
+<td>number</td>
+<td>Return count of elements in array <em>list</em> .</td>
+</tr>
+<tr>
+<td><strong>array_push</strong> (array &amp;<em>list</em>, mixed <em>value</em>)</td>
+<td>number</td>
+<td>Push a value to array <em>list</em> and return the next free index.</td>
+</tr>
+<tr>
+<td><strong>array_pop</strong> (array &amp;<em>list</em>)</td>
+<td>mixed</td>
+<td>Pop a value from array <em>list</em> and return.</td>
+</tr>
+<tr>
+<td><strong>array_key_exists</strong> (array &amp;<em>array</em>, string <em>key</em>)</td>
+<td>bool</td>
+<td>Return true if a <em>key</em>  exists in <em>array</em>. In difference to isset () also true is returned if the value of key is null.</td>
+</tr>
+<tr>
+<td><strong>in_array</strong> (mixed <em>value</em>, array &amp;<em>array</em>, bool <em>strict</em>=false)</td>
+<td>bool</td>
+<td>Same as PHP function in_array (). Search the given <em>value</em> in <em>array</em>. If <em>strict</em> = true then the datatype must be equal. If value was found in array then true is returned.</td>
+</tr>
+<tr>
+<td><strong>array_search</strong> (mixed <em>value</em>, array <em>array</em>, bool <em>strict</em>=false)</td>
+<td>string</td>
+<td>Same as in_array (), but return the key of the found <em>value</em>. If value is not found false is returned.</td>
+</tr>
+<tr>
+<td><strong>array_merge</strong> (mixed <em>array1</em>, array <em>array2</em>...)</td>
+<td>array</td>
+<td>Same as PHP function array_merge (). Merge two ore more arrays together. Alphanumeric keys in previous arrays will be be overwritten from next arrays. Number keys (indexes) will be appended and reorganized beginning from 0.  The merged array is returned.</td>
+</tr>
+<tr>
+<td><strong>array_keys</strong> (array <em>array</em>)</td>
+<td>array</td>
+<td>Return keys of <em>array</em> as  list.</td>
+</tr>
+<tr>
+<td><strong>array_values</strong> (array <em>array</em>)</td>
+<td>array</td>
+<td>Return values of <em>array</em> as  list.</td>
+</tr>
+<tr>
+<td><strong>array_slice</strong> (array <em>array</em>, number <em>offset</em> [, number <em>length</em>])</td>
+<td>array</td>
+<td>Same as PHP function array_slice (). Extract a slice of the array from <em>offset</em>  with optional <em>length</em> and return. If length is not specified then the rest of the array is returned.</td>
+</tr>
+<tr>
+<td><strong>array_splice</strong> (array &amp;<em>array</em>, number <em>offset</em> [, number <em>length</em>, mixed <em>replace</em>])</td>
+<td>array</td>
+<td>Same as PHP function array_splice (). Remove a portion of the <em>array</em> with optional <em>length</em> and <em>replace</em> it with something else.  If <em>length</em> is not set then the rest of the array will be removed. If <em>replace</em> is not set then the portion is only removed. Note: Parameter <em>array</em> is given as reference to a variable which will be spliced. The return value is the sliced array, same as in function array_slice().</td>
+</tr>
+<tr>
+<td><strong>array_flip</strong> (array <em>array</em>)</td>
+<td>array</td>
+<td>Swap the keys and the values of the <em>array</em> an return. If value is not a number or string it will be irgnored and a warning is shown.</td>
+</tr>
+<tr>
+<td><strong>array_reverse</strong> (array <em>array</em>, <em>preserveKeys</em>=false)</td>
+<td>array</td>
+<td>Reverse the direction of entries in the <em>array</em> and return. If <em>preserveKeys</em> = true then the keys are preserved, otherwise new indexes beginning from 0 are calculated.</td>
+</tr>
+</tbody>
+</table>
+<h1>Sort functions</h1>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>sort</strong> (array&amp; <em>array</em>)</td>
+<td>true</td>
+<td>Sort <em>array</em>  by values in ascending order with changing of keys. New indexes are calculated.</td>
+</tr>
+<tr>
+<td><strong>rsort</strong> (array&amp; <em>array</em>)</td>
+<td>true</td>
+<td>Sort <em>array</em>  by values in descending order with changing of keys. New indexes are calculated.</td>
+</tr>
+<tr>
+<td><strong>asort</strong> (array&amp; <em>array</em>)</td>
+<td>true</td>
+<td>Sort <em>array</em>  by values in ascending order without changing of keys.</td>
+</tr>
+<tr>
+<td><strong>arsort</strong> (array&amp; <em>array</em>)</td>
+<td>true</td>
+<td>Sort <em>array</em>  by values in descending order without changing of keys.</td>
+</tr>
+<tr>
+<td><strong>ksort</strong> (array&amp; <em>array</em>)</td>
+<td>true</td>
+<td>Sort <em>array</em>  by keys  in ascending order without changing of keys.</td>
+</tr>
+<tr>
+<td><strong>krsort</strong> (array&amp; <em>array</em>)</td>
+<td>true</td>
+<td>Sort <em>array</em>  by keys in descending order without changing of keys.</td>
+</tr>
+<tr>
+<td><strong>usort</strong> (array&amp; <em>array</em>, string <em>cmpFunc</em>)</td>
+<td>true</td>
+<td>Sort <em>array</em>  by values with own comparison function with changing of keys. The <em>cmpFunc</em> get two arguments and must return an integer less than, equal to, or greater than zero if the first argument is considered to be respectively less than, equal to, or greater than the second. New indexes are calculated.</td>
+</tr>
+<tr>
+<td><strong>uasort</strong> (array&amp; <em>array</em>, string <em>cmpFunc</em>)</td>
+<td>true</td>
+<td>Sort <em>array</em>  by values with own comparison function without changing of keys. The <em>cmpFunc</em> get two arguments and must return an integer less than, equal to, or greater than zero if the first argument is considered to be respectively less than, equal to, or greater than the second.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

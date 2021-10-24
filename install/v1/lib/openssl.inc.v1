@@ -1,0 +1,222 @@
+<?v1
+// Replace with correct path of OpenSSL libCrypro library (libcryptoMD.dll or libcrypto.so)
+libcryptoLibName =  'libcrypto';
+
+hDLLCrypto = dl (libcryptoLibName, true);
+hDLLSSL = null; //  dl ("libssl", true); // We dont use libSSL native because we have V1 module ssl.
+
+if (!hDLLCrypto)
+{
+	// Search for libraries
+	libList = explode ("\n", system ('/usr/bin/find /usr -name "libcrypto*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLCrypto = dl (libcryptoLibName = libList[0], true);
+	}
+}
+
+if (!hDLLCrypto)
+{
+	print ("OpenSSL library not found.\r\nSet libcryptoLibName in ".__FILE__." to libcrypto.so or libcryptoMD.dll");
+	exit (1);
+}
+
+// OpenSSL functions
+// https://github.com/openssl/openssl/blob/master/include/openssl/rsa.h
+// https://github.com/openssl/openssl/blob/master/include/openssl/pem.h
+// https://github.com/openssl/openssl/blob/master/include/openssl/bio.h
+// https://github.com/openssl/openssl/blob/master/include/openssl/evp.h
+
+const RSA_F4 = 65537;
+const MBSTRING_ASC = 4097;
+const MBSTRING_UTF8 = 4096;
+
+function OpenSSL_version (f=0)
+{
+	global hDLLCrypto;
+	ret = call (hDLLCrypto, "SSLeay_version", [["i"], "s"], f);
+	if (ret===false)
+		ret = call (hDLLCrypto, "OpenSSL_version", [["i"], "s"], f);
+	return ret;
+}
+
+function BN_new ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "BN_new", [[], "p"]);
+}
+
+function BN_free (bn)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "BN_free", [['p'], "i"], bn);
+}
+
+function BN_set_word (bn, word)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "BN_set_word", [['p', 'i'], "p"], bn, word);
+}
+
+function RSA_new ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "RSA_new", [[], "p"]);
+}
+
+function RSA_generate_key_ex (rsa, bits, bn, cb=null)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "RSA_generate_key_ex", [['p','i','p','p'], "p"], rsa, bits, bn, cb);
+}
+
+function X509_REQ_new ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "X509_REQ_new", [[], "p"]);
+}
+
+function X509_REQ_free (x509_req)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "X509_REQ_free", [['p'], "i"], x509_req);
+}
+
+function X509_REQ_set_version (x509_req, version)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "X509_REQ_set_version", [['p', 'i'], "i"], x509_req, version);
+}
+
+function X509_NAME_add_entry_by_txt (x509_name, field, type, value, len=-1, loc=-1, set=0)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "X509_NAME_add_entry_by_txt", [['p','s','i','s','i','i','i'], "i"], x509_name, field, type, value, len, loc, set);
+}
+
+function X509_REQ_get_subject_name (x509_req)
+{
+	global hDLLCrypto;
+	ret=call (hDLLCrypto, "X509_REQ_get_subject_name", [['p'], "p"], x509_req);
+	if (ret===false) {
+		// Old version X509_REQ_get_subject_name(x) ((x)->req_info->subject)
+		req_info = binparse (memat (x509_req, _ALIGN));
+		ret = binparse (memat (req_info+_ALIGN*4, _ALIGN));
+	}
+	return ret;
+}
+
+function EVP_PKEY_new ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "EVP_PKEY_new", [[], "p"]);
+}
+
+function EVP_PKEY_free (pKey)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "EVP_PKEY_free", [['p'], "i"], pKey);
+}
+
+function EVP_PKEY_set1_RSA (pKey, rsa)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "EVP_PKEY_set1_RSA", [['p', 'p'], "i"], pKey, rsa);
+}
+
+function X509_REQ_set_pubkey (x509_req, pKey)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "X509_REQ_set_pubkey", [['p', 'p'], "i"], x509_req, pKey);
+}
+
+function X509_REQ_sign (x509_req, pKey, hash)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "X509_REQ_sign", [['p', 'p', 'p'], "i"], x509_req, pKey, hash);
+}
+
+function BIO_new_file (filename, mode)
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "BIO_new_file", [['s','s'], "p"], filename, 'w+');
+}
+
+function PEM_write_bio_X509_REQ (bio, x509_req)
+{
+	global hDLLCrypto;
+	ret = call (hDLLCrypto, "PEM_write_bio_X509_REQ", [['p','p'], "i"], bio, x509_req);
+}
+
+function BIO_free_all (bio)
+{
+	global hDLLCrypto;
+	call (hDLLCrypto, "BIO_free_all", [['p'], "i"], bio);
+}
+
+function EVP_sha1 ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "EVP_sha1", [[], "p"]);
+}
+
+function EVP_sha256 ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "EVP_sha256", [[], "p"]);
+}
+
+function ERR_load_crypto_strings ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "ERR_load_crypto_strings", [[], "i"]);
+}
+
+function OPENSSL_config ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "OPENSSL_config", [["p"], "i"], null);
+}
+
+function OpenSSL_add_all_ciphers ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "OpenSSL_add_all_ciphers", [[], "i"], null);
+}
+
+function OpenSSL_add_all_digests ()
+{
+	global hDLLCrypto;
+	return call (hDLLCrypto, "OpenSSL_add_all_digests", [[], "i"]);
+}
+
+
+if (!function_exists ("ERR_get_error"))
+{
+	function ERR_get_error () {
+		global hDLLCrypto;
+		return call (hDLLCrypto, "ERR_get_error", [[], "i"]);
+	}
+}
+
+if (!function_exists ("ERR_lib_error_string"))
+{
+	function ERR_lib_error_string (err) {
+		global hDLLCrypto;
+		return call (hDLLCrypto, "ERR_lib_error_string", [["i"], "s"], err);
+	}
+}
+
+OPENSSL_config ();
+
+/* Initialization for older Versions */
+if (hDLLSSL)
+{
+	call (hDLLSSL, "SSL_library_init", [[], "i"]);
+	call (hDLLSSL, "SSL_load_error_strings", [[], "i"]);
+}
+
+ERR_load_crypto_strings ();
+OpenSSL_add_all_ciphers ();
+OpenSSL_add_all_digests ();
+
+?>

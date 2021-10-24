@@ -1,0 +1,328 @@
+<?v1
+// Replace with correct path of bzip2 library (libbz2.dll or libbz2.so)
+bzip2LibName =  'libbz2';
+
+hDLLBZip2 = dl (bzip2LibName, true);
+if (!hDLLBZip2)
+{
+	// Search for libraries
+	libList = explode ("\n", system ('/usr/bin/find /usr -name "libbz2*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLBZip2 = dl (bzip2LibName = libList[0], true);
+	}
+}
+
+if (!hDLLBZip2)
+{
+	print ("bzip2 library not found.\r\nSet bzip2LibName in ".__FILE__." to libbz2.so or libbz2.dll");
+	exit (1);
+}
+
+// BZip functions
+// ftp://sources.redhat.com/pub/bzip2/docs/manual_toc.html
+
+const BZ_RUN              = 0;
+const BZ_FLUSH            = 1;
+const BZ_FINISH           = 2;
+
+const BZ_OK               = 0;
+const BZ_RUN_OK           = 1;
+const BZ_FLUSH_OK         = 2;
+const BZ_FINISH_OK        = 3;
+const BZ_STREAM_END       = 4;
+const BZ_SEQUENCE_ERROR   = -1;
+const BZ_PARAM_ERROR      = -2;
+const BZ_MEM_ERROR        = -3;
+const BZ_DATA_ERROR       = -4;
+const BZ_DATA_ERROR_MAGIC = -5;
+const BZ_IO_ERROR         = -6;
+const BZ_UNEXPECTED_EOF   = -7;
+const BZ_OUTBUFF_FULL     = -8;
+const BZ_CONFIG_ERROR     = -9;
+
+const BZ_BUF_SIZE         = 0xFFFF*2;
+
+//  Return unitialized bz_stream struct
+function bz_streamCreate ()
+{
+	return array (
+	           array (
+	               "next_in"=> 0,
+	               "avail_in"=> 0,
+	               "total_in_lo32"=> 0,
+	               "total_in_hi32"=> 0,
+	               "next_out"=> 0,
+	               "avail_out"=> 0,
+	               "total_out_lo32" => 0,
+	               "total_out_hi32"=> 0,
+	               "state"=> 0,
+	               "bzalloc"=> 0,
+	               "bzfree"=> 0,
+	               "opaque"=> 0
+	           ),
+	           "", // Binary representation, filled by bz_streamFormat
+
+	           // Special datatypes differs from default byte aligment
+	           array (
+	               "total_in_lo32" => 3, // 32 Bit
+	               "total_in_hi32" => 3, // 32 Bit
+	               "total_out_lo32" => 3, // 32 Bit
+	               "total_out_hi32" => 3 // 32 Bit
+	           )
+	       );
+}
+
+// Format binary representation of bz_stream
+function bz_streamFormat (&bz_stream, fReset=false)
+{
+	if (strlen (bz_stream[1])==0) {
+		// Build the bz_stream struct first
+		foreach (bz_stream[0] as key => value) {
+			type = 7;
+			if (isset (bz_stream[2][key]))
+				type = bz_stream[2][key];
+			bz_stream[1].=binformat(value, type);
+		}
+	}
+	else {
+		mem = memref (bz_stream[1]);
+		// Only set the variables
+		pos = 0;
+		foreach (bz_stream[0] as key => value) {
+			type = 7;
+			if (isset (bz_stream[2][key]))
+				type = bz_stream[2][key];
+			memset (mem, binformat ((fReset ? 0 : value), type), pos);
+			pos+=(type==3 ? 4 : _ALIGN);
+		}
+	}
+	return strlen (bz_stream[1]);
+}
+
+// Parse binary representation of bz_stream
+function bz_streamParse (&bz_stream)
+{
+	pos = 0;
+	foreach (bz_stream[0] as key => value) {
+		type = 7;
+		if (isset (bz_stream[2][key]))
+			type = bz_stream[2][key];
+		bz_stream[0][key]=binparse(bz_stream[1], (key=="avail_out" ?  3 :  type), pos); // avail_out, read only lower word
+		pos+=(type==3 ? 4 : _ALIGN);
+	}
+}
+
+function bz_streamLog (&bz_stream)
+{
+	// Log the z_stream
+	foreach (bz_stream[0] as key =>value) {
+		printf ("%s = %8X <br>", key, value, value);
+	}
+}
+
+function BZ2_bzlibVersion ()
+{
+	global hDLLBZip2;
+	return call (hDLLBZip2, "BZ2_bzlibVersion", [[], "s"]);
+}
+
+function BZ2_bzCompressInit (&bz_stream, blockSize100k=1, verbosity=0, workFactor=30)
+{
+	global hDLLBZip2;
+	size = bz_streamFormat (bz_stream);
+	ret = call (hDLLBZip2, "BZ2_bzCompressInit", [["r", "i", "i", "i"], "i"], bz_stream[1], blockSize100k, verbosity, workFactor);
+	bz_streamParse (bz_stream);
+	return ret;
+}
+
+function BZ2_bzCompress (&bz_stream, action)
+{
+	global hDLLBZip2;
+	size = bz_streamFormat (bz_stream);
+	ret = call (hDLLBZip2, "BZ2_bzCompress", [["r", "i"], "i"], bz_stream[1], action);
+	bz_streamParse (bz_stream);
+	return ret;
+}
+
+function BZ2_bzCompressEnd (&bz_stream)
+{
+	global hDLLBZip2;
+	size = bz_streamFormat (bz_stream);
+	ret = call (hDLLBZip2, "BZ2_bzCompressEnd", [["r"], "i"], bz_stream[1]);
+	bz_streamParse (bz_stream);
+	return ret;
+}
+
+function BZ2_bzDecompressInit  (&bz_stream, verbosity=0, small=0)
+{
+	global hDLLBZip2;
+	size = bz_streamFormat (bz_stream);
+	ret = call (hDLLBZip2, "BZ2_bzDecompressInit", [["r", "i", "i"], "i"], bz_stream[1], verbosity, small);
+	bz_streamParse (bz_stream);
+	return ret;
+}
+
+function BZ2_bzDecompress (&bz_stream)
+{
+	global hDLLBZip2;
+	size = bz_streamFormat (bz_stream);
+	ret = call (hDLLBZip2, "BZ2_bzDecompress", [["r"], "i"], bz_stream[1]);
+	bz_streamParse (bz_stream);
+	return ret;
+}
+
+function BZ2_bzDecompressEnd  (&bz_stream)
+{
+	global hDLLBZip2;
+	size = bz_streamFormat (bz_stream);
+	ret = call (hDLLBZip2, "BZ2_bzDecompressEnd", [["r"], "i"], bz_stream[1]);
+	bz_streamParse (bz_stream);
+	return ret;
+}
+
+function BZ2_bzBuffToBuffCompress  (&dst, &src, blockSize100k=1, verbosity=0, workFactor=30)
+{
+	global hDLLBZip2;
+	srcLen = strlen (src);
+	resize (dst, srcLen + srcLen/100 + 600);
+	dstLen = binformat (strlen (dst));
+	ret = call (hDLLBZip2, "BZ2_bzBuffToBuffCompress", [["r", "r", "s", "i", "i", "i", "i"], "i"], dst, dstLen, src, srcLen, blockSize100k, verbosity, workFactor);
+	dstLen = binparse (dstLen);
+	resize (dst, dstLen);
+	return ret;
+}
+
+function BZ2_bzBuffToBuffDecompress  (&dst, &src, small=0, verbosity=0)
+{
+	global hDLLBZip2;
+	srcLen = strlen (src);
+	if (strlen (dst)<=srcLen)
+		resize (dst, srcLen*10); // Calc with factor 10
+	dstLen = binformat (strlen (dst));
+	ret = call (hDLLBZip2, "BZ2_bzBuffToBuffDecompress", [["r", "r", "s", "i", "i", "i"], "i"], dst, dstLen, src, srcLen, small, verbosity);
+	dstLen = binparse (dstLen);
+	resize (dst, dstLen);
+	return ret;
+}
+
+
+/* Higher level functions, not part of bzip2 */
+
+function bz_compress_file (srcFilename, dstFilename, fVerbose=false)
+{
+	fh = fopen (srcFilename, 'r');
+	if (!fh) {
+		if (fVerbose)
+			print ("Cannot open file: ", srcFilename);
+		return BZ_IO_ERROR;
+	}
+
+	fh2 = fopen (dstFilename, 'w+');
+	if (!fh2) {
+		if (fVerbose)
+			print ("Cannot create file: ", dstFilename);
+		return BZ_IO_ERROR;
+	}
+
+	bz_stream = bz_streamCreate ();
+
+	blockSize = 9;
+	ret =BZ2_bzCompressInit (bz_stream, blockSize);
+
+	if (ret<0) {
+		if (fVerbose)
+			print ("BZ2_bzCompressInit() failed: ", ret);
+	}
+	else {
+		src = "";
+		dst = "";
+		resize (dst, BZ_BUF_SIZE); // Make enough destination buffer
+		while (fread (fh, src)) {
+			bz_stream[0]["avail_out"] = BZ_BUF_SIZE;
+			bz_stream[0]["next_out"]  = memref (dst);
+			bz_stream[0]["avail_in"]  = strlen (src);
+			bz_stream[0]["next_in"]   = memref (src);
+
+			ret = BZ2_bzCompress (bz_stream, feof (fh) ? BZ_FINISH : BZ_FLUSH);
+
+			if (ret<0) {
+				if (fVerbose)
+					print ("BZ2_bzCompress() failed: ", ret);
+				break;
+			}
+			size = BZ_BUF_SIZE-bz_stream[0]["avail_out"];
+			fwrite (fh2, dst, size);
+		}
+		BZ2_bzCompressEnd (bz_stream);
+	}
+	if (ret<0) {
+		if (fVerbose)
+			print ("Compression error: ", ret);
+	}
+
+	fclose (fh);
+	fclose (fh2);
+	return ret;
+}
+
+function bz_decompress_file (srcFilename, dstFilename, fVerbose=false)
+{
+	fh = fopen (srcFilename, 'r');
+	if (!fh) {
+		if (fVerbose)
+			print ("Cannot open file: ", srcFilename);
+		return BZ_IO_ERROR;
+	}
+
+	fh2 = fopen (dstFilename, 'w+');
+	if (!fh2) {
+		if (fVerbose)
+			print ("Cannot create file: ", dstFilename);
+		return BZ_IO_ERROR;
+	}
+
+	bz_stream = bz_streamCreate ();
+
+	ret = BZ2_bzDecompressInit (bz_stream);
+
+	if (ret<0) {
+		if (fVerbose)
+			print ("BZ2_bzDecompressInit() failed: ", ret);
+	}
+	else {
+		src = "";
+		dst = "";
+		resize (dst, BZ_BUF_SIZE); // Make enough destination buffer
+		while (fread (fh, src, 4096)) { // Read with low buf size
+			bz_stream[0]["avail_out"] = BZ_BUF_SIZE;
+			bz_stream[0]["next_out"]  = memref (dst);
+
+			bz_stream[0]["avail_in"]  = strlen (src);
+			bz_stream[0]["next_in"]   = memref (src);
+
+			ret = BZ2_bzDecompress (bz_stream);
+			if (ret<0) {
+				if (fVerbose)
+					print ("BZ2_bzDecompress() failed: ", ret);
+				break;
+			}
+			size = BZ_BUF_SIZE-bz_stream[0]["avail_out"];
+
+			fwrite (fh2, dst, size);
+			if (ret==BZ_STREAM_END)
+				break;
+		}
+		BZ2_bzDecompressEnd (bz_stream);
+	}
+
+	if (ret<0) {
+		if (fVerbose)
+			print ("Decompression error: ", ret);
+	}
+
+	fclose (fh);
+	fclose (fh2);
+	return ret;
+}
+
+?>

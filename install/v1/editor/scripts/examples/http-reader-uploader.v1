@@ -1,0 +1,78 @@
+<?v1 require_once ("helpers/start.v1");?>
+<h3>HTTP Reader and Uploader</h3>
+<?v1
+// Demonstrates how to work with Formulars, Sockets and Uploads
+fUploaded = false;
+
+if (isset (_FILES["upload"]))
+{
+	foreach (_FILES["upload"]["tmp_name"] as i => tmpName) {
+		fUploaded = move_uploaded_file (tmpName, ROOT_PATH."/"._FILES["upload"]["name"][i]);
+		if (fUploaded) {
+			showSuccess (_FILES["upload"]["name"][i]." uploaded. Refresh file list.");
+		}
+	}
+}
+
+host = getText ("host");
+port = getInt ("port", 80);
+path = getText ("path", "/");
+
+if (empty (host))
+{
+	if (!fUploaded)
+		showError ("Please insert a host or select a file.");
+}
+else
+{
+	fh = fsockopen (host, port);
+	result = "";
+	if (fh) {
+		header = "GET ".path." HTTP/1.1\r\nHost: ".host."\r\n\r\n";
+
+		print (header);
+
+		fwrite (fh, header);
+		line = "";
+
+		while (freadln (fh, line)) {
+			if (empty (line))
+				break;
+			result.=line;
+			result.="\n";
+
+		}
+		print ("<p><textarea style=\"width:500px;height:300px;\">".result."</textarea></p>");
+	}
+	else {
+		showError ("Connection error");
+	}
+	fclose (fh);
+}
+
+?>
+<form  enctype="multipart/form-data" method="post" action="<?v1 print (getenv ("SCRIPT_NAME"));?>">
+<table>
+    <tr>
+        <td>Host</td>
+        <td><input type="text" name="host" value="<?v1 print (host); ?>" /></td>
+    </tr>
+    <tr>
+        <td>Port</td>
+        <td><input type="text" name="port" value="<?v1 print (port); ?>" /></td>
+    </tr>
+    <tr>
+        <td>Path</td>
+        <td><input type="text" name="path" value="<?v1 print (path); ?>" /></td>
+    </tr>
+    <tr>
+        <td>File 1</td>
+        <td><input type="file" name="upload[]" /></td>
+    </tr>
+    <tr>
+        <td>File 2</td>
+        <td><input type="file" name="upload[]" /></td>
+    </tr>
+</table>
+<p><input type="submit" value="Submit" /></p>
+<?v1 require_once ("helpers/end.v1");?>

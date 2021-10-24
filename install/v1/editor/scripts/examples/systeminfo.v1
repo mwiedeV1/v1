@@ -1,0 +1,26 @@
+<?v1
+require_once ("helpers/start.v1");
+
+fh = fopen ("/proc/cpuinfo", "r");
+print ('
+       <h2>CPU-Info</h2>
+       <table style="width:100%;"  class="data_tbl">
+       <tr class="header">
+            <td style="width:25%;">Name</td>
+            <td>Value</td>
+        </tr>
+');
+                              line = "";
+       while (freadln (fh, line))
+{
+assign (key, value) = explode (":", trim (line));
+	if (empty (key))
+		continue;
+	print ('<tr><td>'.key.'</td><td>'.value.'</td></tr>');
+
+}
+print ('</table>');
+
+
+?>
+<?v1 require_once ("helpers/end.v1"); ?>

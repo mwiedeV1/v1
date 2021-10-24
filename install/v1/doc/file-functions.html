@@ -1,0 +1,210 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - File functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>File functions</h1>
+<p>The following file and directory functions are supported. The file functions are compatible with theire PHP pendants.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>fopen</strong> (string <em>filename</em>, string <em>mode</em>="r")</td>
+<td>handle</td>
+<td>Open or create a file named with <em>filename</em>. If parameter <em>mode</em>  is not given then  the file will be opened with read only permissions, otherwise the modes are equal to PHP/C fopen(): r, r+, w+, a, a+, x, x+ (c, c+, e are not implemented!). For detailed description read <a href="http://php.net/manual/en/function.fopen.php" target="_blank">PHP file modes</a>. On success the file handle is returned, otherwise null is returned an a warning is shown. The following special filenames are possible: 'v1://stdin' = standard input, 'v1://stdout' = standard output, 'v1://stderr' = standard error</td>
+</tr>
+<tr>
+<td><strong>fwrite</strong> (handle <em>file</em>,  string <em>string</em> [, number <em>length</em>])</td>
+<td>number</td>
+<td>Write a <em>string</em> into the given <em>file</em> . If parameter <em>length</em>  is not given then the full string is written, otherwise the specified number of bytes are written. On success the number of written bytes is returned, otherwise false is returned and a warning is shown.</td>
+</tr>
+<tr>
+<td><strong>fread</strong> (handle <em>file</em>,  string&amp; <em>string</em> [, number <em>length</em>=0xFFFF])</td>
+<td>number</td>
+<td>Read data from the given <em>file</em> into a <em>string</em> variable. The parameter <em>string</em> must be  a reference to a variable. If <em>length</em>  is not set then it tries to read 64 KB from the file. On success the number of read bytes is returned, otherwise false is returned.</td>
+</tr>
+<tr>
+<td><strong>fgets</strong> (handle <em>file</em>)</td>
+<td>string</td>
+<td>Read a line until Ascii 13=\n from <em>file</em> .  On success the read line is returned. If the end of file is reached false is returned.</td>
+</tr>
+<tr>
+<td><strong>freadln</strong> (handle <em>file</em>,  string&amp; string)</td>
+<td>bool</td>
+<td>Read a line until Ascii 13=\n from <em>file</em>  into a given <em>string</em> variable. The parameter <em>string</em> must be  a reference to a variable. On success true is returned. If the end of file is reached false is returned.</td>
+</tr>
+<tr>
+<td><strong>fclose</strong> (handle <em>file</em>)</td>
+<td>bool</td>
+<td>Close the <em>file</em>. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>feof</strong> (handle <em>file</em>)</td>
+<td>bool</td>
+<td>Return true  if the end of the <em>file</em> is reached and no more data can be read.</td>
+</tr>
+<tr>
+<td><strong>ftell</strong> (handle <em>file</em>)</td>
+<td>number</td>
+<td>Return the current position of <em>file</em> pointer (read bytes).</td>
+</tr>
+<tr>
+<td><strong>fseek</strong> (handle <em>file</em>, number <em>position</em>)</td>
+<td>bool</td>
+<td>Set the <em>file</em> pointer to a <em>position</em>  beginning from 0. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>filesize</strong> (string <em>filename</em>)</td>
+<td>number</td>
+<td>Return the file size of a given <em>filename</em>. If the file is not found false is returned.</td>
+</tr>
+<tr>
+<td><strong>filemtime</strong> (string <em>filename</em>)</td>
+<td>number</td>
+<td>Return timestamp of last modification of <em>filename</em>. If the file is not found false is returned.</td>
+</tr>
+<tr>
+<td><strong>filectime</strong> (string <em>filename</em>)</td>
+<td>number</td>
+<td>Return timestamp of creation of <em>filename</em>. If the file is not found false is returned.</td>
+</tr>
+<tr>
+<td><strong>fileatime</strong> (string <em>filename</em>)</td>
+<td>number</td>
+<td>Return timestamp of last access of <em>filename</em>. If the file is not found false is returned.</td>
+</tr>
+<tr>
+<td><strong>touch</strong> (string <em>filename</em>, number <em>filemtime</em>=time() [, number <em>fileatime</em>])</td>
+<td>bool</td>
+<td>Set modification time <em>filemtime</em> and optional access time <em>fileatime</em> to <em>filename</em>. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>file_exists</strong> (string <em>path</em>)</td>
+<td>bool</td>
+<td>Return true  if a given <em>path</em> is a file or directory.</td>
+</tr>
+<tr>
+<td><strong>is_file</strong> (string <em>path</em>)</td>
+<td>bool</td>
+<td>Return true  if a given <em>path</em> is a file.</td>
+</tr>
+<tr>
+<td><strong>is_dir</strong> (string <em>path</em>)</td>
+<td>bool</td>
+<td>Return true  if a given <em>path</em> is a directory.</td>
+</tr>
+<tr>
+<td><strong>filetype</strong> (string <em>path</em>)</td>
+<td>string</td>
+<td>Return the type of a given <em>path</em>. Possible return values: 'dir' = Directory; 'file' = File; false = not found</td>
+</tr>
+<tr>
+<td><strong>unlink</strong> (string <em>filename</em>)</td>
+<td>bool</td>
+<td>Delete a file named with <em>flename</em>. On success true  is returned.</td>
+</tr>
+<tr>
+<td><strong>rename</strong> (string <em>fromFilename</em>, string <em>toFilename</em>)</td>
+<td>bool</td>
+<td>Rename (move) a file <em>fromFilename</em> <em>toFilename</em>. On success true  is returned.</td>
+</tr>
+<tr>
+<td><strong>copy</strong> (string <em>fromFilename</em>, string <em>toFilename</em>)</td>
+<td>bool</td>
+<td>Copy a file <em>fromFilename</em> <em>toFilename</em>. The file will be dublicated. On success true  is returned.</td>
+</tr>
+<tr>
+<td><strong>basename</strong> (string <em>path</em>)</td>
+<td>string</td>
+<td>Return the base name without directory of a given <em>path</em>. For example: c:\projects\v1\v1.exe will return v1.exe</td>
+</tr>
+<tr>
+<td><strong>dirname</strong> (string <em>path</em>)</td>
+<td>string</td>
+<td>Return the directory of a given <em>path</em>. For example: c:\projects\v1\v1.exe will return c:\projects\v1</td>
+</tr>
+<tr>
+<td><strong>pathinfo</strong> (string <em>path</em>)</td>
+<td>array</td>
+<td>Same as PHP pathinfo (). Return an array with information about the given <em>path</em>. For example:  c:\projects\v1\v1.exe will return:  array ( 'dirname' =&gt; 'c:\projects\v1', 'basename' =&gt; 'v1.exe', 'extension' =&gt; 'exe', 'filename' =&gt; 'v1' )</td>
+</tr>
+<tr>
+<td><strong>realpath</strong> (string <em>path</em>)</td>
+<td>string</td>
+<td>Return the absolute system path of a given relative <em>path</em>. For example: ./v1.exe will return c:\projects\v1\v1.exe. realpath() does not work for files with length 0 and non readable files.</td>
+</tr>
+</tbody>
+</table>
+<h1>Directory functions</h1>
+<p>See also example <a href="example-read-directory.html">Read directory</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>getcwd</strong> ()</td>
+<td>string</td>
+<td>Return the current working directory.</td>
+</tr>
+<tr>
+<td><strong>chdir</strong> (string <em>directory</em>)</td>
+<td>bool</td>
+<td>Set the current working <em>directory</em>. On success true is returned. Note: The default working directory is the directory of calling v1.exe. To determine the directory of current V1 file use: dirname(__FILE__)</td>
+</tr>
+<tr>
+<td><strong>mkdir</strong> (string <em>directory</em>)</td>
+<td>bool</td>
+<td>Create a new  <em>directory</em>. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>rmdir</strong> (string <em>directory</em>)</td>
+<td>bool</td>
+<td>Remove  a <em>directory</em> if its empty. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>opendir</strong> (string <em>directory</em>)</td>
+<td>handle</td>
+<td>Open  a <em>directory</em> to read containing filenames and sub directories. On success a directory handle is returned, otherwise null is returned.</td>
+</tr>
+<tr>
+<td><strong>readdir</strong> (handle <em>directory</em>)</td>
+<td>string</td>
+<td>Read the next filename from  a <em>directory</em> handle. On success the filename or sub directory is returned. If the last entry was read then  false is returned.</td>
+</tr>
+<tr>
+<td><strong>closedir</strong> (handle <em>directory</em>)</td>
+<td>bool</td>
+<td>Close a <em>directory</em> handle. On success true is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

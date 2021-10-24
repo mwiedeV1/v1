@@ -1,0 +1,127 @@
+<?v1
+// Examples of gd module based of LibGD with PHP compatible functions.
+dl ("gd");
+
+// Sinus frequencies to overlay
+freqList = [1.8, 3.14, 6.28];
+
+windowWidth  = 640;
+windowHeight = 480;
+coordMargin = 60;
+legendFont = 5;
+axisFont = 4;
+
+const PI  = 3.14159265359;
+const PI2 = 2*PI;
+
+img = imagecreatetruecolor (windowWidth, windowHeight);
+if (!img)
+{
+	print ("Cannot create GDLib graphics image.");
+	exit (1);
+}
+
+// Allocate colors
+colors = array (
+    "white" => imagecolorallocatealpha (img, 255,255,255,0),
+    "black" => imagecolorallocatealpha (img, 0,0,0,0),
+    "red" => imagecolorallocatealpha (img, 255,0,0,0),
+    "green" => imagecolorallocatealpha (img, 0,255,0, 0),
+    "blue" => imagecolorallocatealpha (img, 0,0,255,0)
+);
+
+// Clear window
+imagefill (img, 0, 0, colors["white"]);
+
+// Draw legend
+imagefilledrectangle (img, 12, 12, 22, 22, colors["red"]);
+
+msg = "";
+foreach (freqList as freq)
+{
+	if (!empty (msg))
+		msg.=" + ";
+	if (freq!=1)
+		msg.= "sin(".freq."x)";
+	else
+		msg.="sin(x)";
+}
+if (count (freqList))
+	msg = "(".msg.") / ".count (freqList);
+
+imagestring (img, legendFont, 30, 10, utf8_decode (msg), colors["blue"]);
+
+// Draw axes
+imagesetthickness (img, 1);
+x = coordMargin;
+y = coordMargin;
+
+// Y axis
+imageline (img, x, y, x, windowHeight-coordMargin, colors["black"]);
+
+windowHalf = (windowHeight-coordMargin*2)/2;
+for (y2=-1; y2<=1; y2+=0.25)
+{
+	msg = y2;
+	y = (windowHeight/2)-y2 * windowHalf;
+	imageline (img, x-5, y, x+5, y, colors["black"]);
+
+	// Align text to right and center vertical
+	xt = (coordMargin-imagefontwidth (axisFont)*strlen (msg)) - 15;
+	yt = y - imagefontheight (axisFont)/2;
+	imagestring (img, axisFont, xt, yt, msg, colors["black"]);
+}
+
+// X axis
+x = coordMargin;
+y = (windowHeight/2);
+imageline (img, x, y, windowWidth-coordMargin, y, colors["black"]);
+
+for (x2=0.25; x2<=1; x2+=0.25)
+{
+	msg = x2;
+	if (x2==0.25)
+		msg = "pi/2";
+	else if (x2==0.5)
+		msg = "pi";
+	else if (x2==0.75)
+		msg = "3pi/2";
+	else if (x2==1)
+		msg = "2pi";
+
+	x = coordMargin + (windowWidth- (coordMargin*2)) * x2;
+	imageline (img, x, y-5, x, y+5, colors["black"]);
+
+	// Center text
+	xt=x-imagefontwidth (axisFont)*strlen (msg) / 2;
+	imagestring (img, axisFont, xt, y+15, msg, colors["black"]);
+}
+
+// Plot overlayed frequencies
+Fs = (windowWidth-coordMargin*2)/4;
+T = 1 / Fs;
+L = Fs;
+t = 0;
+x = coordMargin;
+xOld = yOld = 0;
+
+for (i=0; i<=L; i++)
+{
+	v = 0;
+	foreach (freqList as freq)
+		v+=sin(PI2*freq*t);
+	v/=count(freqList);
+
+	y = (windowHeight/2) - v * ((windowHeight-coordMargin*2)/2);
+	if (i>0) {
+		imageline (img,  xOld, yOld, x, y, colors["red"]);
+	}
+	xOld = x;
+	yOld = y;
+	t+=T;
+	x+=4;
+}
+
+// Output image to browser
+imagepng (img, null);
+?>

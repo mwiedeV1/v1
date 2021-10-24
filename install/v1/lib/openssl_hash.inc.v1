@@ -1,0 +1,58 @@
+<?v1
+require_once ("openssl.inc.v1");
+
+/*
+  Create message digest of a file with OpenSSL hash functions
+
+  @param algo Algorithm must be supported by OpenSSL, e.g. ripemd160
+  @filename filename to calc message digest
+  @fBin fBin return as binary string
+  @fVerbose true = print errors
+
+  @return Message digest or false on errors
+
+*/
+
+function openssl_hash_file (algo, filename, fBin=false, fVerbose=false)
+{
+	global hDLLCrypto;
+	fh = fopen (filename);
+	ret = false;
+	ctx = call (hDLLCrypto, "EVP_MD_CTX_new", [[], "p"]);
+	if (!ctx) {
+		ctx = call (hDLLCrypto, "EVP_MD_CTX_create", [[], "p"]);
+	}
+	if (!ctx) {
+		if (fVerbose)
+			print ("EVP_MD_CTX_create failed.");
+	}
+	else {
+		type = call (hDLLCrypto, "EVP_".algo, [[], "p"]);
+		if (!type) {
+			if (fVerbose)
+				print ("Digest ".algo." not found in ", OpenSSL_version ());
+		}
+		else {
+			md = "";
+			resize (md, 1024); // make enough buffer for hash
+			len = binformat (0);
+			ret = call (hDLLCrypto, "EVP_DigestInit", [['p', 'p'], "i"], ctx, type);
+			text = "";
+			while (fread (fh, text)) {
+				ret = call (hDLLCrypto, "EVP_DigestUpdate", [['p', 's', 'i'], "i"], ctx, text, strlen (text));
+			}
+			ret = call (hDLLCrypto, "EVP_DigestFinal", [['p', 'r', 'r'], "i"], ctx, md, len);
+			len = binparse (len);
+			resize (md, len);
+			ret = md;
+			if (!fBin)
+				ret = bin2hex (md);
+		}
+		call (hDLLCrypto, "EVP_MD_CTX_free", [['p'], "i"], ctx);
+	}
+	fclose (fh);
+	return ret;
+}
+
+
+?>

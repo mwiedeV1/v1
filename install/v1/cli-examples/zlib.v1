@@ -1,0 +1,43 @@
+<?v1
+/*
+  Demonstrates native function calling of compression library ZLib
+
+  Usage: v1 zlib.v1
+*/
+
+error_reporting (0);
+require_once ("../lib/zlib.inc.v1");
+require_once ("../lib/utils.inc.v1");
+
+print ("Library: ", zLibLibName);
+print ("Version: ", zlibVersion());
+
+do
+{
+	print ("");
+	print ("[c] = Compress a file");
+	print ("[d] = Decompress a file");
+	print ("[x] = Exit");
+
+	mode = getch ();
+	if (mode=="c") {
+		srcFilename = input ("File to compress:");
+		dstFilename = srcFilename.".gz";
+		if ((ret=gz_compress_file (srcFilename, dstFilename, true))==0) {
+			print (srcFilename, " (", formatKBText (filesize (srcFilename)), ") compressed to ", dstFilename, " (", formatKBText (filesize (dstFilename)), ")");
+		}
+	}
+	else if (mode=="d") {
+		srcFilename = input ("File to decompress:");
+		dstFilename = srcFilename.".original";
+		if ((ret=gz_decompress_file (srcFilename, dstFilename, true))==0) {
+			print (srcFilename, " (", formatKBText (filesize (srcFilename)), ") decompressed to ", dstFilename, " (", formatKBText (filesize (dstFilename)), ")");
+		}
+	}
+	else if (mode=="x") {
+		break;
+	}
+}
+while (true);
+
+?>

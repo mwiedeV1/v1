@@ -1,0 +1,33 @@
+<?v1
+/*
+  Mathematical constants and helper functions
+*/
+
+const PI  = 3.14159265358979323846;
+const DEG = 180.0/PI;
+const RAD = PI/180.0;
+const PI2 = 2*PI;
+const EPS = 1.0e-12; // machine error constant
+
+function frac(x)
+{
+	return(x-floor(x));
+}
+
+function mod2pi(x)
+{
+	x = (x-floor(x/(2*PI))*2*PI);
+	return(x);
+}
+
+function deg2rad (a)
+{
+	return PI2 / 360 * a;
+}
+
+function rad2deg (a)
+{
+	return (a / PI2) * 360;
+}
+
+?>

@@ -1,0 +1,66 @@
+<?v1 require_once ("helpers/start.v1");?>
+<h3>Hash functions</h3>
+<?v1
+
+text = "V1 Script";
+print ("crc32() = ".sprintf ("#%.8x", crc32 (text)));
+
+print ("<br />bin2hex() ".bin2hex ("V1 Script"));
+print ("<br />hex2bin() ".hex2bin ("563120536372697074"));
+
+base64Enc = base64_encode (text);
+print ("<br />base64_encode() = ".base64Enc);
+print ("<br />base64_decode() = ".base64_decode(base64Enc));
+
+
+function getRandomString (max=22)
+{
+	srand (microtime ());
+	str = "";
+	for (j = 0; j < max; j++) {
+		str.=substr("./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", rand()%64, 1);
+	}
+	return str;
+}
+
+// Crypt functions from crypt.dll
+dl ("crypt");
+
+print ("<br />sha1() = ".sha1 (text));
+print ("<br />md5() = ".md5 (text));
+
+
+for (i=0; i<1; i++)
+{
+	salt = getRandomString(2);
+	print ("<br />DES crypt() = ".crypt(text, salt));
+}
+
+for (i=0; i<1; i++)
+{
+	print ("<br />MD5 crypt() = ".crypt(text));
+}
+
+for (i=0; i<1; i++)
+{
+	salt = "$2y$07$".getRandomString();
+	print ("<br />Blowfish crypt() = ".crypt(text, salt));
+}
+
+
+for (i=0; i<1; i++)
+{
+	salt = "$5$rounds=5000$".(rand()%1000 +1)."$";
+	print ("<br />SHA256 crypt() = ".crypt(text, salt));
+};
+
+for (i=0; i<1; i++)
+{
+	salt = "$6$rounds=5000$".(rand()%1000 +1)."$";
+	print ("<br />SHA512 crypt() = ".crypt(text, salt));
+};
+
+print ("<br>SHA256 of file v1: ", hash_file ("sha256", "v1"));
+
+?>
+<?v1 require_once ("helpers/end.v1");?>

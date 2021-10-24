@@ -1,0 +1,27 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Windows registry</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Example: Working with the Windows registry</h1>
+<p>The follwing <a href="system-functions.html">system functions</a> can be used to work with the Windows registry: getreg(), putreg(), delreg()</p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1<br /></span><span style="color: #008000">/*&nbsp;<br />&nbsp;&nbsp;&nbsp;&nbsp;Working&nbsp;with&nbsp;the&nbsp;Windows&nbsp;registry<br />*/<br /><br />//&nbsp;Read&nbsp;all&nbsp;registry&nbsp;keys&nbsp;and&nbsp;values&nbsp;as&nbsp;array<br /></span><span style="color: #000000">regKey&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #DD0000">'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'</span><span style="color: #0000BB;">;<br /></span><span style="color: #000000">keyList&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">getreg</span><span style="color: #0000BB;">(</span><span style="color: #000000">regKey</span><span style="color: #0000BB;">);<br /></span><span style="color: #000000">print_r&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">keyList</span><span style="color: #0000BB;">);<br /><br /></span><span style="color: #008000">//&nbsp;Read&nbsp;specific&nbsp;key<br /></span><span style="color: #000000">value&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">getreg&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">regKey</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"MyKey"</span><span style="color: #0000BB;">));<br /><br /></span><span style="color: #008000">//&nbsp;Create&nbsp;a&nbsp;new&nbsp;registry&nbsp;sub&nbsp;tree<br /></span><span style="color: #000000">regKey&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #DD0000">"Software\\Microsoft\\Windows\\CurrentVersion\\Run"</span><span style="color: #0000BB;">;<br /></span><span style="color: #000000">putreg&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">regKey</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"SubTree"</span><span style="color: #0000BB;">);<br /><br /></span><span style="color: #008000">//&nbsp;Add&nbsp;a&nbsp;key/value&nbsp;pair<br /></span><span style="color: #000000">putreg&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">regKey</span><span style="color: #0000BB;">.</span><span style="color: #DD0000">"\\SubTree"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"Key"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"Value"</span><span style="color: #0000BB;">);<br /><br /></span><span style="color: #008000">//&nbsp;Add&nbsp;a&nbsp;key/value&nbsp;pair&nbsp;as&nbsp;32&nbsp;Bit&nbsp;DWORD<br /></span><span style="color: #000000">myNum&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">0xFFFFFFFF</span><span style="color: #0000BB;">;<br /></span><span style="color: #000000">putreg&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">regKey</span><span style="color: #0000BB;">.</span><span style="color: #DD0000">"\\SubTree"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"Key&nbsp;2"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">myNum</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">1</span><span style="color: #0000BB;">);<br /><br /></span><span style="color: #008000">//&nbsp;Delete&nbsp;the&nbsp;whole&nbsp;sub&nbsp;tree<br /></span><span style="color: #000000">delreg&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">regKey</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"SubTree"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">1</span><span style="color: #0000BB;">);<br /><br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

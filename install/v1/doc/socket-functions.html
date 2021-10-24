@@ -1,0 +1,109 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Socket functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Socket functions</h1>
+<p>The following socket functions are supported. Socket handles can be used with file I/O functions. See also chapter <a href="file-functions.html">File functions</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>fsockopen</strong> (string <em>host</em>, number <em>port</em>, number <em>rcvTimeout</em>=0)</td>
+<td>handle</td>
+<td>Open a TCP/IP client socket and connect to a specified <em>host</em> and <em>port</em>. Optional parameter <em>rcvTimeout</em> set the timeout in milliseconds data should be received from socket (0=no timeout).  On success the socket handle is returned, otherwise null is returned and a warning is shown.</td>
+</tr>
+<tr>
+<td><strong>fsockserver</strong> (string <em>host</em>, number <em>port</em>, number <em>backlog</em>=10)</td>
+<td>handle</td>
+<td>Create a TCP/IP server socket on a specified <em>host</em> and <em>port</em>. On success the socket handle is returned, otherwise null is returned and a warning is shown The optional <em>backlog</em> parameter set the number of possible waiting clients in background until fsockaccept() return a new client socket.</td>
+</tr>
+<tr>
+<td><strong>fsockaccept</strong> (handle <em>socket</em>, number <em>rcvTimeout</em>=0)</td>
+<td>handle</td>
+<td>Accept a new connection on a TCP/IP server <em>socket</em>. On success the new client socket handle is returned, otherwise null is returned and a warning is shown. Optional parameter <em>rcvTimeout</em> set the timeout in milliseconds data should be received from new client socket (0=no timeout).</td>
+</tr>
+<tr>
+<td><strong>fclose</strong> (handle <em>socket</em>)</td>
+<td>bool</td>
+<td>Shutdown and close a given <em>socket</em>. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>fsockip</strong> (handle <em>socket</em>)</td>
+<td>string</td>
+<td>Return the IPV4 address of a given <em>socket</em>.</td>
+</tr>
+<tr>
+<td><strong>fsockport</strong> (handle <em>socket</em>)</td>
+<td>number</td>
+<td>Return the port number of a given <em>socket</em>.</td>
+</tr>
+<tr>
+<td><strong>gethostbyaddr</strong> (string <em>ipaddress</em>)</td>
+<td>string</td>
+<td>Lookup the hostname of a <em>ipaddress</em> (IPV4). On success the hostname is returned, otherwise false is returned.</td>
+</tr>
+<tr>
+<td><strong>gethostbyname</strong> (string <em>hostname</em>)</td>
+<td>string</td>
+<td>Lookup the IPV4 address of a <em>hostname</em>. On success the IP address is returned, otherwise false is returned.</td>
+</tr>
+</tbody>
+</table>
+<p>Socket I/O functions:</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>fwrite</strong> (handle <em>socket</em>,  string <em>string</em> [, number <em>length</em>])</td>
+<td>number</td>
+<td>Write a <em>string</em> into the given <em>socket</em> . If parameter <em>length</em>  is not given then the full string is written, otherwise the specified number of bytes are written. On success the number of written bytes is returned. If the peer connection was closed false is returned.</td>
+</tr>
+<tr>
+<td><strong>fread</strong> (handle <em>socket</em>,  string&amp; <em>string</em> [, number <em>length</em>=0xFFFF])</td>
+<td>number</td>
+<td>Read data from the given <em>socket</em> into a <em>string</em> variable. The parameter <em>string</em> must be  a reference to a variable. If <em>length</em>  is not set then it tries to read 64 KB from the socket. On success the number of read bytes is returned. I the peer connection was closed or timeout occurred false is returned.</td>
+</tr>
+<tr>
+<td><strong>fgets</strong> (handle <em>socket</em>)</td>
+<td>string</td>
+<td>Read a line until Ascii 13=\n from <em>socket</em> .  On success the read line is returned. If the peer connection was closed or timeout occurred false is returned.</td>
+</tr>
+<tr>
+<td><strong>freadln</strong> (handle <em>socket</em>,  string&amp; <em>string</em>)</td>
+<td>bool</td>
+<td>Read a line until Ascii 13=\n from <em>socket</em>  into a given <em>string</em> variable. The parameter <em>string</em> must be  a reference to a variable. On success true is returned. If the peer connection was closed or timeout occurred false is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

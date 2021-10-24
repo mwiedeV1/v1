@@ -1,0 +1,442 @@
+<?v1
+/*
+  HTTP(S)-Server
+  This V1 program will create a multithreaded HTTP-Server on localhost:8080 (optional with TLS/SSL)
+  with document path of current working directory and optional arguments.
+
+  Usage: v1 webserver.v1 [docPath] [startURL]
+*/
+
+error_reporting (0); // 1 to show all warnings
+
+const SERVER_HOST = "localhost"; // Host or IP address
+const SERVER_PORT = 8080; // HTTP port
+const SERVER_SSL_PORT = 0; // 443 to use https:// or 0 not using SSL
+const CERT_DIR = "cert"; // Directory of SSL certificates (PEM format)
+const MAX_THREADS = 10; // Max. parallel requests
+const RECV_TIMEOUT = 30000; // Milliseconds a client should send data
+const HTTP_DATE_FORMAT = "%D, %d %M %Y %H:%i:%s GMT";
+
+if (SERVER_SSL_PORT!=0)
+	dl ("ssl");
+
+mimeTypeList = array (
+	"css" => "text/css",
+	"js" => "application/x-javascript",
+	"jpg" => "image/jpeg",
+	"jpeg" => "image/jpeg",
+	"png" => "image/png",
+	"gif" => "image/jpeg",
+	"svg" => "image/svg+xml",
+	"exe" => "application/octet-stream",
+	"pdf" => "application/pdf",
+	"doc" => "application/msword",
+	"docx" => "application/msword",
+	"ico" => "image/x-icon",
+	"mp4" =>"video/mp4",
+	"xml" => "text/xml",
+	"txt" => "text/plain",
+	"sh" => "text/plain",
+	"bat" => "text/plain"
+);
+
+fExitAll = false;
+docPath = getcwd ();
+if (isset (argv[2])) {
+	docPath = argv[2];
+}
+
+realDocPath = realpath (docPath);
+print ("Document path is ".realDocPath);
+
+serverCertList = array ();
+
+function maintenanceThread ()
+{
+	fFirstStart = true;
+	while (true) {
+		sleep (500);
+		// Do some maintenance
+		if (fFirstStart && isset (argv[3])) {
+			// Start Webbrowser URL
+			print ("Start ".argv[3]);
+			shellexec (argv[3]);
+			fFirstStart = false;
+		}
+	}
+}
+
+// Function load certificate by servername from cert/ directory
+function servernameCallback (servername)
+{
+	global serverCertList;
+
+	if (!isset (serverCertList[servername])) {
+		// Check with/without www.
+		fOnlyCheck = false;
+		if (strpos (servername, "www.")===0) {
+			servername2 = substr (servername, 4, strlen (servername)-4);
+		}
+		else {
+			fOnlyCheck = true;
+			servername2 = "www.".servername;
+		}
+		if (isset (serverCertList[servername2])) {
+			return serverCertList[servername2];
+		}
+		if (!fOnlyCheck)
+			servername = servername2;
+
+		if (!is_file (CERT_DIR."/".servername.".crt")) {
+			// Create self signed certificate
+			if (!SSL_create_selfsigned_cert (CERT_DIR."/".servername.".crt", CERT_DIR."/".servername.".key", servername, 315360000, "sha256", 2048))
+				print ("Cannot create self signed certificate for ".servername);
+		}
+
+		ctx = SSL_CTX_new ();
+		if (SSL_CTX_load_cert (ctx, CERT_DIR."/".servername.".crt", CERT_DIR."/".servername.".key")) {
+			serverCertList[servername]=ctx;
+		}
+		else {
+			SSL_CTX_free (ctx);
+			print ("Cannot load SSL certificate ", CERT_DIR."/".servername.".crt");
+		}
+	}
+	return serverCertList[servername];
+}
+
+
+function clientWrite (&client, &str, ssl=null)
+{
+	if (ssl)
+		return SSL_write (ssl, str);
+	return fwrite (client, str);
+}
+
+function clientWriteLen (&client, &str, len, ssl=null)
+{
+	if (ssl)
+		return SSL_write (ssl, str, len);
+	return fwrite (client, str, len);
+}
+
+function clientReadln (&client, &str, ssl=null)
+{
+	if (ssl)
+		return SSL_readln (ssl, str);
+	return freadln (client, str);
+}
+
+function workerThread (client, ssl=null)
+{
+	global docPath, realDocPath, mimeTypeList;
+
+	if (ssl) {
+		SSL_set_fd (ssl, client);
+		if (!SSL_accept (ssl)) {
+			// SSL problems
+			SSL_free (ssl);
+			fclose (client);
+			return;
+		}
+	}
+
+	lineIdx = 0, contentLength=0, headerList=array ();
+
+	// Read the HTTP headers
+	line = "";
+	while (clientReadln (client, line, ssl)) {
+		if (lineIdx==0) {
+			assign (method, uri, protocol) = explode (" ", line);
+		}
+		else {
+			if ((p=strpos (line, ":"))!==false) {
+				header = strtoupper (trim (substr(line,0,p)));
+				value = trim (substr(line,p+1));
+				if (header=="CONTENT-LENGTH")
+					contentLength = value;
+				headerList[header]=value;
+			}
+		}
+		if (empty (line))
+			break;
+		lineIdx++;
+	}
+
+	if (!isset (uri)) {
+		// No URI given, close connection and finish thread
+		if (ssl)
+			SSL_free (ssl);
+		fclose (client);
+		return;
+	}
+
+	// Get path and query string
+	queryString = "";
+	p = strpos (uri, '?');
+	if (p!==false) {
+		queryString = substr (uri, p+1, strlen (uri)-p-1);
+		path = substr (uri, 0, p);
+	}
+	else {
+		path = uri;
+	}
+	path = url_decode (path);
+
+	fFound = false;
+
+	// Check for auto index files
+	if (!is_file (docPath.path)) {
+		autoIndexList = array ("index.html", "index.v1", "index.htm");
+		foreach (autoIndexList as autoFile) {
+			path2=path."/".autoFile;
+			if (is_file (docPath.path2)) {
+				path = path."/".autoFile;
+				fFound = true;
+				break;
+			}
+		}
+	}
+	else {
+		fFound = true;
+	}
+
+	// Handle the filename
+	filename = docPath."/".path;
+	fileSize = 0;
+	if (fFound) {
+		fileSize = filesize (filename);
+	}
+	pi = pathinfo (filename);
+	fileExt = strtolower (pi["extension"]);
+
+	// Check if filename is outside docPath or special file extensions for security reasons
+	realFilename = realpath (filename);
+	if ((fFound && fileSize>0 && strpos (realFilename, realDocPath)!==0) || fileExt=="key" || fileExt=="htaccess") {
+		// Send HTTP status forbidden
+		clientWrite (client, "HTTP/1.1 403 Forbidden\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\nRequested ressource is forbidden.", ssl);
+	}
+	else if (fFound) {
+		// Get MIME type from file extension
+		mimeType = mimeTypeList[fileExt];
+		if (empty (mimeType))
+			mimeType = "text/html";
+
+		if (fileExt=="v1") {
+			// Execute V1 Script as CGI
+			output = "", retCode = 0;
+			envStr = "QUERY_STRING=".queryString;
+			envStr.="\0";
+			envStr.='CONTENT_TYPE='.headerList["CONTENT-TYPE"];
+			envStr.="\0";
+			envStr.='SCRIPT_FILENAME='.filename;
+			envStr.="\0";
+			envStr.='SCRIPT_NAME='.path;
+			envStr.="\0";
+			envStr.='DOCUMENT_ROOT='.docPath;
+			envStr.="\0";
+			envStr.='REQUEST_URI='.uri;
+			envStr.="\0\0";
+
+			cmd = './v1 -w "'.filename.'"';
+			if (exec (cmd, output, retCode, (contentLength>0 ? (ssl ? ssl : client) : null), contentLength, envStr)) {
+				responseStatus = "200 OK";
+				//  Analyze response header
+				p = strpos (output, "\r\n\r\n");
+				if (p!==false) {
+					responseHeader = substr (output, 0, p);
+					if (strpos (responseHeader, "\r\nLocation:")!==false) {
+						responseStatus = "301 Moved Temporarly";
+					}
+				}
+				clientWrite (client, "HTTP/1.1 ".responseStatus."\r\nServer: V1 HTTP-Server\r\n", ssl);
+				clientWrite (client, output, ssl);
+
+			}
+			else {
+				clientWrite (client, "HTTP/1.1 500 Internal Server Error\r\nServer: V1 HTTP-Server\r\n\r\nCannot execute: ".cmd, ssl);
+			}
+		}
+		else {
+			// Send file HTTP status 200 OK
+			lastModified = gmdate (HTTP_DATE_FORMAT, filemtime(filename));
+
+			fSendFile = true;
+			ifModSince = headerList["IF-MODIFIED-SINCE"];
+			if (isset (ifModSince)) {
+				// print ("Check modification ",ifModSince, " vs. ", lastModified );
+				if (!strcmp (ifModSince, lastModified)) {
+					clientWrite (client, "HTTP/1.1 304 Not Modified\r\nServer: V1 HTTP-Server\r\nDate:".gmdate (HTTP_DATE_FORMAT)."\r\nLast-Modified:".lastModified."\r\nContent-Length:".fileSize."\r\nContent-Type: ".mimeType."\r\nConnection:close\r\n\r\n", ssl);
+					fSendFile = false;
+				}
+			}
+			if (fSendFile) {
+				clientWrite (client, "HTTP/1.1 200 OK\r\nServer: V1 HTTP-Server\r\nDate:".gmdate (HTTP_DATE_FORMAT)."\r\nLast-Modified:".lastModified."\r\nContent-Length:".fileSize."\r\nContent-Type: ".mimeType."\r\nConnection:close\r\n\r\n", ssl);
+
+				// Send the file
+				fh = null;
+				if (fh = fopen (filename, "r")) {
+					str = "";
+					while (!feof (fh)) {
+						len = fread (fh, str);
+						clientWriteLen (client, str, len, ssl);
+					}
+					fclose (fh);
+				}
+			}
+		}
+	}
+	else {
+		// Send HTTP status 404 Not found
+		clientWrite (client, "HTTP/1.1 404 Not Found\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\n".path." not found on this server.", ssl);
+	}
+
+	// Close connection and finish thread
+	if (ssl)
+		SSL_free (ssl);
+	fclose (client);
+}
+
+
+function port80Thread (fh)
+{
+	global fExitAll;
+
+	currThreadIdx = 0;
+	threadList = array ();
+
+	fh2 = null;
+
+	while (!fExitAll && (fh2 = fsockaccept (fh, RECV_TIMEOUT))) {
+		// print ("Connection from ", fsockip (fh2), " / ", gethostbyaddr(fsockip (fh2)));
+
+
+		// Get current thread
+		do {
+			if (currThreadIdx>MAX_THREADS)
+				currThreadIdx = 0;
+			if (isset (threadList[currThreadIdx])) {
+				if (!thread_is_active (threadList[currThreadIdx])) {
+					thread_close (threadList[currThreadIdx]);
+					break;
+				}
+			}
+			else {
+				break;
+			}
+
+			currThreadIdx++;
+			if (currThreadIdx>MAX_THREADS) {
+				// print ("Server seems busy.");
+				sleep (10); // Wait until thread is available
+			}
+		}
+		while (true);
+
+		// Create new thread
+		t = thread_create ("workerThread", fh2);
+		threadList[currThreadIdx]=t;
+		thread_start (t, false);  // false = dont wait until thread is running
+	}
+	fclose (fh);
+}
+
+
+function port443Thread (fh)
+{
+	global fExitAll, serverCertList;
+
+	currThreadIdx = 0;
+	threadList = array ();
+
+	// Create SSL Context
+	ctx = SSL_CTX_new ("SSLv23_method"); // TLSv1_2_server_method, SSLv23_method
+	// SSL_CTX_set_cipher_list (ctx, "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");
+
+	if (!is_file (CERT_DIR."/".SERVER_HOST.".crt")) {
+		// Create self signed
+		if (!SSL_create_selfsigned_cert (CERT_DIR."/".SERVER_HOST.".crt", CERT_DIR."/".SERVER_HOST.".key", SERVER_HOST, 315360000, "sha256", 2048)) {
+			print ("Cannot create self signed certificate for ".SERVER_HOST);
+			exit (1);
+		}
+	}
+
+	if (!SSL_CTX_load_cert (ctx, CERT_DIR."/".SERVER_HOST.".crt", CERT_DIR."/".SERVER_HOST.".key")) {
+		print ("Cannot load SSL certificate ", CERT_DIR."/".SERVER_HOST.".crt");
+		exit (1);
+	}
+	serverCertList[SERVER_HOST]=ctx;
+
+	SSL_CTX_set_tlsext_servername_callback (ctx, "servernameCallback");
+
+	fh2 = null;
+	while (!fExitAll && (fh2 = fsockaccept (fh, RECV_TIMEOUT))) {
+		// print ("Connection from ", fsockip (fh2), " / ", gethostbyaddr(fsockip (fh2)));
+
+		// Create SSL
+		ssl = SSL_new (ctx);
+
+		// Get current thread
+		do {
+			if (currThreadIdx>MAX_THREADS)
+				currThreadIdx = 0;
+			if (isset (threadList[currThreadIdx])) {
+				if (!thread_is_active (threadList[currThreadIdx])) {
+					thread_close (threadList[currThreadIdx]);
+					break;
+				}
+			}
+			else {
+				break;
+			}
+
+			currThreadIdx++;
+			if (currThreadIdx>MAX_THREADS) {
+				// print ("Server seems busy.");
+				sleep (10); // Wait until thread is available
+			}
+		}
+		while (true);
+
+		// Create new thread
+		t = thread_create ("workerThread", fh2, ssl);
+		threadList[currThreadIdx]=t;
+		thread_start (t, false);  // false = dont wait until thread is running
+	}
+	SSL_CTX_free (ctx);
+	fclose (fh);
+}
+
+// Create Port 80
+fh = fsockserver (SERVER_HOST, SERVER_PORT);
+if (!fh)
+{
+	print ("Cannot create HTTP-Server on ",  SERVER_HOST, ":", SERVER_PORT);
+	exit (1);
+}
+else
+{
+	print ("HTTP-Server created on ",  fsockip (fh), ":", fsockport(fh));
+	thread_start (thread_create ("port80Thread", fh));
+}
+
+if (SERVER_SSL_PORT>0)
+{
+	// Create Port 443
+	fh2 = fsockserver (SERVER_HOST, SERVER_SSL_PORT);
+	if (!fh2) {
+		print ("Cannot create HTTP-Server on ",  SERVER_HOST, ":", SERVER_SSL_PORT);
+		exit (1);
+	}
+	else {
+		print ("HTTP-Server created on ",  fsockip (fh2), ":", fsockport(fh2));
+		thread_start (thread_create ("port443Thread", fh2));
+	}
+}
+
+// Maintenance thread
+thread_start (thread_create ("maintenanceThread"));
+while (!fExitAll)
+	sleep (1000);
+
+?>

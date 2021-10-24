@@ -1,0 +1,92 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Module:  ssl</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Module: ssl</h1>
+<p>Support a wrapper for the following OpenSSL functions. The module must be loaded with dl('ssl');</p>
+<p>See also examples <a href="example-ssl-client.html">SSL Client</a> and <a href="example-webserver.html">HTTP/SSL Webserver</a>.</p>
+<ul>
+<li>SSL_CTX_new</li>
+<li>SSL_CTX_free</li>
+<li>SSL_CTX_set_tlsext_servername_callback</li>
+<li>SSL_CTX_set_options</li>
+<li>SSL_CTX_clear_options</li>
+<li>SSL_CTX_get_options</li>
+<li>SSL_CTX_set_cipher_list</li>
+<li>SSL_CTX_load_verify_locations</li>
+<li>SSL_CTX_use_certificate_chain_file</li>
+<li>SSL_CTX_use_certificate_file</li>
+<li>SSL_CTX_use_PrivateKey_file</li>
+<li>SSL_CTX_check_private_key </li>
+<li>SSL_new</li>
+<li>SSL_free</li>
+<li>SSL_set_cipher_list</li>
+<li>SSL_get_cipher_list</li>
+<li>SSL_set_verify_result</li>
+<li>SSL_get_verify_result </li>
+<li>SSL_set_fd</li>
+<li>SSL_accept</li>
+<li>SSL_connect</li>
+<li>SSL_read</li>
+<li>SSL_write</li>
+<li>SSL_get_peer_certificate</li>
+<li>ERR_get_error</li>
+<li>ERR_lib_error_string</li>
+</ul>
+<p>Special helper functions, not part of OpenSSL.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SSL_CTX_load_cert</strong> (handle <em>ctx</em>, string <em>certFilename</em>, string <em>keyFilename </em> [, string <em>keyPass</em>])</td>
+<td>bool</td>
+<td>Load certificate and private key file (PEM format) into OpenSSL context. Optional parameter password can be set for encrypted key files. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>SSL_create_selfsigned_cert</strong> (string <em>certFilename</em>, string <em>keyFilename </em>, string <em>CN</em> [, number <em>lifetime</em>=315360000, string <em>sigType</em>="sha256", number <em>bits</em>=2048])</td>
+<td>bool</td>
+<td>Create a selfsigned certificate and private key file (RSA key, PEM format). <em>CN</em> is the common name and should be the host e.g. localhost. Optional parameter <em>lifetime</em> is the seconds from now the certificate is valid (default 10 years). Optional <em>sigType</em> can be a signature type from OpenSSL: md5, sha1, mdc2, sha224, sha256, sha384, sah512. <em>bits</em> set the RSA key bits (default 2048).  On success true is returned and the <em>certFilename</em> and <em>keyFilename</em> are created.</td>
+</tr>
+<tr>
+<td><strong>SSL_FLAG</strong>    (string <em>name</em>)</td>
+<td>number</td>
+<td>Return a OpenSSL constant by <em>name</em> used in SSL_CTX_set_options(), SSL_CTX_get_options(), SSL_CTX_clear_options(). See <a href="https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_clear_options.html" target="_blank">OpenSSL documentation</a>.</td>
+</tr>
+<tr>
+<td><strong>SSL_gets</strong>    (handle <em>ssl</em>)</td>
+<td>string</td>
+<td>Read a line until line break from <em>ssl</em> connection. On success the string is returned otherwise false is returned.</td>
+</tr>
+<tr>
+<td><strong>SSL_readln</strong>    (handle <em>ssl</em>, string &amp;<em>line</em>)</td>
+<td>bool</td>
+<td>Same as SSL_gets. Read a <em>line</em> from <em>ssl</em> connection. On success true is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

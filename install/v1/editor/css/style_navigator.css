@@ -1,0 +1,88 @@
+body {
+	margin:0px;
+	padding:0;
+	font-family:Arial,sans-serif;
+	background-color:#FFFFFF;
+	font-size:11.5pt;
+}
+
+.toolbar {
+	height:30px;
+	text-align:right;
+	background-color:#868686;
+	color:#FFFFFF;
+	white-space:nowrap;
+}
+
+.toolbar button {
+	height:30px;
+	display:inline-block;
+	vertical-align:middle;
+	font-size:12pt;
+	padding:0px 5px 0px 5px;
+	line-height:1.0;
+}
+
+.toolbar span {
+	padding-right:20px;
+}
+
+.file_list {
+	overflow-y:auto;
+}
+
+.file_list a {
+	display:block;
+	text-decoration:none;
+	color:#000000;
+	min-height:16px;
+	line-height:16px;
+    padding-left:18px;
+	padding-right:10px;
+	white-space:pre;
+}
+
+.file_list a.dir {
+	background:url(../images/tree/folder.gif) no-repeat;
+}
+
+.file_list a.textfile {
+	background:url(../images/tree/textfile.png) no-repeat 0px 0px;
+}
+
+.file_list a.cpp {
+	background:url(../images/tree/cpp.png) no-repeat 0px 0px;
+}
+
+.file_list a.h {
+	background:url(../images/tree/h.png) no-repeat 0px 0px;
+}
+
+.file_list a.perl {
+	background:url(../images/tree/perl.png) no-repeat;
+}
+
+.file_list a.ruby {
+	background:url(../images/tree/ruby.png) no-repeat;
+}
+
+.file_list a.python {
+	background:url(../images/tree/python.png) no-repeat;
+}
+
+.file_list a.php {
+	background:url(../images/tree/php.png) no-repeat 0px 0px;
+}
+
+.file_list a.img {
+	background:url(../images/tree/img.png) no-repeat 0px 0px;
+}
+
+.file_list a.v1 {
+	background:url(../images/tree/v1.ico) no-repeat 0px 0px;
+}
+
+.file_list a:hover, .file_list a.marked {
+	color:#FFFFFF;
+	background-color:blue;
+}

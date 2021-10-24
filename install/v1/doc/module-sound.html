@@ -1,0 +1,63 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Module:  sound</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Module: sound</h1>
+<p>Support sound functions (only available on Windows). The module must be loaded with dl('sound');</p>
+<p>See also example <a href="example-sound.html">Play Sound</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>play_sound</strong>    (string <em>name</em> [, <em>flags</em>=SND_FILENAME])</td>
+<td>bool</td>
+<td>Play sound with the WIN32 function PlaySound(). If <em>flags</em> are not specified the <em>name</em> points to a filename (WAV). <em>flags</em> can combine the following values: SND_ASYNC, SND_ALIAS, SND_ALIAS_ID, SND_LOOP, SND_SYNC, SND_FILENAME. To stop a asynchronous playing call play_sound (null, 0); On success true is returned. See also  WIN32 function <a href="https://docs.microsoft.com/en-us/previous-versions/dd743680(v%3Dvs.85)" target="_blank">PlaySound ()</a> for detailed description.</td>
+</tr>
+<tr>
+<td><strong>midi_create</strong>    (number <em>devideId</em>)</td>
+<td>handle</td>
+<td>Create MIDI device handle for specific <em>deviceId</em>. The default device is 0. On success the handle is returned, on error null is returned. Note: Win7+ has no default MIDI device! Please install MIDI device manually.</td>
+</tr>
+<tr>
+<td><strong>midi_play</strong>    (handle <em>handle</em>, number <em>frequency</em>, number <em>duration</em>, number <em>volume</em>, number <em>voice</em>)</td>
+<td>bool</td>
+<td>Play sound on created MIDI <em>handle</em> with <em>frequency</em>, <em>duration</em> in milliseconds, <em>volume</em> from 0 to 127 and MIDI <em>voice</em> from 0 to 255. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>midi_wait</strong>    (handle <em>handle</em>)</td>
+<td>bool</td>
+<td>Wait until played sound on MIDI <em>handle</em> is finished. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>midi_close</strong>    (handle <em>handle</em>)</td>
+<td>bool</td>
+<td>Close MIDI <em>handle</em>. On success true is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

@@ -1,0 +1,51 @@
+<?v1
+require_once ("glib.inc.v1");
+
+// Replace with correct path of GDK library (libgdk-win32.dll or libgdk.so)
+if (version(1)=='Windows')
+{
+	require_once ("win32.inc.v1");
+	gdkLibName = 'libgdk-win32-2.0-0.dll';
+}
+else
+{
+	gdkLibName = 'libgdk-3.so.0';
+}
+
+hDLLGDK = dl (gdkLibName, true);
+if (!hDLLGDK)
+{
+	// Search for GDK library
+	libList = explode ("\n", system ('/usr/bin/find /usr -name "libgdk-3*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLGDK = dl (mySQLLibName = libList[0], true);
+		if (hDLLGDK) {
+			print ('Please replace for faster starting: gdkLibName="'.libList[0].'"; in '.__FILE__);
+		}
+	}
+}
+
+if (!hDLLGDK)
+{
+	msg = "GDK library not found.\r\nSet gdkLibName in ".__FILE__." to libgdk-win32.dll or libgdk.so";
+	if (version(1)=='Windows') {
+		MessageBox (msg);
+	}
+	else {
+		print (msg);
+	}
+	exit (1);
+}
+
+
+// GDK functions
+// Note: Not all GDK functions are implemented here
+// You have to call your own GDK functions with call (hDLLGDK, "gdk_xxx", ...)
+
+function gdk_cairo_create (window)
+{
+	global hDLLGDK;
+	call (hDLLGDK, "gdk_cairo_create", [['p'],'p'], window);
+}
+
+?>

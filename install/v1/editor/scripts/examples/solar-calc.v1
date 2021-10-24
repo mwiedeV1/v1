@@ -1,0 +1,89 @@
+<?v1 require_once ("helpers/start.v1");?>
+<h3>Calculate the current rising of Sun and Moon on a specific location.</h3>
+<?v1
+require_once ("../../../lib/astronomy.inc.v1");
+
+sysInfo = version (4);
+if (!empty (sysInfo["geoData"]["longitude"]))
+{
+	// System longitude and latitude only on Windows
+	const MY_LONGITUDE = sysInfo["geoData"]["longitude"];
+	const MY_LATITUDE  = sysInfo["geoData"]["latitude"];
+}
+else
+{
+	const MY_LONGITUDE = 10.9518465;
+	const MY_LATITUDE  = 48.9174128;
+}
+
+function InitDate(&form)
+{
+	time = time ();
+	form["Hour"]    = date ("%H", time);
+	form["Minute"]  = date ("%i", time);
+	form["Second"]  = date ("%s", time);
+	form["Day"]     = date ("%j", time);
+	form["Month"]   = date ("%m", time);
+	form["Year"]    = date ("%Y", time);
+	form["Zone"]    = date ("%Z", time) / 3600;
+	form["DeltaT"]  = 65; // deltaT - difference among 'earth center' versus 'observered' time (TDT-UT), in seconds
+}
+
+function Init(&form)
+{
+	InitDate(form);
+
+	// Position
+	form["Lon"] = MY_LONGITUDE;
+	form["Lat"] = MY_LATITUDE;
+	form["JD"] = EMPTY_ASTRO_STR;
+	form["GMST"] = EMPTY_ASTRO_STR;
+	form["LMST"] = EMPTY_ASTRO_STR;
+	form["SunLon"] = EMPTY_ASTRO_STR;
+	form["SunRA"] = EMPTY_ASTRO_STR;
+	form["SunDec"] = EMPTY_ASTRO_STR;
+	form["SunAz"] = EMPTY_ASTRO_STR;
+	form["SunAlt"] = EMPTY_ASTRO_STR;
+	form["SunDistance"] = EMPTY_ASTRO_STR;
+	form["SunDistanceObserver"] = EMPTY_ASTRO_STR;
+	form["SunDiameter"] = EMPTY_ASTRO_STR;
+	form["SunSign"] = EMPTY_ASTRO_STR;
+	form["SunTransit"] = EMPTY_ASTRO_STR;
+	form["SunRise"] = EMPTY_ASTRO_STR;
+	form["SunSet"]  = EMPTY_ASTRO_STR;
+	form["SunCivilTwilightMorning"] = EMPTY_ASTRO_STR;
+	form["SunCivilTwilightEvening"]  = EMPTY_ASTRO_STR;
+	form["SunNauticalTwilightMorning"] = EMPTY_ASTRO_STR;
+	form["SunNauticalTwilightEvening"]  = EMPTY_ASTRO_STR;
+	form["SunAstronomicalTwilightMorning"] = EMPTY_ASTRO_STR;
+	form["SunAstronomicalTwilightEvening"]  = EMPTY_ASTRO_STR;
+	form["MoonLon"] = EMPTY_ASTRO_STR;
+	form["MoonLat"] = EMPTY_ASTRO_STR;
+	form["MoonRA"]  = EMPTY_ASTRO_STR;
+	form["MoonDec"] = EMPTY_ASTRO_STR;
+	form["MoonAz"] = EMPTY_ASTRO_STR;
+	form["MoonAlt"] = EMPTY_ASTRO_STR;
+	form["MoonDistance"] = EMPTY_ASTRO_STR;
+	form["MoonDistanceObserver"] = EMPTY_ASTRO_STR;
+	form["MoonDiameter"] = EMPTY_ASTRO_STR;
+	form["MoonPhase"] = EMPTY_ASTRO_STR;
+	form["MoonAge"] = EMPTY_ASTRO_STR;
+	form["MoonSign"] = EMPTY_ASTRO_STR;
+	form["MoonTransit"] = EMPTY_ASTRO_STR;
+	form["MoonRise"] = EMPTY_ASTRO_STR;
+	form["MoonSet"] = EMPTY_ASTRO_STR;
+}
+
+form = array ();
+Init (form);
+ComputeSunMoon (form);
+
+print ("<table class=\"data_tbl\"><tr><td>Name</td><td>Value</td></tr>");
+foreach (form as key => value)
+{
+	print ("<tr><td>", key, "</td><td>", value,"</td></tr>");
+}
+print ("</table>");
+
+?>
+<?v1 require_once ("helpers/end.v1");?>

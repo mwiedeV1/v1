@@ -1,0 +1,75 @@
+<?v1
+/*
+	Read the content of current directory and allow to navigate throught directories.
+	Usage: v1 showdir.v1
+*/
+error_reporting (0);
+
+dir = "";
+do
+{
+	// Change directory
+	chdir (dir);
+	dir = getcwd (); // Current directory
+
+	dh = opendir (dir);
+	if (!dh) {
+		print ("Cannot open directory.");
+	}
+	else {
+
+		fileList = array ();
+		// Get list of files / sub directories
+		while ((dirEntry = readdir (dh))!==false) {
+			array_push (fileList, dirEntry);
+		}
+		closedir (dh);
+
+		// Show info
+		print ("\r\n", dir." ".count(fileList)." entries", "\r\n");
+
+		// Sort the file list (optional)
+		sort (fileList);
+
+		// Show the list
+		for (z=0; z<2; z++) {
+			foreach (fileList as filename) {
+				fi = pathinfo (filename);
+
+				fileTime = filemtime(dir."/".filename);
+				if (is_dir (dir."/".filename)) {
+					// Show sub directories
+					if (z>0)
+						continue;
+					printf ("%10s %12s %s", "", date ("%M %d %H:%i", fileTime), filename);
+				}
+				else {
+					// Show files
+					if (z==0)
+						continue;
+					printf ("%10s %12s %s", filesize (dir."/".filename), date ("%M %d %H:%i", fileTime), filename);
+				}
+			}
+		}
+	}
+	
+	do {
+		dirNew = input ("\r\nChange directory:");
+		if (is_dir (dirNew)) {
+			dir = dirNew;
+			break;
+		}
+		else if (is_dir (dir."/".dirNew)) {
+			dir.=("/".dirNew);
+			break;
+		}
+		else {
+			print ("No directory");
+		}
+	}
+	while (true);
+
+}
+while (true);
+
+?>

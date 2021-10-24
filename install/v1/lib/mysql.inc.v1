@@ -1,0 +1,130 @@
+<?v1
+
+// Replace with correct path of MySQL client library (libmysqlclient.so or libmySQL.dll)
+mySQLLibName =  'libmysqlclient';
+
+hDLLMySQL = dl (mySQLLibName, true);
+if (!hDLLMySQL)
+{
+	// Search for libraries
+	libList = explode ("\n", system ('/usr/bin/find /usr -name "libmysqlclient*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLMySQL = dl (mySQLLibName = libList[0], true);
+	}
+}
+
+if (!hDLLMySQL)
+{
+	print ("MySQL client library not found.\r\nSet mySQLLibName in ".__FILE__." to libmysqlclient.so or libmySQL.dll");
+	exit (1);
+}
+
+// MySQL functions
+// https://github.com/google/mysql/blob/master/include/mysql.h
+
+function mysql_init ()
+{
+	global hDLLMySQL;
+	return call (hDLLMySQL, "mysql_init", [['i'], 'p'],  null);
+}
+
+function mysql_connect (mysql, host, user, password, database, port=3306)
+{
+	global hDLLMySQL;
+	if (call (hDLLMySQL, "mysql_real_connect", [['p','s','s','s','s','i','i','i'], 'i'], mysql, host, user, password, database, port, null, 0))
+		return mysql;
+	return false;
+}
+
+function mysql_close (mysql)
+{
+	global hDLLMySQL;
+	return call (hDLLMySQL, "mysql_close", [['p'], "i"],  mysql);
+}
+
+function mysql_query (mysql, sql)
+{
+	global hDLLMySQL;
+	if (!call (hDLLMySQL, "mysql_query", [['p','s'], 'i'],  mysql, sql)) {
+		result = call (hDLLMySQL, "mysql_store_result", [['p'], 'p'], mysql);
+		fieldCnt = call (hDLLMySQL, "mysql_field_count", [['p'], 'i'], mysql);
+		if (result && fieldCnt) {
+			headers = array ();
+			for( i = 0; i<fieldCnt; i++) {
+				field = call (hDLLMySQL, "mysql_fetch_field", [['p'], 'p'], result);
+				headers[i] = memat (binparse (memat (field,_ALIGN),7));
+			}
+			return array (result, headers);
+		}
+		else {
+			return true;
+		}
+	}
+	return false;
+}
+
+function mysql_fetch_array (&result, &data)
+{
+	global hDLLMySQL;
+	if (is_array (result) && (row = call (hDLLMySQL, "mysql_fetch_row",  [['p'], 'i'], result[0]))) {
+
+		data = array ();
+		for (i=0; i<count (result[1]); i++) {
+			pnt = binparse(memat(row,_ALIGN),7);
+			if (pnt) {
+				data[result[1][i]]=memat (pnt);
+			}
+			row+=_ALIGN;
+		};
+		return true;
+	}
+	return false;
+}
+
+function mysql_free_result (result)
+{
+	global hDLLMySQL;
+	if (is_array (result))
+		return call (hDLLMySQL, "mysql_free_result", [['p'], 'i'],  result[0]);
+	return true;
+}
+
+function mysql_escape_string (from)
+{
+	global hDLLMySQL;
+	to = "";
+	resize (to,strlen (from)*2);
+	if (call (hDLLMySQL, "mysql_escape_string", [['r', 's', 'i'], 'i'], to, from, strlen (from)))
+		return to;
+	return false;
+}
+
+function mysql_real_escape_string (mysql, from)
+{
+	global hDLLMySQL;
+	to = "";
+	resize (to,strlen (from)*2);
+	if (call (hDLLMySQL, "mysql_real_escape_string", [['p', 'r', 's', 'i'], 'i'], mysql, to, from, strlen (from)))
+		return to;
+	return false;
+}
+
+function mysql_error (mysql)
+{
+	global hDLLMySQL;
+	return call (hDLLMySQL, "mysql_error", [['p'], 's'], mysql);
+}
+
+function mysql_get_client_info (mysql)
+{
+	global hDLLMySQL;
+	return call (hDLLMySQL, "mysql_get_client_info", [['p'], 's'], mysql);
+}
+
+function mysql_get_server_info (mysql)
+{
+	global hDLLMySQL;
+	return call (hDLLMySQL, "mysql_get_server_info", [['i'], "s"], mysql);
+}
+
+?>

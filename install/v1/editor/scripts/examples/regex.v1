@@ -1,0 +1,54 @@
+<?v1  require_once ("helpers/start.v1"); ?>
+<h3>Regular Expressions</h3>
+<?v1
+dl ("regex"); // Regular expression module
+
+text = getText ("text", "", false);
+
+// Replace  BB tags
+find=array(
+     '/\[left\](.*?)\[\/left\]/is',
+     '/\[right\](.*?)\[\/right\]/is',
+     // '/((?:https?|ftp)://\S+[[:alnum:]]/?)/is',
+     // '/((?<!//)(www\.\S+[[:alnum:]]/?))/is',
+     '/\[b\](.*?)\[\/b\]/is',
+     '/\[i\](.*?)\[\/i\]/is',
+     '/\[u\](.*?)\[\/u\]/is',
+     '/\[url\](.*?)\[\/url\]/is',
+     '/\[url\=(.*?)\](.*?)\[\/url\]/is'
+ );
+
+replace=array(
+    '<div style="float:left;margin-right:10px;display:block;width:190px;">$1</div> ',
+    '<div style="display:block;margin-left:200px;">$1</div> ',
+    // '<a href="$1" target="_blank">$1</a> ',
+    // '<a href="http://$1" target="_blank">$1</a>',
+    '<strong>$1</strong>',
+    '<em>$1</em>',
+    '<u>$1</u>',
+    '<a href="$1" target="_blank">$1</a>',
+    '<a href="$1" target="_blank">$2</a>'
+);
+
+formattedText = preg_replace(find, replace, htmlspecialchars (text));
+
+?>
+
+<form  method="post" action="<?v1 print (getenv ("SCRIPT_NAME"));?>">
+<script src="helpers/js/sbbeditor.js" type="text/javascript"></script>
+<input type="button" name="bold" value="B" onclick="javascript:addtag('contentArea','bold');">
+<input type="button" name="italic" value="I" onclick="javascript:addtag('contentArea','italic');">
+<input type="button" name="uline" value="U" onclick="javascript:addtag('contentArea','underline');">
+<input type="button" name="url" value="URL" onclick="javascript:addtag('contentArea','url');">
+<input type="button" name="img" value="IMG" onclick="javascript:addtag('contentArea','img');">
+
+<div>
+<textarea id="contentArea" style="width:400px;height:200px;" name="text">
+<?v1 print (htmlspecialchars (text));
+?>
+</textarea>
+</div>
+<p><input type="submit" value="Format" /></p>
+</form>
+<?v1 print (nl2br (formattedText)); ?>
+<?v1 require_once ("helpers/end.v1");?>

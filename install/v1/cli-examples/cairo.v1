@@ -1,0 +1,68 @@
+<?v1
+/*
+  Create a SVG and PDF image with Cairo Library
+
+  Note: Cairo Library must be installed on your system.
+
+  On Windows you can install GTK Runtime Environment (32 Bit) which include Cairo
+  with following link: https://sourceforge.net/projects/gtk-win/
+
+  On Linux Cairo is part of GTK or you can install it manually like this:
+  apt-get install libcairo2-dev
+
+  Usage: v1 cairo.v1
+*/
+
+require_once ("../lib/cairo.inc.v1");
+
+function createLogo (surface)
+{
+	cr = cairo_create(surface);
+
+	for (x=0; x<10; x++)
+		for (y=0; y<10; y++)
+			cairo_rectangle(cr, x*10.0, y*10.0, 5, 5);
+
+	pattern = cairo_pattern_create_radial(50, 50, 5, 50, 50, 50);
+	cairo_pattern_add_color_stop_rgb(pattern, 0, 0.75, 0.15, 0.99);
+	cairo_pattern_add_color_stop_rgb(pattern, 0.9, 1, 1, 1);
+
+	cairo_set_source(cr, pattern);
+	cairo_fill(cr);
+
+	cairo_set_font_size (cr, 15);
+	cairo_select_font_face (cr, "Georgia", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+	cairo_set_source_rgb (cr, 0, 0, 0);
+
+	cairo_move_to(cr, 10, 25);
+	cairo_show_text(cr, "Hello");
+
+	cairo_move_to(cr, 10, 75);
+	cairo_show_text(cr, "V1 Script!");
+
+	cairo_destroy (cr);
+	cairo_surface_flush (surface);
+	cairo_surface_destroy (surface);
+}
+
+surface = cairo_svg_surface_create ("Cairo_example.svg", 100.0, 100.0);
+if (!surface) {
+	print ("Cannot create SVG file.");
+	exit (1);
+}
+else {
+	createLogo (surface);
+	print ("SVG file created.");
+}
+
+surface = cairo_pdf_surface_create ("Cairo_exmple.pdf", 595, 842);
+if (!surface) {
+	print ("Cannot create PDF file.");
+	exit (1);
+}
+else {
+	createLogo (surface);
+	print ("PDF file created.");
+}
+
+?>

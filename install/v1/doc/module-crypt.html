@@ -1,0 +1,78 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Module:  crypt</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Module: crypt</h1>
+<p>Support hash algorithms. The module must be loaded with dl('crypt');</p>
+<p>See also example <a href="example-hash-algorithms.html">Hash algorithms</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>crypt</strong>    (string <em>text</em> [, string <em>salt</em>])</td>
+<td>string</td>
+<td>Crypt a given <em>text</em> with integrated hash algorithms and optional salt. Crypted string will be returned. This function is full compatible with PHP <a href="http://php.net/manual/en/function.crypt.php" target="_blank">crypt ()</a>. Integrated algorithms: DES, MD5, Blowfish, SHA256, SHA512</td>
+</tr>
+<tr>
+<td><strong>md5</strong>    (string <em>text</em> [, bool <em>rawOutput</em>=false])</td>
+<td>string</td>
+<td>Create MD5 hash of given <em>text</em>. Crypted string will be returned. If <em>rawOutput</em> is true, then the string is returned as binary data. This function is full compatible with PHP <a href="http://php.net/manual/en/function.md5.php" target="_blank">md5 ()</a>.</td>
+</tr>
+<tr>
+<td><strong>sha1</strong>    (string <em>text</em> [, bool <em>rawOutput</em>=false])</td>
+<td>string</td>
+<td>Create SHA1 hash of given <em>text</em>. Crypted string will be returned. If <em>rawOutput</em> is true, then the string is returned as binary data. This function is full compatible with PHP <a href="http://php.net/manual/en/function.sha1.php" target="_blank">sha1 ()</a>.</td>
+</tr>
+<tr>
+<td><strong>hash_algos</strong>    ()</td>
+<td>array</td>
+<td>Return array of integrated hash algorithms for the hash_xxx () functions. For example array ("md5","sha1","sha256","sha512")</td>
+</tr>
+<tr>
+<td><strong>hash_init</strong>    (string <em>algorithm</em>)</td>
+<td>handle</td>
+<td>Initialize a hash <em>algorithm</em>. See function hash_algos () for available algorithms. On success a handle is returned which can be used in hash functions, on error false is returned.</td>
+</tr>
+<tr>
+<td><strong>hash_update</strong>    (handle <em>handle</em>, string <em>data</em>)</td>
+<td>bool</td>
+<td>Update the hash of <em>data</em> with hash algorithm <em>handle</em>. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>hash_finish</strong>    (handle <em>handle</em> [, bool <em>rawOutput</em>=false])</td>
+<td>string</td>
+<td>Return the calculated hash of hash algorithm <em>handle</em>. If <em>rawOutput</em> is true, then the string is returned as binary data. On error false is returned. The <em>handle</em> will be destroyed and cannot be used again.</td>
+</tr>
+<tr>
+<td><strong>hash_file</strong>    (string <em>algorithm</em>, string <em>file</em> [, bool <em>rawOutput</em>=false])</td>
+<td>string</td>
+<td>Return the calculated hash of a <em>file</em> with a specific hash <em>algorithm</em>. See function hash_algos () for available algorithms.  If <em>rawOutput</em> is true, then the string is returned as binary data. On error false is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

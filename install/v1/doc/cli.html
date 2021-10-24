@@ -1,0 +1,39 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Command line arguments</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Command line arguments</h1>
+<pre><code><span style="color: #000000">v1&nbsp;</span><span style="color: #0000BB;">[</span><span style="color: #000000">options</span><span style="color: #0000BB;">]&nbsp;&lt;</span><span style="color: #000000">filename</span><span style="color: #0000BB;">&gt;<br /><br /></span><span style="color: #000000">Options</span><span style="color: #0000BB;">:<br /><br />-</span><span style="color: #000000">l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Syntax&nbsp;check&nbsp;only&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">lint</span><span style="color: #0000BB;">)<br />-</span><span style="color: #000000">o&nbsp;</span><span style="color: #0000BB;">&lt;</span><span style="color: #000000">file</span><span style="color: #0000BB;">&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color: #000000">Append&nbsp;output&nbsp;to&nbsp;file<br /></span><span style="color: #0000BB;">-</span><span style="color: #000000">r&nbsp;</span><span style="color: #0000BB;">&lt;</span><span style="color: #000000">code</span><span style="color: #0000BB;">&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color: #000000">Run&nbsp;code&nbsp;without&nbsp;</span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1&nbsp;?&gt;</span>&nbsp;tags<br />-v&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Show&nbsp;version<br />-w&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Web&nbsp;mode&nbsp;(CGI)</code></pre>
+<p><strong>Options only available on Windows:</strong></p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">-</span><span style="color: #000000">b&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Run&nbsp;in&nbsp;background&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">hide&nbsp;window</span><span style="color: #0000BB;">)<br />-</span><span style="color: #000000">p&nbsp;</span><span style="color: #0000BB;">&lt;</span><span style="color: #000000">priority</span><span style="color: #0000BB;">&gt;&nbsp;&nbsp;&nbsp;</span><span style="color: #000000">Process&nbsp;priority</span><span style="color: #0000BB;">:&nbsp;-</span><span style="color: #000000">2</span><span style="color: #0000BB;">=</span><span style="color: #000000">IDLE&nbsp;</span><span style="color: #0000BB;">..&nbsp;</span><span style="color: #000000">0</span><span style="color: #0000BB;">=</span><span style="color: #000000">Normal&nbsp;</span><span style="color: #0000BB;">..&nbsp;</span><span style="color: #000000">3</span><span style="color: #0000BB;">=</span><span style="color: #000000">Realtime</span></code></pre>
+<p><strong>Run file on command line:</strong></p>
+<pre><code><span style="color: #000000">v1&nbsp;filename</span><span style="color: #0000BB;">.</span><span style="color: #000000">v1&nbsp;</span><span style="color: #0000BB;">[</span><span style="color: #000000">arguments</span><span style="color: #0000BB;">]</span></code></pre>
+<p>Working with command line arguments in V1:</p>
+<p>V1 has a global Array 'argv' which contain the arguments.</p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1&nbsp;<br /></span><span style="color: #0000BB;">print&nbsp;(</span><span style="color: #000000">count&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">argv</span><span style="color: #0000BB;">).</span><span style="color: #DD0000">'&nbsp;arguments&nbsp;available'</span><span style="color: #0000BB;">);<br /></span><span style="color: #000000">arg1&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">argv</span><span style="color: #0000BB;">[</span><span style="color: #000000">0</span><span style="color: #0000BB;">];&nbsp;</span><span style="color: #008000">//&nbsp;Always&nbsp;the&nbsp;executable&nbsp;of&nbsp;V1&nbsp;e.g.&nbsp;c:\projects\v1\v1.exe<br /></span><span style="color: #000000">arg2&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">argv</span><span style="color: #0000BB;">[</span><span style="color: #000000">1</span><span style="color: #0000BB;">];&nbsp;</span><span style="color: #008000">//&nbsp;Filename&nbsp;of&nbsp;the&nbsp;V1&nbsp;script&nbsp;e.g.&nbsp;filename.v1<br /></span><span style="color: #000000">arg3&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">argv</span><span style="color: #0000BB;">[</span><span style="color: #000000">2</span><span style="color: #0000BB;">];&nbsp;</span><span style="color: #008000">//&nbsp;First&nbsp;user&nbsp;defined&nbsp;argument<br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<p><strong>Rund code on command line with -r option:</strong></p>
+<pre><code><span style="color: #000000">v1&nbsp;</span><span style="color: #0000BB;">-</span><span style="color: #000000">r&nbsp;</span><span style="color: #DD0000">"print('Its&nbsp;now&nbsp;'.date('%D&nbsp;%j&nbsp;%F&nbsp;%Y&nbsp;%H:%i:%s'));"<br /></span><span style="color: #000000">Its&nbsp;now&nbsp;Wed&nbsp;2&nbsp;May&nbsp;2018&nbsp;11</span><span style="color: #0000BB;">:</span><span style="color: #000000">13</span><span style="color: #0000BB;">:</span><span style="color: #000000">54</span></code></pre>
+<p><strong>The Web mode  -w option:</strong></p>
+<p>Use  -w option to start V1 as CGI interpreter on a Webserver.
+Therefore you have to configurate your Webserver to call v1 -w <filename> for every file which should be interpretated with V1.
+See also chapter <a href="web-functions.html">Web mode.</a></p>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

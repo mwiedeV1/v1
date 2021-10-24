@@ -1,0 +1,190 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - System functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>System functions</h1>
+<p>The following system  functions are supported.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>print</strong>    (mixed <em>arg1</em>...)</td>
+<td>1</td>
+<td>Print  one or more arguments  to screen respective the standard output.</td>
+</tr>
+<tr>
+<td><strong>printf</strong>    (string <em>format</em>, mixed <em>arg1</em>...)</td>
+<td>string</td>
+<td>Print  one or more arguments formatted to screen and return as string. Modifiers j, n, p are ignored. Modifiers are compatible with  <a href="http://www.cplusplus.com/reference/cstdio/printf/" target="_blank">C++ printf</a></td>
+</tr>
+<tr>
+<td><strong>sprintf</strong>    (string <em>format</em>, mixed <em>arg1</em>...)</td>
+<td>string</td>
+<td>Format one or more arguments and return as string. Modifiers j, n, p are ignored. Modifiers are compatible with  <a href="http://www.cplusplus.com/reference/cstdio/printf/" target="_blank">C++ printf</a></td>
+</tr>
+<tr>
+<td><strong>print_r</strong>   (mixed arg, bool asString=false)</td>
+<td>string / bool</td>
+<td>Print the content of a variable to screen. The difference to print () is that  also Arrays are displayed in a user friendly format. If <em>asString</em> = true then the content is returned as string and not printed to screen. Otherwise true is returned.</td>
+</tr>
+<tr>
+<td><strong>sscanf</strong>    (string <em>string</em>, string <em>format</em> [, mixed&amp; <em>arg1</em> ...])</td>
+<td>mixed</td>
+<td>Parses input from a <em>string</em> according to a <em>format</em>. Modifiers j, n, p, * are ignored. Function is compatible with <a href="http://php.net/manual/en/function.sscanf.php" target="_blank">PHP sscanf</a></td>
+</tr>
+<tr>
+<td><strong>console_echo</strong>    (bool <em>echo</em>)</td>
+<td>true</td>
+<td>Enable or disable the <em>echo</em> of  keyboard within input() function. Usefull for passwords.</td>
+</tr>
+<tr>
+<td><strong>autonl</strong>    (bool <em>on</em>)</td>
+<td>true</td>
+<td>Enable or disable new line \r\n after print() function. If <em>on</em> is true a new line will be printed automatically. In Web mode new line is disabled per default.</td>
+</tr>
+<tr>
+<td><strong>input </strong>   ([string <em>infotext</em>, string <em>default</em>])</td>
+<td>string</td>
+<td>Receive a string from keyboard respective standard input until ENTER (Ascii 13='\n') was received. Optional <em>infotext</em> can be printed to screen and <em>default</em> value can be returned. Note! The maximum length of returned string is 255 bytes.</td>
+</tr>
+<tr>
+<td><strong>getch</strong>    (bool <em>asciiNum</em>=false)</td>
+<td>string / number</td>
+<td>Receive a character from keyboard respective standard input. If <em>asciiNum</em> = true the corresponding Ascii  number is returned.</td>
+</tr>
+<tr>
+<td><strong>exit</strong>    (number <em>exitCode</em>=0)</td>
+<td>true</td>
+<td>Exit the program immediately with <em>exitCode</em>.</td>
+</tr>
+<tr>
+<td><strong>include</strong>    (string <em>filename</em>)</td>
+<td>bool</td>
+<td>Include a file and interprete it. If the <em>filename</em> does not exists, the program will be aborted with error. Compatible with PHP include() function.</td>
+</tr>
+<tr>
+<td><strong>require_once</strong>    (string <em>filename</em>)</td>
+<td>bool</td>
+<td>Include a file if it was not included before and interprete it. If the <em>filename</em> does not exists, the program will be  aborted with error. Compatible with PHP require_once () function.</td>
+</tr>
+<tr>
+<td><strong>eval</strong>    (string <em>code</em>)</td>
+<td>mixed</td>
+<td>Evaluate V1 <em>code</em> without &lt;?v1 ?&gt; tags and return the content of last operation. For example eval('10*2;') will return 20.</td>
+</tr>
+<tr>
+<td><strong>call_user_func</strong>    (string <em>name</em> [, mixed <em>arg1</em>...])</td>
+<td>mixed</td>
+<td>Call a user defined function by its <em>name</em>. Arguments and return value depend on the user defined implementation. If the function is not declared, the program will be aborted with error.</td>
+</tr>
+<tr>
+<td><strong>function_exists</strong>    (string <em>function</em>)</td>
+<td>bool</td>
+<td>Return true if <em>function</em> exists. User functions and buildin functions will be checked.</td>
+</tr>
+<tr>
+<td><strong>exec</strong>    (string <em>filename</em> [, string&amp;   <em>result</em>, number&amp;  <em>exitCode</em>, mixed <em>stdInput</em>, number <em>stdInputLen</em>])</td>
+<td>bool</td>
+<td>Execute a program <em>filename</em> . If parameters <em>result</em> and <em>exitCode</em> are given as references to  variables, then the output of the program and the exit code will be stored in these variables. If <em>stdInput</em>  is given, then the standard input of the program will be the content of this parameter. <em>stdInput</em> can be also a File or Socket handle.  Optional parameter <em>stdInputLen</em> set the length of input in bytes. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>system</strong>    (string <em>filename</em>)</td>
+<td>string</td>
+<td>Execute a program <em>filename</em> and return the output of the program. On error false is returned.</td>
+</tr>
+<tr>
+<td><strong>dl</strong>    (string <em>filename</em> [,bool <em>fNative</em>=false])</td>
+<td>number</td>
+<td>Load a module <em>filename</em>. File extension .dll on Windows and .so on Linux is not necessary. If <em>fNative</em> is true then a module number is returned which can be used in dlsym () or call() function. To load special V1 modules <em>fNative</em> must be false and no module number is returned. On error false is returned.</td>
+</tr>
+<tr>
+<td><strong>dlsym</strong>    (number <em>module</em>, string <em>symbol</em>)</td>
+<td>number</td>
+<td>Get pointer address of <em>symbol</em> in <em>module</em> loaded with dl() function. On success pointer address is returned. If symbol is not found false is returned. See also <a href="native-function-call.html">Native function calling</a>.</td>
+</tr>
+<tr>
+<td><strong>call</strong>    (number <em>module</em>, mixed <em>function</em>, array <em>paramDef</em> [, mixed <em>arg1</em> ... ])</td>
+<td>mixed</td>
+<td>Call a native <em>function</em> of a <em>module</em> loaded with dl() function. The <em>function</em> can also be a memory pointer (number) returned from dlsym(). The array <em>paramDef</em> defines the parameters and return code of native funtion:<br> [[ 'type of param1' ... 'type of param N' ], 'type of return' ] For detailed description read manual <a href="native-function-call.html">Native function calling</a>.</td>
+</tr>
+<tr>
+<td><strong>getenv</strong>    (string <em>var</em>)</td>
+<td>string</td>
+<td>Return the environment variable <em>var</em>. If variable does not exists false is returned.</td>
+</tr>
+<tr>
+<td><strong>putenv</strong>    (string <em>var</em>, string <em>value</em>)</td>
+<td>bool</td>
+<td>Set  the <em>value</em> of environment variable <em>var</em>. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>error_reporting</strong>    (number <em>id</em>)</td>
+<td>true</td>
+<td>Set the reporting of errors and warnings. <em>id</em> can have following values: 0 = no errors and warnings are shown, 1 = errors and warnings are shown.</td>
+</tr>
+<tr>
+<td><strong>version</strong> (<em>type</em>=0)</td>
+<td>mixed</td>
+<td>Return the version of V1 interpreter or operating system. If <em>type</em> is 0 then V1 version number will be returned as float value, for example 0.95. <em>type</em> can have the following further values: 1 = OS type will be returned as string, for example Windows or Linux. 2 = OS version will be retuned as float value, on Windows  Major.Minor, on Linux the kernel release. 3 = Return 1 if operating system is 64 Bit. 4 = Return detailed array with system information depending on OS type. Use print_r() function to get details.</td>
+</tr>
+</tbody>
+</table>
+<h1>Special system functions only available on Windows</h1>
+<p>See also example <a href="example-registry.html">Working with the Windows registry</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>getreg</strong>    (string <em>regKey</em> [, string <em>valueKey</em>])</td>
+<td>string / array</td>
+<td>Lookup a Windows registry key named with <em>regKey</em>. If <em>valueKey</em> is given then the value of the specified value key is returned, otherwise all  sub keys and all values are returned as array. Use print_r () to dump the array. Registry keys only work with backslashes, for example:  HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run - If key was not found false is returned.</td>
+</tr>
+<tr>
+<td><strong>putreg</strong>    (string <em>regKey</em>, string <em>valueKeySubKey</em> [, mixed <em>value</em>, number <em>datatype</em>=0])</td>
+<td>bool</td>
+<td>Create a new Windows registry entry into the tree of <em>regKey</em>. If <em>value</em>  is given then the second parameter is a value key, otherweise a sub key will be created. For values also a <em>datatype</em> can be given (0=String, 1=32 Bit Word, 2=64 Bit QuadWord, 3=Binary). On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>delreg</strong>    (string <em>regKey</em>, string <em>valueKeySubKey</em>, number <em>mode</em>=0)</td>
+<td>bool</td>
+<td>Delete a Windows registry entry from the tree of <em>regKey</em>.  Parameter <em>mode</em> can have following values: 0 = Delete value key. 1 = Delete all values of sub key and sub key itself if it has no other sub keys. 2 = Delete complete sub key tree recursive. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>shellexec</strong>    (string <em>filename</em>, string <em>operation</em>='open', bool <em>isHidden</em> = false)</td>
+<td>bool</td>
+<td>Execute a Windows shell programm. <em>filename</em> can be a executable or editable file, shortcut or URL. Optional parameter <em>operation</em> can have following values: open, edit, explore, print. If <em>isHidden</em> = true no window will be show. On success true is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

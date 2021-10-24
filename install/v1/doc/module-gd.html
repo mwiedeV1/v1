@@ -1,0 +1,192 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Module:  gd</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Module: gd</h1>
+<p>Module for image processing, compatible with <a href="https://www.php.net/manual/en/book.image.php" target="_blank">PHP GD</a> based on <a href="https://libgd.github.io/" target="_blank">LibGD</a> The module must be loaded with dl('gd');</p>
+<p>See also example <a href="example-gd.html">Graphics functions</a>.</p>
+<p>The following functions are almost compatible with PHP. For further information read documentation of <a href="https://www.php.net/manual/en/book.image.php" target="_blank">PHP GD</a>.</p>
+<ul>
+<li>gd_info</li>
+<li>imagetypes</li>
+</ul>
+<p><strong>Open / Output</strong></p>
+<ul>
+<li>imagecreate</li>
+<li>imagecreatetruecolor</li>
+<li>imagedestroy</li>
+<li>imagejpeg</li>
+<li>imagegif</li>
+<li>imagepng</li>
+<li>imagewbmp</li>
+<li>imagewebp</li>
+<li>imagebmp</li>
+</ul>
+<p>Special helper functions, not part of PHP GD.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>imagecreatefromfile</strong> (string <em>filename</em>)</td>
+<td>handle</td>
+<td>Create image from <em>filename</em>. On success a image handle is returned.</td>
+</tr>
+<tr>
+<td><strong>imagefile</strong> (handle <em>image</em>, string <em>filename</em>)</td>
+<td>bool</td>
+<td>Save <em>image</em> to  <em>filename</em>. On success true is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><strong> Drawing </strong></p>
+<ul>
+<li>imagesetpixel</li>
+<li>imagefill</li>
+<li>imagefilltoborder</li>
+<li>imageline</li>
+<li>imagedashedline</li>
+<li>imagerectangle</li>
+<li>imagefilledrectangle</li>
+<li>imagearc</li>
+<li>imagefilledarc</li>
+<li>imageellipse</li>
+<li>imagefilledellipse</li>
+<li>imagepolygon</li>
+<li>imageopenpolygon</li>
+<li>imagefilledpolygon</li>
+</ul>
+<p><strong> Text/Font </strong></p>
+<ul>
+<li>imagestring</li>
+<li>imagestringup</li>
+<li>imagettftext</li>
+<li>imagefontheight</li>
+<li>imagefontwidth</li>
+</ul>
+<p><strong> Properties </strong></p>
+<ul>
+<li>imageistruecolor</li>
+<li>imagegettruecolorpixel</li>
+<li>imagesetthickness</li>
+<li>imagesetbrush</li>
+<li>imagesettile</li>
+<li>imagesetstyle</li>
+<li>imagesetantialiased</li>
+<li>imagesetantialiaseddontblend</li>
+<li>imageinterlace</li>
+<li>imageresolution</li>
+<li>imagealphablending</li>
+<li>imagesavealpha</li>
+<li>imagesetinterpolation</li>
+</ul>
+<p>Special helper functions, not part of PHP GD.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>imagesx</strong> (handle <em>image</em>)</td>
+<td>number</td>
+<td>Return <em>image</em> width in pixel.</td>
+</tr>
+<tr>
+<td><strong>imagesy</strong> (handle <em>image</em>)</td>
+<td>number</td>
+<td>Return <em>image</em> height in pixel.</td>
+</tr>
+<tr>
+<td><strong>imagegetpixel</strong> (handle <em>image</em>, number <em>x</em>, number <em>y</em>)</td>
+<td>number</td>
+<td>Get color of pixel <em>x</em>/<em>y</em>. Same as colorat function.</td>
+</tr>
+</tbody>
+</table>
+<p><strong> Colors, Palettes </strong></p>
+<ul>
+<li>imagecolorstotal</li>
+<li>imagecolorat</li>
+<li>imagecolorsforindex</li>
+<li>imagecolortransparent</li>
+<li>imagecolorallocate</li>
+<li>imagecolorallocatealpha</li>
+<li>imagecolordeallocate</li>
+<li>imagecolorclosest</li>
+<li>imagecolorclosestalpha</li>
+<li>imagecolorclosesthwb</li>
+<li>imagecolorexact</li>
+<li>imagecolorexactalpha</li>
+<li>imagecolorresolve</li>
+<li>imagecolorresolvealpha </li>
+<li>imagecolormatch</li>
+<li>imagecolorset     </li>
+<li>imagepalettetotruecolor</li>
+<li>imagetruecolortopalette</li>
+<li>imagepalettecopy</li>
+</ul>
+<p><strong> Copy, Size </strong></p>
+<ul>
+<li>imagecopy</li>
+<li>imagecopymerge</li>
+<li>imagecopymergegray</li>
+<li>imagecopyresized</li>
+<li>imagecopyrotated</li>
+<li>imagecopyresampled</li>
+<li>imagecrop</li>
+<li>imagecropauto</li>
+<li>imagescale</li>
+</ul>
+<p><strong> Operations, Filters </strong></p>
+<ul>
+<li>imageflip</li>
+<li>imagerotate</li>
+<li>imagefilter</li>
+<li>imagecompare</li>
+</ul>
+<p><strong>Special functions only available on Windows</strong></p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>makescreenshot</strong> (number <em>hWnd</em>=null, bool <em>clientRect</em>=false)</td>
+<td>handle</td>
+<td>Capture image from screen or specific window handle given by <em>hWnd</em>. If <em>hWnd</em> is null then the entire screen is captured. If <em>clientRect</em> is true, only the inner rectangle of a window is captured. On success the captured image handle is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

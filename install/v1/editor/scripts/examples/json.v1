@@ -1,0 +1,17 @@
+<?v1
+// Example to fetch a JSON Webservice
+require_once ("../../../lib/wget.inc.v1");
+
+url = "https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo";
+res = wget (url, null, false);
+
+if (res["errText"]!="")
+{
+	print (res["errText"]);
+}
+else
+{
+	data = json_decode (res["content"]);
+	print (nl2br (print_r (data, true)));
+}
+?>

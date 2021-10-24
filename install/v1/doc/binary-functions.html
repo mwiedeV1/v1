@@ -1,0 +1,65 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Binary functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Binary functions</h1>
+<p>V1 strings can contain binary data (also zero byte). The length of a string is always detected with strlen() function.</p>
+<p>The following functions can be used to parse and format binary data and access the memory. </p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>binformat</strong> (number <em>number</em>, [number <em>format</em>=7, number <em>nbo</em>=0] )</td>
+<td>string</td>
+<td>Convert a <em>number</em> into a binary <em>format</em> and return the binary string. <em>format</em> can be following: 1 = 8 Bit (char), 2 = 16 Bit (short), 3 = 32 Bit (int), 4 = 64 Bit (long long), 5 = 32 Bit (float), 6 = 64 Bit (double), 7 = integer with default width (defined in constant _ALIGN). If optional parameter <em>nbo</em> is 1, then 32 Bit and 16 Bit will be converted from network byte order to host byte order. If <em>nbo</em> is 2, then 32 Bit and 16 Bit will be converted from host byte order to network byte order. If <em>nbo</em> is 0, then 32 Bit and 16 Bit are formatted in native machine format.</td>
+</tr>
+<tr>
+<td><strong>binparse</strong> (string <em>string</em>, [number <em>format</em>=7, number <em>pos</em>=0, bool <em>signed</em>=0, number <em>nbo</em>=0] )</td>
+<td>number</td>
+<td>Parse a binary <em>string</em> and return the parsed number. <em>format</em> can be following: 1 = 8 Bit (char), 2 = 16 Bit (short), 3 = 32 Bit (int), 4 = 64 Bit (long long), 5 = 32 Bit (float), 6 = 64 Bit (double), 7 = integer with default width (defined in constant _ALIGN). Optional parameter <em>pos</em> set the position where parsing will start. If <em>signed</em> is true, then the number will returned signed, default is unsigned. If <em>nbo</em> is 1, then 32 Bit and 16 Bit will be converted from network byte order to host byte order. If <em>nbo</em> is 2, then 32 Bit and 16 Bit will be converted from host byte order to network byte order. If <em>nbo</em> is 0, then 32 Bit and 16 Bit are parsed in native machine format.</td>
+</tr>
+<tr>
+<td><strong>memat</strong>    (number <em>address</em> [,number <em>length</em>=0])</td>
+<td>string</td>
+<td>Read memory data from <em>address</em>. If no <em>length</em> is given it stops on zero byte (0 terminated string) otherwise the length of bytes is read. Memory data is returned as string. Usually this function will be used to read memory data from pointers returned by native functions. For detailed description read manual <a href="native-function-call.html">Native function calling</a>.</td>
+</tr>
+<tr>
+<td><strong>memref</strong>    (string &amp;<em>string</em>)</td>
+<td>number</td>
+<td>Return a reference pointer to memory of <em>string</em>. Usually this function will be used to make pointers for native functions. For detailed description read manual <a href="native-function-call.html">Native function calling</a>.</td>
+</tr>
+<tr>
+<td><strong>memset</strong>    (number <em>address</em>, string <em>data</em>, [,number <em>offset</em>=0])</td>
+<td>number</td>
+<td>Set memory <em>data</em> at <em>address</em>. Optional <em>offset</em> is added to address. Size of <em>data</em> is returned. Usually this function will be used to write data on pointers returned by native functions. For detailed description read manual <a href="native-function-call.html">Native function calling</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>Note that 64 Bit integer numbers cannot be loaded completely into internal floating point representation. See also <a href="datatypes.html">datatypes</a>.<br>
+To work with binary strings see also <a href="native-function-call.html">Native function calling</a>. </p>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

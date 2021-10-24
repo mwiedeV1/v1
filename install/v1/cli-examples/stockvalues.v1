@@ -1,0 +1,50 @@
+<?v1
+// Receive a HTML website and parse for values with regular expressions
+require_once ("../lib/wget.inc.v1");
+
+const WEBSITE_URL = "https://www.onvista.de";
+
+patterns = [
+	"Dow Jones" => '<span class="top-assets__price" data-push="15305651:last:1:1:Index"> (.*?) <\/span>',
+	"NASDAQ 100" => '<span data-push="13320014:last:1:0:Index">(.*?)<\/span>',
+	// "German DAX" => '<span class="top-assets__price" data-push="14207349:last:1:1:Index"> (.*?) <\/span>',
+	"German DAX" => '<span data-push="20735:last:2:0:Index">(.*?)<\/span>',
+	"DAX-Performance" => '<span class=".*" data-push="20735:performanceRelative:2:0:Index">(.*?)<\/span>',
+	"Oil (WTI)" => '<span class="top-assets__price" data-push="31117979:last:1:1:Commodity"> (.*?) <\/span>',
+	"USDEUR" => '<span data-push="1390634:last:2:0:Currency">(.*?)<\/span>',
+	"Gold" => '<span class="top-assets__price" data-push="31117890:last:1:1:Commodity">(.*?)<\/span>'
+];
+
+function getStockValues (url, &patterns)
+{
+	// Use WGet library to receive HTML website
+	website = wget (url, null, false);
+	if (website["errText"]!="") {
+		return "Error: ".website["errText"];
+	}
+	else {
+		// List of PCRE patterns
+		stockList = array ();
+		foreach (patterns as name => pattern) {
+			matches = array ();
+			// Check the pattern
+			ret  = preg_match_all (pattern, website["content"], matches);
+			if (ret) {
+				// Value found, remove . and replace , with .
+				stockList[name]=str_replace (array (".", ","), array ("", "."), matches[1][0]);
+			}
+			else {
+				stockList[name]="<not found, check pattern>";
+			}
+		}
+		return stockList;
+	}
+	return -1;
+}
+
+// Show values
+do {
+	print_r (getStockValues (WEBSITE_URL, patterns));
+	print ("Do you want repeat? (y/n)");
+} while (getch ()=='y');
+?>

@@ -1,0 +1,130 @@
+<?v1
+/* 
+Editor of V1 Editor 
+*/
+require_once ("main.inc.v1");
+
+docPath = getenv("DOCUMENT_ROOT");
+chdir (docPath."/".dirname(getenv("SCRIPT_NAME")));
+
+fi = pathinfo (filename);
+
+scriptType = "";
+if (isset (fi["extension"])) {
+	fi["extension"] = strtolower (fi["extension"]);
+	if (isset (CONFIG_GLOBAL["editor_types"][fi["extension"]])) {
+		scriptType = CONFIG_GLOBAL["editor_types"][fi["extension"]];
+	}
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>WScript Editor</title>
+<meta name="robots" content="noindex,nofollow" />
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/utils.js"></script>
+<style type="text/css" media="screen">
+body {
+	margin:0px;
+	padding:0;
+	font-family:Arial,sans-serif;
+	background-color:#FFFFFF;
+}
+#editor { 
+	position:absolute;
+	left:0px;
+	width:100%;
+	height:95%;
+	font-size:15px;
+}
+
+.toolbar {
+	height:30px;
+	text-align:right;
+	background-color:#868686;
+	color:#FFFFFF;
+}
+
+.toolbar button {
+	height:30px;
+	display:inline-block;
+	vertical-align:middle;
+	font-size:12pt;
+	padding:0px 5px 0px 5px;
+	line-height:1.0;
+}
+
+.toolbar span {
+	padding-right:20px;
+	vertical-align:top;
+	line-height:30px;
+
+}
+
+.script_output {
+	width:100%;
+	height:100%;
+	margin:0px;
+	padding:0px;
+}
+</style>
+</head>
+<body>
+
+<html>
+<?v1
+if (is_file (filename) && !empty (scriptType)) {
+?>
+<div class="toolbar"><span><?v1 print (htmlspecialchars (filename)); ?></span><button onclick="saveEditor('<?v1 print(filename); ?>');return false;">Save +  Run</button></div>
+<div id="editor" style="white-space: pre;"><?v1 
+	
+	fh = fopen (filename,"r");
+	scriptCode = tmp = "";
+	while (!feof (fh)) {	
+		fread (fh, tmp);
+    scriptCode.=tmp;
+	}
+	fclose (fh);	
+	
+	print(str_replace (array ("<", ">"), array ("&lt;", "&gt;"), scriptCode));
+?>
+</div>
+<script src="js/ace-builds-master/src-min/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="js/ace-builds-master/src-min/ext-static_highlight.js"></script>
+<script type="text/javascript">
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/eclipse");
+    editor.getSession().setMode("ace/mode/<?v1 print(scriptType);?>"); // c_cpp
+//    document.getElementById('editor').style.fontSize='15px';
+		editor.commands.addCommand({
+		    name: 'saveDocument',
+		    bindKey: {win: 'Ctrl-S'/*,  mac: 'Command-M' */},
+		    exec: function(editor) {
+		    	saveEditor('<?v1 print(filename); ?>');
+		    },
+		    readOnly: false // false if this command should not apply in readOnly mode
+		});    
+    
+//    editor.setOption("maxLines", 110);
+</script>
+<?v1
+}
+else {
+	if (!is_dir (filename) && empty (scriptType)) {
+?>
+<div class="toolbar"><span>File type is not supported for editor: <?v1 print(htmlspecialchars (filename)); ?></span></div>
+<?v1
+	}
+	else {
+?>  
+	<div class="toolbar"><span>Please select file on left side</span></div>
+<?v1
+	}
+}
+?>
+
+</body>
+</html>
+

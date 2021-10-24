@@ -1,0 +1,51 @@
+<?v1 require_once ("helpers/start.v1");?>
+<h3>Calculate Angular Diameter</h3>
+<p>g = real size, r = distance, α = angular diameter or apparent size, parallax</p>
+<?v1
+
+// Calculation from
+// https://rechneronline.de/sehwinkel/angular-diameter.php
+g = getDouble ("g");
+r = getDouble ("r");
+a = getDouble ("a");
+
+aRad = deg2rad(a);
+
+if (g==0 && r!=0 && a!=0)
+{
+	g = 2*r*tan(aRad/2);
+	g = round (g,2);
+}
+else if (r==0 && g!=0 && a!=0)
+{
+	r = g/(2*tan(aRad/2));
+	r = round (r,2);
+}
+else if (a==0 && g!=0 && r!=0)
+{
+	aRad = 2*atan(g/(2*r));
+	a = round (rad2deg (aRad),2);
+}
+
+if ( !(g && r && a))
+{
+	showError ("Please insert at least two values.");
+}
+?>
+<form method="get" action="<?v1 print (getenv ("SCRIPT_NAME"));?>">
+    <table>
+        <tr>
+        <td>g =</td>
+        <td><input type="text" name="g" value="<?v1 g!=0 ? print (g) : ""; ?>" /></td>
+        </tr>
+    <tr>
+        <td>r =</td>
+        <td><input type="text" name="r" value="<?v1 r!=0 ? print (r) : ""; ?>" /></td>
+        </tr>
+    <tr>
+        <td>α =</td>
+        <td><input type="text" name="a" value="<?v1 a!=0 ? print (a) : ""; ?>" /></td>
+        </tr>
+    </table>
+<p><input type="submit" value="Calc" /></p>
+<?v1 require_once ("helpers/end.v1");?>

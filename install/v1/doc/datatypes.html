@@ -1,0 +1,62 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Datatypes</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Datatypes in V1</h1>
+<p>V1 support following datatypes: Numbers, Strings, Boolean, Handles, Arrays</p>
+<h1>Number</h1>
+<p>Numbers are internally stored as <strong>floating point double</strong> values.   That means also integer numbers are internally double values.
+Its important to know that, because of a big 64 Bit integer cannot be stored completely into a double value.</p>
+<p>Types of number formats:</p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1<br />a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">10</span><span style="color: #0000BB;">;&nbsp;</span><span style="color: #008000">//&nbsp;Integer&nbsp;number<br /></span><span style="color: #000000">a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">10.12</span><span style="color: #0000BB;">;&nbsp;</span><span style="color: #008000">//&nbsp;Floating&nbsp;point&nbsp;number<br /></span><span style="color: #000000">a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">10e-9</span><span style="color: #0000BB;">;&nbsp;</span><span style="color: #008000">//&nbsp;Exponent&nbsp;number<br /></span><span style="color: #000000">a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">0x8000</span><span style="color: #0000BB;">;&nbsp;</span><span style="color: #008000">//&nbsp;Hexadecimal&nbsp;number<br /></span><span style="color: #000000">a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">0b0001</span><span style="color: #0000BB;">;&nbsp;</span><span style="color: #008000">//&nbsp;Binary&nbsp;number<br /></span><span style="color: #000000">a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">0666</span><span style="color: #0000BB;">;&nbsp;</span><span style="color: #008000">//&nbsp;Octal&nbsp;number<br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<p>Big numbers:</p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1<br />a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">0xFFFFFFFFFFFFFFFF</span><span style="color: #0000BB;">;&nbsp;</span><span style="color: #008000">//&nbsp;Assign&nbsp;a&nbsp;64&nbsp;Bit&nbsp;hexadecimal&nbsp;number<br /></span><span style="color: #0000BB;">print&nbsp;(</span><span style="color: #000000">a</span><span style="color: #0000BB;">);&nbsp;<br /></span><span style="color: #008000">/*&nbsp;<br />The&nbsp;real&nbsp;value&nbsp;is&nbsp;18446744073709551615.<br />But&nbsp;the&nbsp;internal&nbsp;floating&nbsp;point&nbsp;representation&nbsp;is&nbsp;1.844674407371e+019&nbsp;<br />It&nbsp;differs&nbsp;from&nbsp;the&nbsp;13th&nbsp;position.&nbsp;<br />*/<br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<h1>String</h1>
+<p>Strings are internally representated as a buffer of bytes. A string can contain every character from 0 to 255, but usually <strong>UTF8</strong> formatted text. V1 functions work with UTF8 charset. You can use the utf8_encode() and utf8_decode() functions to reformat from or to Latin2 charset. A String can be longer than the ending zero byte. The length of a string in bytes can be determined with strlen() function.</p>
+<p>String formats:</p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1<br /><br />a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #DD0000">'String&nbsp;with&nbsp;single&nbsp;quotes.&nbsp;\'Internal&nbsp;single&nbsp;quotes&nbsp;must&nbsp;be&nbsp;escaped\'&nbsp;"Internal&nbsp;double&nbsp;quotes",&nbsp;<br />All&nbsp;other&nbsp;escaped&nbsp;characters&nbsp;like&nbsp;\r\n&nbsp;have&nbsp;no&nbsp;effect.'</span><span style="color: #0000BB;">;<br /><br /></span><span style="color: #000000">a&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #DD0000">"String&nbsp;with&nbsp;double&nbsp;quotes.&nbsp;'Internal&nbsp;single&nbsp;quotes',&nbsp;\"Internal&nbsp;double&nbsp;quotes&nbsp;must&nbsp;be&nbsp;escaped\",&nbsp;<br />For&nbsp;escaped&nbsp;characters&nbsp;like&nbsp;\\&nbsp;\r\n&nbsp;\t&nbsp;\x32&nbsp;\77&nbsp;see&nbsp;description&nbsp;below."</span><span style="color: #0000BB;">;<br /><br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<p>Escaped characters in double quoted strings:</p>
+<ul>
+<li>\r = Carriage return</li>
+<li>\n = Line feed</li>
+<li>\t = Tabulator</li>
+<li>\\ = Backslash</li>
+<li>\" = Double quote</li>
+<li>\0 = Zero byte</li>
+<li>\xHEX = Hexadecimal representated byte</li>
+<li>\OOO = Octal representated byte (only decimal range 0..255)</li>
+</ul>
+<p><strong>Dynamic conversion between Strings and Numbers:</strong></p>
+<p>V1 detect if a string represents a number.  Numbers can be used also in string functions.</p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1<br />c&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #DD0000">"10.23"</span><span style="color: #0000BB;">+</span><span style="color: #DD0000">"12.23"</span><span style="color: #0000BB;">;<br />print&nbsp;(</span><span style="color: #000000">gettype&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">c</span><span style="color: #0000BB;">));&nbsp;</span><span style="color: #008000">//&nbsp;Will&nbsp;output&nbsp;number<br /></span><span style="color: #000000">c&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">null&nbsp;</span><span style="color: #0000BB;">+&nbsp;</span><span style="color: #000000">10.23</span><span style="color: #0000BB;">;<br />print&nbsp;(</span><span style="color: #000000">gettype&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">c</span><span style="color: #0000BB;">));&nbsp;</span><span style="color: #008000">//&nbsp;Will&nbsp;output&nbsp;number<br /></span><span style="color: #000000">c&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">10.23&nbsp;</span><span style="color: #0000BB;">+&nbsp;</span><span style="color: #DD0000">""</span><span style="color: #0000BB;">;&nbsp;<br />print&nbsp;(</span><span style="color: #000000">gettype&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">c</span><span style="color: #0000BB;">));&nbsp;</span><span style="color: #008000">//&nbsp;Will&nbsp;output&nbsp;number<br /></span><span style="color: #000000">c&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">10e10</span><span style="color: #0000BB;">;<br />print&nbsp;(</span><span style="color: #000000">strlen&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">c</span><span style="color: #0000BB;">));&nbsp;</span><span style="color: #008000">//&nbsp;Will&nbsp;output&nbsp;12<br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<h1>Boolean</h1>
+<p>V1 support Boolean datatype with <strong>true</strong> and <strong>false</strong>, usually used for arguments.</p>
+<h1>Handle</h1>
+<p>Handles are references to internal objects and data structures such as Sockets or Files,  generated from V1 functions.</p>
+<h1>Array</h1>
+<p>V1 support multi dimensional Arrays.
+There are two ways to define an array. </p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1<br /></span><span style="color: #008000">//&nbsp;Array&nbsp;as&nbsp;a&nbsp;list.&nbsp;Every&nbsp;entry&nbsp;has&nbsp;a&nbsp;unique&nbsp;index&nbsp;beginning&nbsp;from&nbsp;0.<br /></span><span style="color: #000000">a&nbsp;</span><span style="color: #0000BB;">=&nbsp;[&nbsp;</span><span style="color: #000000">true</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">1.333</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"String"</span><span style="color: #0000BB;">,&nbsp;[</span><span style="color: #DD0000">"Internal&nbsp;Array"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">172.3</span><span style="color: #0000BB;">]&nbsp;];<br /><br />print&nbsp;(</span><span style="color: #000000">a</span><span style="color: #0000BB;">[</span><span style="color: #000000">1</span><span style="color: #0000BB;">]);&nbsp;</span><span style="color: #008000">//&nbsp;will&nbsp;output&nbsp;1.333<br /></span><span style="color: #000000">print_r&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">a</span><span style="color: #0000BB;">[</span><span style="color: #000000">count</span><span style="color: #0000BB;">(</span><span style="color: #000000">a</span><span style="color: #0000BB;">)-</span><span style="color: #000000">1</span><span style="color: #0000BB;">]);&nbsp;</span><span style="color: #008000">//&nbsp;will&nbsp;dump&nbsp;the&nbsp;internal&nbsp;array&nbsp;("Internal&nbsp;Array",&nbsp;172.3);<br /><br />//&nbsp;Array&nbsp;as&nbsp;a&nbsp;dictionary&nbsp;with&nbsp;key/value&nbsp;pairs<br /></span><span style="color: #000000">a&nbsp;</span><span style="color: #0000BB;">=&nbsp;array&nbsp;(</span><span style="color: #DD0000">"Key1"</span><span style="color: #0000BB;">=&gt;</span><span style="color: #DD0000">"Value1"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"Key2"</span><span style="color: #0000BB;">=&gt;</span><span style="color: #DD0000">"Value2"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"Key3"</span><span style="color: #0000BB;">=&gt;</span><span style="color: #000000">1.333</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"Key4"</span><span style="color: #0000BB;">=&gt;array&nbsp;(</span><span style="color: #DD0000">"Key5"</span><span style="color: #0000BB;">=&gt;</span><span style="color: #DD0000">"Internal&nbsp;Array"</span><span style="color: #0000BB;">));<br /><br />print&nbsp;(</span><span style="color: #000000">a</span><span style="color: #0000BB;">[</span><span style="color: #DD0000">"Key2"</span><span style="color: #0000BB;">]);&nbsp;</span><span style="color: #008000">//&nbsp;will&nbsp;output&nbsp;Value2<br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<h1>null</h1>
+<p><strong>null</strong> is the identifier for an empty and undefined variable.</p>
+<p>See also <a href="datatype-functions.html">Datatype functions</a>.</p>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

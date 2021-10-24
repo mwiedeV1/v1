@@ -1,0 +1,275 @@
+<?v1
+/*
+  Create a shared memory image and attach a GD image to it.
+*/
+dl ('gd');
+error_reporting (0);
+
+const WINDOW_WIDTH  = 540;
+const WINDOW_HEIGHT = 500;
+const WINDOW_TITLE  = 'V1 Script - Shared memory GD image';
+
+// Load GD image
+gdImg = imagecreatefromfile ("v1_logo.png");
+
+// Load libraries
+hDLLC = dl ('libc.so.6', true);
+if (!hDLLC)
+{
+	print ('libc.so was not found on this system.');
+	exit (1);
+}
+
+hDLLX11 = dl ('libX11', true);
+if (!hDLLX11)
+{
+	// Search for X11 library
+	libList = explode ("\n", system ('/usr/bin/find /usr/ -name "libX11*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLX11 = dl (libList[0], true);
+		if (hDLLX11) {
+			print ("Please replace for faster starting: dl ('".libList[0]."', true);");
+		}
+	}
+}
+
+if (!hDLLX11)
+{
+	print ("libX11.so was not found on this system.\r\nTry: sudo apt-get install libx11-dev");
+	exit (1);
+}
+
+hDLLXExt = dl ('libXext', true);
+if (!hDLLXExt)
+{
+	// Search for X11ext library
+	libList = explode ("\n", system ('/usr/bin/find /usr/ -name "libXext*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLXExt = dl (libList[0], true);
+		if (hDLLXExt) {
+			print ("Please replace for faster starting: dl ('".libList[0]."', true);");
+		}
+	}
+}
+
+if (!hDLLXExt)
+{
+	print ("libXext.so was not found on this system.\r\nTry: sudo apt-get install libxext-dev");
+	exit (1);
+}
+
+sharedMemData = array (
+                    "shmid" => 0,
+                    "shminfo" => null,
+                    "image" => null,
+                    "data" => null,
+                    "width" => 0,
+                    "height" => 0,
+                    "bytes_per_line" => 0
+                );
+
+function freeResources ()
+{
+	global sharedMemData, hDLLX11, hDLLXExt, hDLLC, display;
+
+	call (hDLLX11, "XFlush", "p:i", display);
+
+	// Free ressources
+	if (sharedMemData["shminfo"]) {
+		call (hDLLXExt, 'XShmDetach', 'pr:p', display,  sharedMemData["shminfo"]);
+	}
+	if (sharedMemData["memimg"]) {
+		imagedestroy (sharedMemData["memimg"]);
+		sharedMemData["memimg"]=null;
+	}
+
+	if (sharedMemData["image"]) {
+		call (hDLLXExt, 'XDestroyImage', "p:i", sharedMemData["image"]);
+		sharedMemData["image"]=null;
+	}
+
+	if (sharedMemData["data"]) {
+		call (hDLLC, "shmdt", "p:i", sharedMemData["data"]);
+		sharedMemData["data"]=null;
+	}
+	if (sharedMemData["shmid"]) {
+		call (hDLLC, "shmctl", "iii:i", sharedMemData["shmid"], 0, 0);
+		sharedMemData["shmid"]=0;
+	}
+}
+
+function drawWindow ()
+{
+	global hDLLX11, hDLLXExt, hDLLC, screen, display, window,  windowWidth, windowHeight, colors, sharedMemData, gdImg;
+	gc = call (hDLLX11, 'XDefaultGC', 'pp:p', display, screen);
+
+	if (windowWidth!=sharedMemData["width"] || windowHeight!=sharedMemData["height"]) {
+		// Window size has changed, free old memory image
+		freeResources ();
+
+		// Create new memory image
+		resize (sharedMemData["shminfo"], 4*_ALIGN);
+		visual = call (hDLLX11, 'XDefaultVisual', 'pp:p', display,  screen);
+		sharedMemData["image"] = image = call (hDLLXExt, 'XShmCreateImage', 'ppppprpp:p', display,  visual, 24, 2, null, sharedMemData["shminfo"], windowWidth, windowHeight);
+		if (!image) {
+			print ("XShmCreateImage() failed.");
+			return;
+		}
+		sharedMemData["width"]  = binparse (memat (image+4*0,  4),3);
+		sharedMemData["height"] = binparse (memat (image+4*1,  4),3);
+		sharedMemData["bytes_per_line"] = binparse (memat (image+4*11, 4),3);
+		sharedMemData["shmid"] = shmid = call (hDLLC, "shmget", "ppp:i", 0, sharedMemData["bytes_per_line"] * sharedMemData["height"], 0x200|0x1FF);
+		if (shmid==-1) {
+			print ("shmget() failed");
+			return;
+		}
+
+		sharedMemData["data"] = data = call (hDLLC, "shmat", "ppp:p", shmid, 0, 0);
+		memset (memref (sharedMemData["shminfo"]), binformat (shmid), _ALIGN);
+		memset (memref (sharedMemData["shminfo"]), binformat (data),  _ALIGN*2);
+		memset (image, binformat (data),  16);
+		ret = call (hDLLXExt, 'XShmAttach', 'pr:p', display,  sharedMemData["shminfo"]);
+
+		// Attach GD image
+		sharedMemData["memimg"] = imagetruecolorattachbuffer (sharedMemData["data"], sharedMemData["width"], sharedMemData["height"], sharedMemData["width"]);
+
+		// Draw GD image
+		if (gdImg && sharedMemData["memimg"]) {
+			// imagecopy(sharedMemData["memimg"], gdImg, 100, 100, 0, 0,  imagesx (img), imagesy (img));
+			imagecopyresized  (sharedMemData["memimg"], gdImg, 0, 0, 0, 0,  sharedMemData["width"], sharedMemData["height"], imagesx (gdImg), imagesy (gdImg));
+		}
+	}
+
+	data = sharedMemData["data"];
+	bytes_per_line = sharedMemData["bytes_per_line"];
+
+	// Write data direct to image buffer
+	/*
+	y = round (windowHeight/2);
+	for (x=0;x<windowWidth;x++)
+	  memset (data+y*bytes_per_line+x*4, binformat (0xFFF000,3));
+	*/
+
+	// Show the image
+	ret = call (hDLLXExt, 'XShmPutImage', 'ppppiiiippi:p', display, window, gc, sharedMemData["image"], 0, 0, 0, 0, windowWidth, windowHeight, 0);
+
+	// ret = call (hDLLXExt, 'XShmGetImage', 'ppppiii:p', display, window, gc, image, 0, 0, 0);
+	call (hDLLX11, 'XFlush', 'p:i', display);
+}
+
+// Open default display
+display = call (hDLLX11, 'XOpenDisplay', 'p:p', null);
+if (!display)
+{
+	print ('Cannot open default display.');
+}
+
+// Check if server support shared memory extension
+if (!call (hDLLXExt, 'XShmQueryExtension', 'p:b', display))
+{
+	print ("Shared memory extension is not supported by this X Server.");
+	exit (1);
+}
+
+minor = binformat(0);
+major = binformat(0);
+pixmaps = binformat(0);
+call (hDLLXExt, 'XShmQueryVersion', 'prrr:i', display, minor, major, pixmaps);
+version = binparse (major).".".binparse (minor);
+print ("Shm version: ", version);
+
+screen = call (hDLLX11, 'XDefaultScreen', "p:i", display);
+displayWidth = call (hDLLX11, 'XDisplayWidth', 'pi:i', display, screen);
+displayHeight = call (hDLLX11, 'XDisplayHeight', 'pi:i', display, screen);
+rootWindow = call (hDLLX11, 'XDefaultRootWindow', 'pi:p', display, screen);
+blackPixel = call (hDLLX11, 'XBlackPixel', 'pi:p', display, screen);
+whitePixel = call (hDLLX11, 'XWhitePixel', 'pi:p', display, screen);
+
+// Create simple window
+window = call (hDLLX11, 'XCreateSimpleWindow', 'ppiiiiiii:p',
+               display,
+               rootWindow,
+               (displayWidth-WINDOW_WIDTH)/2,
+               (displayHeight-WINDOW_HEIGHT)/2,
+               WINDOW_WIDTH,
+               WINDOW_HEIGHT,
+               1,
+               blackPixel,
+               whitePixel);
+
+// Set window title
+call (hDLLX11, 'XStoreName', 'pps:i', display, window, WINDOW_TITLE);
+
+// Set window position and center to display
+// This is old stuff, you can use XResizeWindow and XMoveWindow after XMapWindow (see below)
+size =
+    binformat (1<<2|1<<3).
+    binformat ((displayWidth-WINDOW_WIDTH)/2). // x
+    binformat ((displayHeight-WINDOW_HEIGHT)/2). // y
+    binformat (WINDOW_WIDTH). // width
+    binformat (WINDOW_HEIGHT); // height
+call (hDLLX11, 'XSetNormalHints', 'ppr:i', display, window, size);
+
+// Select kind of events we are interested in
+call (hDLLX11, 'XSelectInput', 'ppi:i', display, window, 1<<15|1|1<<17); // 1<<15 = ExposureMask | 1 = KeyPressMask | 1<<17 = StructureNotifyMask
+wm_delete_window = call (hDLLX11, 'XInternAtom', 'psi:p', display, 'WM_DELETE_WINDOW', false);
+wm_delete_window = binformat (wm_delete_window);
+call (hDLLX11, 'XSetWMProtocols', 'ppri:i', display, window, wm_delete_window, 1);
+
+// Map (show) the window
+call (hDLLX11, 'XMapWindow', 'pp:i', display, window);
+
+// Center the window
+// call (hDLLX11, 'XResizeWindow', 'ppii:i', display, window, WINDOW_WIDTH, WINDOW_HEIGHT);
+// call (hDLLX11, 'XMoveResizeWindow', 'ppiiii:i', display, window, (displayWidth-WINDOW_WIDTH)/2, (displayHeight-WINDOW_HEIGHT)/2, WINDOW_WIDTH, WINDOW_HEIGHT);
+// call (hDLLX11, 'XMoveWindow', 'ppii:i', display, window, (displayWidth-WINDOW_WIDTH)/2, (displayHeight-WINDOW_HEIGHT)/2);
+
+// Create colors
+colormap = call (hDLLX11, 'XDefaultColormap', 'pp:i',display, screen);
+colors = array ();
+colorNames = array ('red', 'green', 'blue', 'brown', 'black', 'yellow', 'white');
+foreach (colorNames as colorName)
+{
+	colors[colorName] = '';
+	ret = resize (colors[colorName], 16); // 16 bytes is enough buffer size for XColor struct
+	call (hDLLX11, 'XAllocNamedColor', 'ppsrr:i', display, colormap, colorName, colors[colorName], colors[colorName]);
+}
+
+// Event loop
+event = null;
+resize (event, 256); // 256 bytes is enough buffer size for XEvent struct
+
+fClose = false;
+while (!fClose)
+{
+	call (hDLLX11, 'XNextEvent', 'pr:i', display, event);
+
+	msgId = binparse (event,3);
+	switch (msgId) {
+		case 12:  // 12 = Expose
+			// Draw or redraw the window
+			drawWindow ();
+			break;
+
+		case 33: // 33 = ClientMessage
+			// Window messages
+			if (binparse (event,3,_ALIGN==4 ? 28 : 56)==binparse (wm_delete_window)) {
+				fClose = true;
+			}
+			break;
+
+		case 22: // 22 = ConfigureNotify
+			// Get window size
+			windowWidth = binparse (event,3,_ALIGN==4 ? 32 : 56);
+			windowHeight = binparse (event,3,_ALIGN==4 ? 36 : 60);
+			break;
+
+		case 2: // 2 = KeyPress
+			break;
+	}
+}
+
+// Close connection to server
+call (hDLLX11, 'XCloseDisplay', 'p:i', display);
+
+?>

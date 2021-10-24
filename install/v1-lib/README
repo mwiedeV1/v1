@@ -1,0 +1,11 @@
+API to integrate libv1.so into own C/C++ applications.
+
+To support modules and libraries download full Linux package from https://v1-script.net
+
+Building the test application:
+
+sudo make all
+./v1-test
+
+p.s.
+If you dont have the g++ compiler install it with: apt-get install g++ && apt-get install make

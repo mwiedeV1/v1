@@ -1,0 +1,118 @@
+<?v1
+testIdx = 0;
+successCnt = 0;
+
+print ("TESTS: Arrays");
+
+array1 = array ( "Katze", "Maus", "Igel", "Pferd", "Huhn" );
+array2 = array_splice ( array1, 1, 2, array ("Orang Utan", "Giraffe"));
+if (count(array1)==5 && array1[0]=="Katze" && array1[1]=="Orang Utan" && array1[2]=="Giraffe" && array1[3]=="Pferd" && array1[4]=="Huhn" && count(array2)==2 && array2[0]=="Maus" && array2[1]=="Igel")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+a0 = array (10.001, null, array ());
+a1 = array ("KEY1"=>"Value1", array ("IN1", "IN2", "IN3"=>array ("A", "B", 10)), "KEY2"=>"Value2", 200=>true, 11 => "1000.22");
+if (in_array ("Value1", a1))
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+if (in_array ("Value100", a1))   // "Value100" == true
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+search = 1000.22;
+x = search + 100;
+if (!in_array (search, a1, true))
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+if (!in_array (false, a1))
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+if (in_array (array ("IN1", "IN2", "IN3"=>array ("A", "B", 10)), a1, true))
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+if (in_array (10.001, a0))
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+list = array ();
+array_push (list, "A");
+array_push (list, "B");
+if (cnt = array_push (list, "C")==3)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+c = array_pop (list);
+b = array_pop (list);
+a = array_pop (list);
+x = array_pop (list);
+if (c=="C" && b=="B" && a=="A" && x=="")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+list = array ("Key1" => "Value1", 10 => "Value2", "20"=>array ("Sub-Value1", "Sub-Value2"));
+assign (a,b,assign(c,d))=array_values (list);
+if (a=="Value1" && !strcmp(b,"Value2") && c=="Sub-Value1" && d="Sub-Value2")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+array1 = array ( "Key1" => "Katze", "Maus", "Key2" => "Igel", "Pferd", "Huhn" );
+array2 = array_reverse (array1);
+if (array2[0]=="Huhn" && array2[1]=="Pferd" && array2[2]=="Igel" && array2[3]=="Maus" && array2[4]=="Katze")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+array1 = array ( "Key1" => "Katze", "Maus", "Key2" => "Igel", "Pferd", "Huhn" );
+array2 = array_flip (array1);
+if (array2["Katze"]=="Key1" && array2["Maus"]==0 && array2["Igel"]=="Key2" && array2["Pferd"]==1 && array2["Huhn"]==2)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a1 = array ("KEY1"=>"Value1", "KEY2"=>"Value2", 11 => "Num Value 1");
+a2 = array ("KEY1"=>"ValueXX", "KEY2"=>"New Value2", "KEY3" => "Value3", 12 => "Num Value 4");
+a3 = array ("NOCHWAS");
+aSum = array_merge (a1, a2, a3);
+if (aSum["KEY1"]=="ValueXX" && aSum["KEY2"]=="New Value2" && aSum[0]=="Num Value 1" && aSum["KEY3"]=="Value3" && aSum[1]=="Num Value 4" && aSum[2]=="NOCHWAS")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+aSum = a1 + a2;
+if (aSum["KEY1"]=="Value1" && aSum["KEY2"]=="Value2" && aSum[11]=="Num Value 1" && aSum["KEY3"]=="Value3" && aSum[12]=="Num Value 4")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+print (successCnt." successful from ".testIdx." tests");
+?>

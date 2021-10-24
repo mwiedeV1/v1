@@ -1,0 +1,429 @@
+<?v1
+/*
+  Chat-Server
+  This V1 program will create a multithreaded SSL based Chat-Server.
+  You can connect to Chat-Server with chat-client.v1
+
+  Usage: v1 chat-server.v1 <ip> [port]
+  Usage: v1 chat-server.v1 set <user> <password>
+  Usage: v1 chat-server.v1 del <user>
+*/
+
+dl ("crypt");
+dl ("ssl");
+
+error_reporting (0); // 1 to show all warnings
+
+const SERVER_HOST = "localhost"; // Default host or IP address, empty = auto
+const SERVER_SSL_PORT = 8888; // Default port, 0 = auto
+const CERT_DIR = "cert"; // Directory of SSL certificates (PEM format)
+const MAX_THREADS = 10; // Max. parallel requests
+const RECV_TIMEOUT = 36000000; // Milliseconds a client should send data
+const USER_FILENAME = dirname(__FILE__)."/chat-users";
+const IS_LINUX = (version (1)=="Linux");
+const INIT_DIR = getcwd ();
+
+/* Chat protocol commands */
+const CHAT_CMD_DEFAULT   = 1;
+const CHAT_CMD_DISPATCH  = 2;
+const CHAT_CMD_CTRL      = 3;
+const CHAT_CMD_MSG       = 4;
+
+configData = array (
+	"host" => SERVER_HOST,
+	"port" => SERVER_SSL_PORT,
+);
+
+userDB = array ();
+salt = "$5$rounds=5000$".(rand()%1000 +1)."$";
+if (is_file (USER_FILENAME))
+{
+	if (fh = fopen (USER_FILENAME)) {
+		line = "";
+		while (freadln (fh, line)) {
+			tokens = explode (":", line);
+			if (count (tokens)>1)
+				userDB[trim (tokens[0])]=tokens[1];
+		}
+		fclose (fh);
+	}
+}
+
+function saveUsers ()
+{
+	global userDB;
+	if (fh = fopen (USER_FILENAME, "w+")) {
+		foreach (userDB as user => hash) {
+			fwrite (fh, user.":".hash."\r\n");
+		}
+		fclose (fh);
+	}
+}
+
+if (argv[2]=="set")
+{
+	if (!isset (argv[3])) {
+		print ("User required");
+		exit (1);
+	}
+	if (!isset (argv[4])) {
+		print ("Password required");
+		exit (1);
+	}
+	userDB[argv[3]]=crypt(argv[4], salt);
+	saveUsers ();
+	exit ();
+}
+else if (argv[2]=="del")
+{
+	if (!isset (argv[3])) {
+		print ("User required");
+		exit (1);
+	}
+	if (!isset (userDB[argv[3]])) {
+		print ("User ".argv[3]." not found");
+		exit (1);
+	}
+	else {
+		unset (userDB[argv[3]]);
+		saveUsers ();
+	}
+	exit ();
+}
+
+if (isset (argv[2]))
+	configData["host"] = argv[2];
+if (isset (argv[3]))
+	configData["port"] = argv[3];
+
+fExitAll = false;
+
+serverCertList = array ();
+activeUserList = array ();
+messageList = array ();
+messageIdx = 0;
+
+function getMessageId ()
+{
+	global dispatcherThread, messageIdx;
+	thread_sync_enter (dispatcherThread);
+	id = ++messageIdx;
+	thread_sync_leave (dispatcherThread);
+	return id;
+}
+
+// Function load certificate by servername from cert/ directory
+function servernameCallback (servername)
+{
+	global serverCertList;
+
+	if (!isset (serverCertList[servername])) {
+		// Check with/without www.
+		fOnlyCheck = false;
+		if (strpos (servername, "www.")===0) {
+			servername2 = substr (servername, 4, strlen (servername)-4);
+		}
+		else {
+			fOnlyCheck = true;
+			servername2 = "www.".servername;
+		}
+		if (isset (serverCertList[servername2])) {
+			return serverCertList[servername2];
+		}
+		if (!fOnlyCheck)
+			servername = servername2;
+
+		if (!is_file (CERT_DIR."/".servername.".crt")) {
+			// Create self signed certificate
+			if (!SSL_create_selfsigned_cert (CERT_DIR."/".servername.".crt", CERT_DIR."/".servername.".key", servername, 315360000, "sha256", 2048))
+				print ("Cannot create self signed certificate for ".servername);
+		}
+
+		ctx = SSL_CTX_new ();
+		if (SSL_CTX_load_cert (ctx, CERT_DIR."/".servername.".crt", CERT_DIR."/".servername.".key")) {
+			serverCertList[servername]=ctx;
+		}
+		else {
+			SSL_CTX_free (ctx);
+			print ("Cannot load SSL certificate ", CERT_DIR."/".servername.".crt");
+		}
+	}
+	return serverCertList[servername];
+}
+
+function clientWrite (&client, &str, ssl=null)
+{
+	if (ssl)
+		return SSL_write (ssl, str);
+	return fwrite (client, str);
+}
+
+function clientWriteLen (&client, &str, len, ssl=null)
+{
+	if (ssl)
+		return SSL_write (ssl, str, len);
+	return fwrite (client, str, len);
+}
+
+function clientReadln (&client, &str, ssl=null)
+{
+	if (ssl)
+		return SSL_readln (ssl, str);
+	return freadln (client, str);
+}
+
+function dipatcherThread ()
+{
+	global activeUserList, messageList;
+	while (true) {
+		thread_wait ();
+		if (!count (messageList))
+			continue;
+		// Get new messages
+		newMessageList = array ();
+		foreach (messageList as id => data) {
+			newMessageList[id] = data;
+			unset (messageList[id]); // Delete message
+		}
+
+		// Send to all clients
+		if (count (newMessageList)) {
+			json = json_encode (newMessageList);
+			cmdStr = CHAT_CMD_DISPATCH."\r\n".strlen (json)."\r\n".json;
+			foreach (activeUserList as user => data) {
+				clientWrite (data["client"], cmdStr, data["ssl"]);
+			}
+		}
+	}
+}
+
+function workerThread (client, ssl=null)
+{
+	global userDB, activeUserList, messageList, dispatcherThread;
+	if (ssl) {
+		SSL_set_fd (ssl, client);
+		if (!SSL_accept (ssl)) {
+			// SSL problems
+			SSL_free (ssl);
+			fclose (client);
+			return;
+		}
+	}
+
+	loginUser = "";
+	loginStatus = false;
+	fExit = false;
+	while (!fExit) {
+		cmd = bytes = msg = result = "";
+		if (SSL_readln (ssl, cmd)===false || SSL_readln (ssl, bytes)===false) {
+			fExit = true; // Connection lost
+			break;
+		}
+		if (bytes) {
+			readBytes = SSL_read (ssl, msg, bytes);
+			if (readBytes!=bytes) {
+				fExit = true; // Connection lost
+				break;
+			}
+		}
+
+
+		if (cmd==CHAT_CMD_DEFAULT) {
+			msg = trim (msg);
+			cmdList = explode (" ", msg);
+			if (!loginStatus && cmdList[0]!="login" && cmdList[0]!="logout" && cmdList[0]!="exit") {
+				result = "Login required";
+			}
+			else {
+				// Handle commands
+				switch (cmdList[0]) {
+
+					case "login":
+						if (!isset (cmdList[1]))
+							result = "User required";
+						else if (!isset (cmdList[2]))
+							result = "Password required";
+						else if (!isset (userDB[cmdList[1]])) {
+							result = "User unknown";
+						}
+						else if (crypt(cmdList[2], userDB[cmdList[1]])!=userDB[cmdList[1]]) {
+							result = "Login failed";
+						}
+						else {
+							unset (activeUserList[loginUser]); // Logout old user
+
+							loginStatus = true;
+							loginUser = cmdList[1];
+							result = "Login successful";
+							chdir (INIT_DIR);
+							activeUserList[loginUser]=array ("client"=>client, "ssl"=>ssl, "messages"=>array ());
+						}
+						break;
+
+					case "logout":
+						if (!loginStatus) {
+							result = "Not logged in";
+						}
+						else {
+							loginStatus = false;
+							result = "Logged out";
+							unset (activeUserList[loginUser]);
+							loginUser = "";
+						}
+						break;
+
+					case "exit":
+						fExit = true;
+						if (!empty (loginUser))
+							result = "Bye ".loginUser."!";
+						else
+							result = "Bye!";
+						break;
+
+					default:
+						result = "Unknown command";
+						break;
+					/*
+			        case "cd":
+			          if (!isset (cmdList[1]))
+			            result = "Directory required";
+			          else {
+			            if (!chdir  (cmdList[1]))
+			              result = "Directory not found";
+			            else
+			              result = "Current directory is ".getcwd ();
+			          }
+			          break;
+
+			        default:
+			          result = "";
+			          if (!empty (msg)) {
+			            if (IS_LINUX) {
+			              // Linux command
+			              result = system ("/usr/bin/".msg);
+			            	if (!result)
+			                result = system ("/bin/".msg);
+			              if (!result)
+			                result = "Cannot execute";
+			            }
+			            else {
+			              // Windows command
+			              result = system ("cmd.exe /C ".msg);
+			            }
+			          }
+			          break;
+					*/
+				}
+			}
+		}
+		else if (cmd==CHAT_CMD_MSG) {
+			if (!loginStatus)
+				result = "Login required";
+			else {
+				messageList[getMessageId()]=array ("user"=>loginUser, "text"=>msg, "time" => time ());
+				result = "";
+
+				thread_signal (dispatcherThread);
+				continue;
+			}
+		}
+
+		clientWrite (client, CHAT_CMD_DEFAULT."\r\n".strlen (result)."\r\n".result, ssl);
+	}
+
+	// Close connection and finish thread
+	if (ssl)
+		SSL_free (ssl);
+
+	fclose (client);
+
+	unset (activeUserList[loginUser]);
+
+}
+
+function portSSLThread (fh)
+{
+	global fExitAll, serverCertList;
+
+	currThreadIdx = 0;
+	threadList = array ();
+
+	// Create SSL Context
+	ctx = SSL_CTX_new ("SSLv23_method"); // TLSv1_2_server_method, SSLv23_method
+	// SSL_CTX_set_cipher_list (ctx, "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");
+
+	if (!is_file (CERT_DIR."/".SERVER_HOST.".crt")) {
+		// Create self signed
+		if (!SSL_create_selfsigned_cert (CERT_DIR."/".SERVER_HOST.".crt", CERT_DIR."/".SERVER_HOST.".key", SERVER_HOST, 315360000, "sha256", 2048)) {
+			print ("Cannot create self signed certificate for ".SERVER_HOST);
+			exit (1);
+		}
+	}
+
+	if (!SSL_CTX_load_cert (ctx, CERT_DIR."/".SERVER_HOST.".crt", CERT_DIR."/".SERVER_HOST.".key")) {
+		print ("Cannot load SSL certificate ", CERT_DIR."/".SERVER_HOST.".crt");
+		exit (1);
+	}
+	serverCertList[SERVER_HOST]=ctx;
+
+	SSL_CTX_set_tlsext_servername_callback (ctx, "servernameCallback");
+
+	fh2 = null;
+	while (!fExitAll && (fh2 = fsockaccept (fh, RECV_TIMEOUT))) {
+		// print ("Connection from ", fsockip (fh2), " / ", gethostbyaddr(fsockip (fh2)));
+
+		// Create SSL
+		ssl = SSL_new (ctx);
+
+		// Get current thread
+		do {
+			if (currThreadIdx>MAX_THREADS)
+				currThreadIdx = 0;
+			if (isset (threadList[currThreadIdx])) {
+				if (!thread_is_active (threadList[currThreadIdx])) {
+					thread_close (threadList[currThreadIdx]);
+					break;
+				}
+			}
+			else {
+				break;
+			}
+
+			currThreadIdx++;
+			if (currThreadIdx>MAX_THREADS) {
+				// print ("Server seems busy.");
+				sleep (10); // Wait until thread is available
+			}
+		}
+		while (true);
+
+		// Create new thread
+		t = thread_create ("workerThread", fh2, ssl);
+		threadList[currThreadIdx]=t;
+		thread_start (t, false);
+	}
+	SSL_CTX_free (ctx);
+	fclose (fh);
+}
+
+// Dispatcher thread
+dispatcherThread = thread_create ("dipatcherThread");
+thread_start (dispatcherThread, true);
+
+// Create Port 443
+fh2 = fsockserver (configData["host"], configData["port"]);
+if (!fh2)
+{
+	print ("Cannot create Chat-Server on ",  configData["host"], ":", configData["port"]);
+	exit (1);
+}
+else
+{
+	print ("Chat-Server created on ",  fsockip (fh2), ":", fsockport(fh2));
+	thread_start (thread_create ("portSSLThread", fh2));
+}
+
+while (!fExitAll)
+	sleep (1000);
+
+?>

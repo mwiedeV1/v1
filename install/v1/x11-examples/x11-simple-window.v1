@@ -1,0 +1,243 @@
+<?v1
+/*
+  Demonstrates how to create a simple GUI window with libX11 native calling
+
+  Sources:
+  https://en.wikipedia.org/wiki/Xlib
+  https://tronche.com/gui/x/xlib/display/display-macros.html
+  http://refspecs.linuxbase.org/LSB_3.0.0/LSB-Graphics/LSB-Graphics/libx11-ddefs.html
+  http://mech.math.msu.su/~nap/2/GWindow/xintro.html
+  https://www.lemoda.net/c/xlib-wmclose/index.html
+  https://github.com/QMonkey/Xlib-demo/blob/master/src/color-drawing.c
+
+*/
+
+error_reporting (0);
+
+const WINDOW_WIDTH  = 800;
+const WINDOW_HEIGHT = 600;
+const WINDOW_TITLE  = 'V1 Script - Simple X11 Window';
+
+hDLLX11 = dl ('libX11', true);
+if (!hDLLX11)
+{
+	// Search for X11 library
+	libList = explode ("\n", system ('/usr/bin/find /usr/lib'.(version(3)==1 ? '64' : '').' -name "libX11*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLX11 = dl (libList[0], true);
+		if (hDLLX11) {
+			print ("Please replace for faster starting: dl ('".libList[0]."', true);");
+		}
+	}
+}
+
+if (!hDLLX11)
+{
+	print ("libX11.so was not found on this system.\r\nTry: sudo apt-get install libx11-dev");
+	exit (1);
+}
+
+const PI  = 3.14159265359;
+const PI2 = 2*PI;
+
+function drawWindow ()
+{
+	global hDLLX11, screen, display, window,  windowWidth, windowHeight, colors;
+	gc = call (hDLLX11, 'XDefaultGC', 'pi:p', display, screen);
+
+	// Sinus frequencies to overlay
+	freqList = [1, 3, 4.5];
+
+	// Clear window
+	call (hDLLX11, 'XClearWindow', 'pp:i', display, window);
+	// call (hDLLX11, 'XSetForeground', 'ppi:i', display, gc, binparse (colors['white']));
+	// call (hDLLX11, 'XFillRectangle', 'pppiiii:i', display, window, gc, 0, 0, windowWidth, windowHeight);
+
+	// Draw legend
+	call (hDLLX11, 'XSetForeground', 'ppi:i', display, gc, binparse (colors['red']));
+	call (hDLLX11, 'XFillRectangle', 'pppiiii:i', display, window, gc, 20, 20, 10, 10);
+
+	msg = '';
+	foreach (freqList as freq) {
+		if (!empty (msg))
+			msg.=' + ';
+		if (freq!=1)
+			msg.= 'sin('.freq.'x)';
+		else
+			msg.='sin(x)';
+	}
+	if (count (freqList))
+		msg = '('.msg.') / '.count (freqList);
+
+	call (hDLLX11, 'XSetForeground', 'ppi:i', display, gc, binparse (colors['blue']));
+	call (hDLLX11, 'XDrawString', 'pppiisi:i', display, window, gc, 40, 30, msg, strlen (msg));
+
+	// Draw axes
+	call (hDLLX11, 'XSetForeground', 'ppi:i', display, gc, binparse (colors['black']));
+
+	offs = 50;
+	x = offs;
+	y = offs;
+
+	// Y axis
+	call (hDLLX11, 'XDrawLine', 'pppiiii:i', display, window, gc, x, y, x, windowHeight-offs);
+
+	windowHalf = (windowHeight-offs*2)/2;
+	for (y2=-1; y2<=1; y2+=0.25) {
+		msg = y2;
+		y = (windowHeight/2)-y2 * windowHalf;
+		call (hDLLX11, 'XDrawLine', 'pppiiii:i', display, window, gc, x-5, y, x+5, y);
+		call (hDLLX11, 'XDrawString', 'pppiisi:i', display, window, gc, x-40, y, msg, strlen (msg));
+	}
+
+	// X axis
+	x = offs;
+	y = (windowHeight/2);
+	call (hDLLX11, 'XDrawLine', 'pppiiii:i', display, window, gc, x, y, windowWidth-offs, y);
+
+	for (x2=0.25; x2<=1; x2+=0.25) {
+		msg = x2;
+		if (x2==0.25)
+			msg = 'pi/2';
+		else if (x2==0.5)
+			msg = 'pi';
+		else if (x2==0.75)
+			msg = '3pi/2';
+		else if (x2==1)
+			msg = '2pi';
+
+		x = offs + (windowWidth- (offs*2)) * x2;
+		call (hDLLX11, 'XDrawLine', 'pppiiii:i', display, window, gc, x, y-5, x, y+5);
+		call (hDLLX11, 'XDrawString', 'pppiisi:i', display, window, gc, x, y+20, msg, strlen (msg));
+	}
+
+	// Plot overlayed frequencies
+	call (hDLLX11, 'XSetForeground', 'ppi:i', display, gc, binparse (colors['red']));
+
+	Fs = (windowWidth-offs*2)/4;
+	T = 1 / Fs;
+	L = Fs;
+	t = 0;
+	x = offs;
+	xOld = yOld = 0;
+
+	for (i=0; i<=L; i++) {
+		v = 0;
+		foreach (freqList as freq)
+			v+=sin(PI2*freq*t);
+		v/=count(freqList);
+
+		y = (windowHeight/2) -  v * ((windowHeight-offs*2)/2);
+		if (i>0)
+			call (hDLLX11, 'XDrawLine', 'pppiiii:i', display, window, gc, xOld, yOld, x, y);
+		xOld = x;
+		yOld = y;
+		t+=T;
+		x+=4;
+	}
+	call (hDLLX11, 'XFlush', 'p:i', display);
+
+}
+
+// Open default display
+display = call (hDLLX11, 'XOpenDisplay', 'p:p', null);
+if (!display)
+{
+	print ('Cannot open default display.');
+}
+
+screen = call (hDLLX11, 'XDefaultScreen', "p:i", display);
+displayWidth = call (hDLLX11, 'XDisplayWidth', 'pi:i', display, screen);
+displayHeight = call (hDLLX11, 'XDisplayHeight', 'pi:i', display, screen);
+rootWindow = call (hDLLX11, 'XDefaultRootWindow', 'pi:p', display, screen);
+blackPixel = call (hDLLX11, 'XBlackPixel', 'pi:p', display, screen);
+whitePixel = call (hDLLX11, 'XWhitePixel', 'pi:p', display, screen);
+
+// Create simple window
+window = call (hDLLX11, 'XCreateSimpleWindow', 'ppiiiiiii:p',
+	display,
+	rootWindow,
+	(displayWidth-WINDOW_WIDTH)/2,
+	(displayHeight-WINDOW_HEIGHT)/2,
+	WINDOW_WIDTH,
+	WINDOW_HEIGHT,
+	1,
+	blackPixel,
+	whitePixel);
+
+// Set window title
+call (hDLLX11, 'XStoreName', 'pps:i', display, window, WINDOW_TITLE);
+
+// Set window position and center to display
+// This is old stuff, you can use XResizeWindow and XMoveWindow after XMapWindow (see below)
+size =
+    binformat (1<<2|1<<3).
+    binformat ((displayWidth-WINDOW_WIDTH)/2). // x
+    binformat ((displayHeight-WINDOW_HEIGHT)/2). // y
+    binformat (WINDOW_WIDTH). // width
+    binformat (WINDOW_HEIGHT); // height
+call (hDLLX11, 'XSetNormalHints', 'ppr:i', display, window, size);
+
+// Select kind of events we are interested in
+call (hDLLX11, 'XSelectInput', 'ppi:i', display, window, 1<<15|1|1<<17); // 1<<15 = ExposureMask | 1 = KeyPressMask | 1<<17 = StructureNotifyMask
+wm_delete_window = call (hDLLX11, 'XInternAtom', 'psi:p', display, 'WM_DELETE_WINDOW', false);
+wm_delete_window = binformat (wm_delete_window);
+call (hDLLX11, 'XSetWMProtocols', 'ppri:i', display, window, wm_delete_window, 1);
+
+// Map (show) the window
+call (hDLLX11, 'XMapWindow', 'pp:i', display, window);
+
+// Center the window
+// call (hDLLX11, 'XResizeWindow', 'ppii:i', display, window, WINDOW_WIDTH, WINDOW_HEIGHT);
+// call (hDLLX11, 'XMoveResizeWindow', 'ppiiii:i', display, window, (displayWidth-WINDOW_WIDTH)/2, (displayHeight-WINDOW_HEIGHT)/2, WINDOW_WIDTH, WINDOW_HEIGHT);
+// call (hDLLX11, 'XMoveWindow', 'ppii:i', display, window, (displayWidth-WINDOW_WIDTH)/2, (displayHeight-WINDOW_HEIGHT)/2);
+
+// Create colors
+colormap = call (hDLLX11, 'XDefaultColormap', 'pp:i',display, screen);
+colors = array ();
+colorNames = array ('red', 'green', 'blue', 'brown', 'black', 'yellow', 'white');
+foreach (colorNames as colorName)
+{
+	colors[colorName] = '';
+	ret = resize (colors[colorName], 16); // 16 bytes is enough buffer size for XColor struct
+	call (hDLLX11, 'XAllocNamedColor', 'ppsrr:i', display, colormap, colorName, colors[colorName], colors[colorName]);
+}
+
+// Event loop
+event = null;
+resize (event, 256); // 256 bytes is enough buffer size for XEvent struct
+
+fClose = false;
+while (!fClose)
+{
+	call (hDLLX11, 'XNextEvent', 'pr:i', display, event);
+
+	msgId = binparse (event,3);
+	switch (msgId) {
+		case 12:  // 12 = Expose
+			// Draw or redraw the window
+			drawWindow ();
+			break;
+
+		case 33: // 33 = ClientMessage
+			// Window messages
+			if (binparse (event,3,_ALIGN==4 ? 28 : 56)==binparse (wm_delete_window)) {
+				fClose = true;
+			}
+			break;
+
+		case 22: // 22 = ConfigureNotify
+			// Get window size
+			windowWidth = binparse (event,3,_ALIGN==4 ? 32 : 56);
+			windowHeight = binparse (event,3,_ALIGN==4 ? 36 : 60);
+			break;
+
+		case 2: // 2 = KeyPress
+			break;
+	}
+}
+
+// Close connection to server
+call (hDLLX11, 'XCloseDisplay', 'p:i', display);
+
+?>

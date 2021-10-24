@@ -1,0 +1,635 @@
+<?v1
+/*
+  Astronomical computations
+
+  Usage: v1 solarcalc.v1
+*/
+
+error_reporting (0);
+require_once ("../lib/astronomy.inc.v1");
+
+// Berlin Germany Europe
+const DEFAULT_LAT = 52.5;
+const DEFAULT_LON = 13.4;
+
+function formatAstroDate ()
+{
+	global form;
+	return sprintf ("%02u-%02u-%02u %02u:%02u:%02u %s", form["Year"], form["Month"], form["Day"], form["Hour"], form["Minute"], form["Second"], formatZone (form["Zone"]));
+}
+
+function formatZone (zone)
+{
+	if (zone==0)
+		return "  UTC";
+	return zone>=0 ? "+".HHMM(zone, false) : "-".HHMM(zone, false);
+}
+
+function isLeapYear (year)
+{
+	return (((year % 4 == 0) &&
+	         (year % 100 != 0)) ||
+	        (year % 400 == 0));
+}
+
+function isValidDate (d,  m,  y)
+{
+	if (m < 1 || m > 12)
+		return false;
+	if (d < 1 || d > 31)
+		return false;
+
+	// Handle February month
+	// with leap year
+	if (m == 2)  {
+		if (isLeapYear(y))
+			return (d <= 29);
+		else
+			return (d <= 28);
+	}
+
+	// Months of April, June,
+	// Sept and Nov must have
+	// number of days less than
+	// or equal to 30.
+	if (m == 4 || m == 6 ||
+	        m == 9 || m == 11)
+		return (d <= 30);
+	return true;
+}
+
+
+function SetupDateTime (&form)
+{
+	time = time ();
+	print ("=============================\r\nSET DATE/TIME\r\nFormat: YYYY-MM-DD [HH:MM:SS]\r\nLet empty to use system time.\r\n=============================\r\n");
+	do {
+		fContinue = false;
+
+		dateTimeStr = input ("Date/time: ");
+		if (!empty (dateTimeStr)) {
+			if ((p=strpos (dateTimeStr, " "))!==false) {
+				// With time
+				dateStr = trim (substr (dateTimeStr, 0, p));
+				timeStr = trim (substr (dateTimeStr, p, strlen (dateTimeStr)-p));
+
+				assign (year, month, day) = explode ("-", dateStr);
+				assign (hour, minute, second) = explode (":", timeStr);
+				time = mktime (hour, minute, second,  month, day, year);
+
+				if (!isValidDate (day, month, year)) {
+					print ("Wrong date/time format.");
+					fContinue = true;
+				}
+
+			}
+			else {
+				// Only date
+				assign (year, month, day) = explode ("-", dateTimeStr);
+				time = mktime (0, 0, 0, month, day, year);
+				if (!isValidDate (day, month, year)) {
+					print ("Wrong date format.");
+					fContinue = true;
+				}
+			}
+		}
+	}
+	while (fContinue);
+
+	print ("\r\nDate/time was set to: ", date ("%Y-%m-%d %H:%i:%s", time));
+
+	form["Hour"]    = date ("%H", time);
+	form["Minute"]  = date ("%i", time);
+	form["Second"]  = date ("%s", time);
+	form["Day"]     = date ("%j", time);
+	form["Month"]   = date ("%m", time);
+	form["Year"]    = date ("%Y", time);
+
+	print ("\r\n\r\n=============================\r\nSET TIME ZONE\r\nFormat: [+|-]Hours to UTC\r\nLet empty to use system zone.\r\n=============================\r\n");
+
+	zone = input ("Zone: ");
+	if (!empty (zone)) {
+		zone = str_replace (array (",", "+", " "), array (".", "", ""), zone);
+		form["Zone"] = zone;
+	}
+	else
+		form["Zone"] = date ("%Z", time) / 3600;
+
+	print ("\r\nZone was set to: ", formatZone (form["Zone"]));
+
+	form["DeltaT"] = 65; // deltaT - difference among 'earth center' versus 'observered' time (TDT-UT), in seconds
+	return true;
+}
+
+function SetupDateShort (&form, prefix="")
+{
+	time = time ();
+	do {
+		fContinue = false;
+
+		dateTimeStr = input (prefix."Date/time (YYYY-MM-DD [HH:MM:SS]): ");
+		if (!empty (dateTimeStr)) {
+			if ((p=strpos (dateTimeStr, " "))!==false) {
+				// With time
+				dateStr = trim (substr (dateTimeStr, 0, p));
+				timeStr = trim (substr (dateTimeStr, p, strlen (dateTimeStr)-p));
+
+				assign (year, month, day) = explode ("-", dateStr);
+				assign (hour, minute, second) = explode (":", timeStr);
+				time = mktime (hour, minute, second,  month, day, year);
+
+				if (!isValidDate (day, month, year)) {
+					print ("Wrong date/time format.");
+					fContinue = true;
+				}
+			}
+			else {
+				// Only date
+				assign (year, month, day) = explode ("-", dateTimeStr);
+				time = mktime (0, 0, 0, month, day, year);
+				if (!isValidDate (day, month, year)) {
+					print ("Wrong date format.");
+					fContinue = true;
+				}
+			}
+		}
+	}
+	while (fContinue);
+
+	form["Hour"]    = date ("%H", time);
+	form["Minute"]  = date ("%i", time);
+	form["Second"]  = date ("%s", time);
+	form["Day"]     = date ("%j", time);
+	form["Month"]   = date ("%m", time);
+	form["Year"]    = date ("%Y", time);
+
+
+	form["DeltaT"] = 65; // deltaT - difference among 'earth center' versus 'observered' time (TDT-UT), in seconds
+	return true;
+}
+
+function SetupZone (&form)
+{
+	zone = input ("Zone ([+|-]Hours to UTC, let empty to use system zone): ");
+	if (!empty (zone)) {
+		zone = str_replace (array (",", "+", " "), array (".", "", ""), zone);
+		form["Zone"] = zone;
+	}
+	else
+		form["Zone"] = date ("%Z") / 3600;
+}
+
+function SetupLocation (&form)
+{
+	// Position
+	sysInfo = version(4);
+
+	print ("\r\n\r\n=============================\r\nSET LOCATION\r\nFormat: Decimal\r\n-Lat = South, -Lon = West\r\nLet empty to use ".(!empty (sysInfo["geoData"]["countryName"]) ? sysInfo["geoData"]["countryName"]  : "Central Europe (Berlin)")."\r\n=============================\r\n");
+
+	form["Lat"] = str_replace ([",", "+"], [".", ""], input ("Latitude: ", (!empty (sysInfo["geoData"]["latitude"]) ? sysInfo["geoData"]["latitude"] : DEFAULT_LAT)));
+	form["Lon"] = str_replace ([",", "+"], [".", ""], input ("Longitue: ", (!empty (sysInfo["geoData"]["longitue"]) ? sysInfo["geoData"]["longitue"] : DEFAULT_LON)));
+
+	print ("\r\nPosition was set to: ", str_replace (["°"], ["o"], lat2str (form["Lat"])." ".lon2str (form["Lon"])));
+	return true;
+}
+
+function InitDefaults (&form)
+{
+	time = time ();
+	form["Hour"]    = date ("%H", time);
+	form["Minute"]  = date ("%i", time);
+	form["Second"]  = date ("%s", time);
+	form["Day"]     = date ("%j", time);
+	form["Month"]   = date ("%m", time);
+	form["Year"]    = date ("%Y", time);
+	form["Zone"]    = date ("%Z", time) / 3600;
+	form["DeltaT"]  = 65; // deltaT - difference among 'earth center' versus 'observered' time (TDT-UT), in seconds
+
+	form["Lat"]     = DEFAULT_LAT;
+	form["Lon"]     = DEFAULT_LON;
+	return true;
+}
+
+function Init(&form)
+{
+	InitDate(form);
+}
+
+print ("Astronomical computations:");
+
+form = array ();
+InitDefaults (form);
+
+do
+{
+	print (
+	    "\r\n\r\n",
+	    "[1] Compute positions of Sun and Moon\r\n",
+	    "[2] Compute positions of Planets\r\n",
+	    "[3] Compute rise/set/transit of Planets\r\n",
+	    "[4] Find conjunctions/oppositions to Sun\r\n",
+	    "[5] Planet statistic per day as CSV file\r\n",
+	    "[6] Sun azimuth/altitude every X minutes\r\n",
+	    "-----------------------------------------\r\n",
+	    "[T] Set date/time\r\n",
+	    "[L] Set location\r\n",
+	    "[X] Exit\r\n"
+	);
+
+	cmd = getch ();
+	if (cmd=='x' || cmd=='X') {
+		exit (0);
+	}
+	else if (cmd=='t' || cmd=='T') {
+		if ((err=SetupDateTime (form))!==true)
+			print (err);
+	}
+	else if (cmd=='l' || cmd=='L') {
+		if ((err=SetupLocation (form))!==true)
+			print (err);
+	}
+	else if (cmd==1) {
+		ComputeSunMoon (form);
+
+		// Print the data, you can also use json_encode (form)
+		print_r (form);
+	}
+	else if (cmd==2) {
+
+		// Format result into nicer format
+		results = ComputePlanets (form);
+
+
+		print ("=========================== PLANET POSITIONS =========================\r\n");
+		print ("                      ".formatAstroDate ());
+		print ("                      ".str_replace (["°"], ["o"], lat2str (form["Lat"])." ".lon2str (form["Lon"])));
+		print ("");
+		print ("======================================================================\r\n");
+
+
+		print ("");
+		print ("Planet      \t        RA\t       DEC\t         AZ\t       ALT\t DIST EARTH\t      LONH*\t   DIST SUN");
+		print ("------------\t ---------\t----------\t ----------\t----------\t ----------\t      -----\t ----------");
+		str = "";
+		foreach (results as p) {
+			foreach (p as key => v) {
+				str.= str_replace ("°", "o", v[1])."\t"; // Replace degree symbol
+				if (key=="name")
+					str.="        "; // Offset
+			}
+			str.="\r\n";
+		}
+		print (str);
+
+		print ("* LONH = Heliocentric longitude, for sun = longitude of earth\r\n");
+		print ("======================================================================\r\n");
+
+	}
+	else if (cmd==3) {
+
+		results = ComputePlanetsRiseSet (form);
+
+		print ("==================== RISE/SET/TRANSIT OF PLANETS =====================\r\n");
+		print ("                      ".formatAstroDate ());
+		print ("                      ".str_replace (["°"], ["o"], lat2str (form["Lat"])." ".lon2str (form["Lon"])));
+		print ("");
+		print ("======================================================================\r\n");
+
+
+		print ("");
+		print ("Planet      \tRise   \t         AZ\tSet    \t         AZ\tTransit\t  ALT\t Elongation\t DLEN");
+		print ("------------\t-----  \t ----------\t-----  \t ----------\t-------\t-----\t-----------\t-----");
+		str = "";
+		foreach (results as p) {
+			foreach (p as key => v) {
+				str.= str_replace ("°", "o", v[1])."\t"; // Replace degree symbol
+				if (key=="name")
+					str.="        "; // Offset
+
+			}
+			str.="\r\n";
+		}
+		print (str);
+		print ("======================================================================\r\n");
+
+	}
+	else if (cmd==4) {
+
+		oldFormData = form;
+
+		checkWithPlanet = 2; // 2 = Earth
+		t = mktime (0, 0, 0, form["Month"], form["Day"], form["Year"]);
+
+		tEnd = mktime (23, 59, 59, 1, 1, date ("%Y", t)+1) - 3600 * 24;
+
+		// Correct to GMT
+		t+= date ("%Z", t);
+
+		tEnd += date ("%Z", tEnd);
+		zone0 = form["Zone"];
+		zone2 = form["Zone"];
+		fAutoZone = date ("%Z", t) == zone0*3600;
+		if (fAutoZone) {
+			zone2 = date ("%Z", tEnd) / 3600;
+		}
+		checkList = [];
+		checkList2 = [];
+
+		print ("================== CONSTELLATIONS OF PLANETS TO SUN ==================\r\n");
+		print ("                     from: ".gmdate ("%Y-%m-%d %H:%i ".formatZone (zone0), t));
+		print ("                       to: ".gmdate ("%Y-%m-%d %H:%i ".formatZone (zone2), tEnd));
+		print ("");
+		print ("======================================================================\r\n");
+
+
+		print ("");
+		print ("Date      \t\tPlanet\t\tType");
+		print ("--------------\t\t------\t\t--------------------");
+
+
+		do {
+			form["Day"]=gmdate ("%d", t);
+			form["Month"]=gmdate ("%m", t);
+			form["Year"]=gmdate ("%Y", t);
+			form["Minute"]=0;
+			form["Hour"]=0;
+			form["Second"]=0;
+			if (fAutoZone) {
+				form["Zone"]=date ("%Z", t-date ("%Z", t))/3600; // Automatic daylight zone
+			}
+
+			results = ComputePlanets (form);
+			lonh0 = results[checkWithPlanet]["lonh"][0];
+			foreach (results as pi => p) {
+				if (pi==checkWithPlanet)
+					continue;
+				lonhd = abs (p["lonh"][0] - lonh0);
+				lonhd180 = abs (lonhd-180);
+
+				if (lonhd<=5) {
+					if (!isset (checkList[pi]) || lonhd<=checkList[pi][0])
+						checkList[pi]=array (lonhd, t);
+				}
+				else if (isset (checkList[pi])) {
+					// Search hour
+					t0 = checkList[pi][1] - 24 * 3600; // Search backward
+					t2 = t0 + 48 * 3600;
+					lonhd3 = -1;
+					fOk = false;
+					for (t0; t0<t2; t0+=3600) {
+						form["Day"]=gmdate ("%d", t0);
+						form["Month"]=gmdate ("%m", t0);
+						form["Year"]=gmdate ("%Y", t0);
+						form["Minute"]=gmdate ("%i", t0);
+						form["Hour"]=gmdate ("%H", t0);
+						form["Second"]=0;
+						if (fAutoZone) {
+							form["Zone"]=date ("%Z", t0-date ("%Z", t0))/3600; // Automatic daylight zone
+						}
+
+						results2 = ComputePlanets (form, pi);
+						results3 = ComputePlanets (form, checkWithPlanet);
+
+						lonh2 = results3[checkWithPlanet]["lonh"][0];
+						p2 = results2[pi];
+						lonhd = abs (p2["lonh"][0] - lonh2);
+						if (lonhd3==-1)
+							lonhd3 = lonhd;
+						else if (lonhd<=lonhd3) {
+							lonhd3 = lonhd;
+							fOk = true;
+						}
+						else if (fOk) {
+							print (gmdate ("%Y-%m-%d %Hh", t0-3600)."\t\t".planets[pi]."\t\t".(pi<2 ? "inferior conjunction" : "opposition"));
+							unset (checkList[pi]);
+							t0 = t2;
+							break;
+						}
+						else {
+							t0 = t2;
+							break;
+						}
+					}
+				}
+
+				if (lonhd180<=5) {
+					if (!isset (checkList2[pi]) || lonhd180<=checkList2[pi][0]) {
+						checkList2[pi]=array (lonhd180, t);
+					}
+				}
+				else if (isset (checkList2[pi])) {
+
+					// Search hour
+					t0 = checkList2[pi][1] - 24 * 3600; // Search backward
+					t2 = t0 + 48 * 3600;
+					lonhd3 = -1;
+					fOk = false;
+					for (t0; t0<t2; t0+=3600) {
+						form["Day"]=gmdate ("%d", t0);
+						form["Month"]=gmdate ("%m", t0);
+						form["Year"]=gmdate ("%Y", t0);
+						form["Minute"]=gmdate ("%i", t0);
+						form["Hour"]=gmdate ("%H", t0);
+						form["Second"]=0;
+						if (fAutoZone) {
+							form["Zone"]=date ("%Z", t0-date ("%Z", t0))/3600; // Automatic daylight zone
+						}
+
+						results2 = ComputePlanets (form, pi);
+						results3 = ComputePlanets (form, checkWithPlanet);
+
+						lonh2 = results3[checkWithPlanet]["lonh"][0];
+						p2 = results2[pi];
+						lonhd = abs (abs (p2["lonh"][0] - lonh2) - 180);
+						if (lonhd3==-1)
+							lonhd3 = lonhd;
+						else if (lonhd<=lonhd3) {
+							lonhd3 = lonhd;
+							fOk = true;
+						}
+						else if (fOk) {
+							print (gmdate ("%Y-%m-%d %Hh", t0-3600)."\t\t".planets[pi]."\t\t".(pi<2 ? "superior conjunction" : "conjunction"));
+							unset (checkList2[pi]);
+							t0 = t2;
+							break;
+						}
+						else {
+							t0 = t2;
+							break;
+						}
+					}
+				}
+			}
+
+			t+=3600*24;
+		}
+		while (t<=tEnd);
+
+		form = oldFormData;
+	}
+	else if (cmd==5) {
+		oldFormData = form;
+
+		foreach (planets as p => name) {
+			print ("[".p."] ".name);
+		}
+		planet = input ("\r\nChoose the planet (Sun = default): ", 2);
+		if (!isset (planets[planet]))
+			planet = 2;
+
+		planetName = planets[planet];
+
+		t = mktime (12, 0, 0, 1, 1, form["Year"]); // Beginning from 12 o clock because of daylight problems!
+
+		print ("Numbers with decimal separator ','? (y/n)");
+		fComma = getch ();
+		if (fComma=='Y' || fComma=='y')
+			fComma = true;
+		else
+			fComma = false;
+
+		tEnd =  mktime (12, 0, 0, 1, 1, date ("%Y", t)+1) - 3600 * 24;
+
+		// Correct to GMT
+		t += date ("%Z", t);
+		tEnd += date ("%Z", tEnd);
+		zone0 = form["Zone"];
+		zone2 = form["Zone"];
+		fAutoZone = date ("%Z", t) == zone0*3600;
+		if (fAutoZone) {
+			zone2 = date ("%Z", tEnd) / 3600;
+		}
+
+		fAutoZone = date ("%Z") == form["Zone"]*3600;
+
+		filename = strtolower (planetName)."_stat_".form["Year"].".csv";
+		print ("Write file: ".filename." ...");
+		fh = fopen (filename, "w+");
+		if (!fh) {
+			print ("Cannot create ".filename);
+		}
+		else {
+			autonl (false);
+			fwrite (fh, planetName." statistic\r\nPosition;".utf8_decode (lat2str (form["Lat"]))." ".utf8_decode (lon2str (form["Lon"]))."\r\nFrom;".gmdate ("%Y-%m-%d ".formatZone (zone0), t)."\r\nTo;".gmdate ("%Y-%m-%d ".formatZone (zone2), tEnd)."\r\n\r\n");
+			fwrite (fh, "Date;Rise;Azimuth;Set;Azimuth;Transit;Altitude;Length of Day\r\n");
+			do {
+				form["Day"]=gmdate ("%d", t);
+				form["Month"]=gmdate ("%m", t);
+				form["Year"]=gmdate ("%Y", t);
+				form["Minute"]=gmdate ("%i", t);
+				form["Hour"]=gmdate ("%H", t);
+				form["Second"]=0;
+				if (fAutoZone) {
+					form["Zone"]=date ("%Z", t-date ("%Z"))/3600; // Automatic daylight zone
+				}
+
+				results = ComputePlanetsRiseSet (form, planet);
+				transitAlt = round (results[planet]["transit_alt"][0],1);
+				dayLength = round (results[planet]["day_length"][0], 2);
+				riseAz = round (results[planet]["rise_az"][0], 2);
+				setAz = round (results[planet]["set_az"][0], 2);
+				line = gmdate ("%Y-%m-%d", t).";".results[planet]["rise"][1].";".riseAz.";".results[planet]["set"][1].";".setAz.";".results[planet]["transit"][1].";".transitAlt.";".dayLength;
+				if (fComma)
+					line =  str_replace (".", ",", line);
+				fwrite (fh, line."\r\n");
+				print (".");
+
+				t+=3600*24;
+			}
+			while (t<=tEnd);
+			fclose (fh);
+			autonl (true);
+			print ("\r\n");
+			print (filename." created");
+		}
+
+		form = oldFormData;
+	}
+	else if (cmd==6) {
+		oldFormData = form;
+
+		form2 = array ();
+		do {
+			SetupDateShort (form,  "Start ");
+			SetupDateShort (form2, "End   ");
+
+			t = mktime (form["Hour"], form["Minute"], 0, form["Month"], form["Day"], form["Year"]);
+			tEnd =  mktime (form2["Hour"], form2["Minute"], 0, form2["Month"], form2["Day"], form2["Year"]);
+			if (tEnd<=t) {
+				print ("\r\nError: End must be higher than start date.\r\n");
+			}
+		}
+		while (tEnd<t);
+
+		SetupZone (form);
+		minuteStep = input ("Every minutes (default = 5): ", 5);
+
+		print ("Numbers with decimal separator ','? (y/n)");
+		fComma = getch ();
+		if (fComma=='Y' || fComma=='y')
+			fComma = true;
+		else
+			fComma = false;
+
+		// Correct to GMT
+		t += date ("%Z", t);
+		tEnd += date ("%Z", tEnd);
+		zone0 = form["Zone"];
+		zone2 = form["Zone"];
+		fAutoZone = date ("%Z", t) == zone0*3600;
+		if (fAutoZone) {
+			zone2 = date ("%Z", tEnd) / 3600;
+		}
+
+		fAutoZone = date ("%Z") == form["Zone"]*3600;
+		oldDateStr = "";
+		filename = "sunstat_".minuteStep."min_".form["Year"].".csv";
+		print ("Write file: ".filename." ...");
+		fh = fopen (filename, "w+");
+		if (!fh) {
+			print ("Cannot create ".filename);
+		}
+		else {
+			fwrite (fh, "Sun azimuth/altitude every ".minuteStep." Minutes\r\nPosition;".utf8_decode (lat2str (form["Lat"]))." ".utf8_decode (lon2str (form["Lon"]))."\r\nFrom;".gmdate ("%Y-%m-%d %H:%i:%s ".formatZone (zone0), t)."\r\nTo;".gmdate ("%Y-%m-%d %H:%i:%s ".formatZone (zone2), tEnd)."\r\n\r\n");
+			fwrite (fh, "Date/Time;Azimuth;Altitude\r\n");
+			do {
+				form["Day"]=gmdate ("%d", t);
+				form["Month"]=gmdate ("%m", t);
+				form["Year"]=gmdate ("%Y", t);
+				form["Hour"]=gmdate ("%G", t);
+				form["Minute"]=gmdate ("%i", t);
+				form["Second"]=0;
+				dateStr = form["Year"]."-".form["Month"]."-".form["Day"];
+
+				if (fAutoZone) {
+					form["Zone"]=date ("%Z", t-date ("%Z"))/3600; // Automatic daylight zone
+				}
+
+				ComputeSunMoon (form, 2);
+				az = form["SunAz"];
+				if (fComma)
+					az = str_replace (".", ",", az);
+
+				alt = form["SunAlt"];
+				if (fComma)
+					alt = str_replace (".", ",", alt);
+
+				if (dateStr!=oldDateStr)
+					print (dateStr);
+				oldDateStr = dateStr;
+				fwrite (fh, gmdate ("%Y-%m-%d %H:%i", t).";".az.";".alt."\r\n");
+				t+=minuteStep*60;
+			}
+			while (t<=tEnd);
+			fclose (fh);
+			autonl (true);
+			print ("\r\n");
+			print (filename." created");
+		}
+		form = oldFormData;
+	}
+
+}
+while (true);
+
+?>

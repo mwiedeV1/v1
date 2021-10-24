@@ -1,0 +1,48 @@
+<?v1
+/*
+  Demonstrates native function calling of OpenSSL library
+  to create a X509 Certificate Signing Request (CSR)
+
+  Usage: v1 openssl_csr.v1
+*/
+error_reporting (0);
+require_once ("../lib/openssl_csr.inc.v1");
+
+print ("Library: ", libcryptoLibName);
+if (empty (version=OpenSSL_version()))
+{
+	print ("Wrong OpenSSL version.");
+	exit (1);
+}
+print ("Version: ", version);
+
+print ("\r\nCreate X509 Certificate Signing Request (CSR)\r\n");
+
+subject = array (
+	"C" => input ("Country (C):"),
+	"ST" => input ("State (ST):"),
+	"L" => input ("Location (L):"),
+	"O" => input ("Organization (O):"),
+	"CN" => input ("Common Name (CN):")
+);
+
+if (empty (subject["CN"]))
+{
+	print ("You need a Common Name (CN).");
+	exit (1);
+}
+
+filename = input ("CSR filename (CN.csr on default):", subject["CN"].".csr");
+
+print ("Generate CSR ...");
+
+if (ret = openssl_csr (subject, filename, 2048, "sha256", true)==1) {
+	print (filename, " successful created.");
+	exit (0);
+}
+else {
+	print ("Finished with errors. ", ret);
+	exit (1);
+}
+
+?>

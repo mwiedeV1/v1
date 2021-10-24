@@ -1,0 +1,84 @@
+<?v1 require_once ("helpers/start.v1");?>
+<h3>Send email with attachments, optional authentication and TLS.</h3>
+<?v1
+error_reporting (0);
+require_once ("../../../lib/smtp.inc.v1");
+
+// Login / Authentication
+host = "localhost"; // SMTP-Server, if empty then sendmail on Linux will be used, you can set own sendmail path in lib/smtp.inc.v1
+port = 25; // SMTP-Port, default = 25
+user = ""; // Username, let empty for no authentication
+pass = ""; // Password
+
+// Sender, Recipient email addresses
+from = "from@me.xyz"; // Sender, mostly same as username
+to = 'to@you.xyz, "Nice Recipient" <and@you.xyz>'; // Recipient(s), more recipients are separated by comma
+reply_to = ""; // BCC does not work on some Mailservers
+
+// Make sender to a nice format
+fromName = "V1 Script";
+from = "=?UTF-8?B?".base64_encode(fromName)."?= <".from.">";
+
+// Subject
+subject = "Mail from V1";
+
+// Message
+content_text = "This is a HTML formatted mail. Switch to HTML view.";
+content_html = '
+<html>
+<body>
+    <h2>V1-Script</h2>
+    <p>This mail was sent from '.getenv("SCRIPT_NAME").'</p>
+    <p>The following image was attached with own Content-ID.
+    It is also attached for download as a regular document.</p>
+    <p><img alt="logo.png" src="cid:image001.png@01CD4999.207EFEB0" /></p>
+</body>
+</html>
+';
+
+// Filenames attached
+filenames=array (
+    // Attach a file with own visible filename
+    array ("filename"=>"doc/images/v1_logo.png", "visible_filename"=>"V1 Logo.png"),
+    
+    // Attach image to reference it direct in html content with own Content-ID
+    array (
+       "filename" => "doc/images/v1_logo.png",
+       "Content-Type" => "image/png",
+       "Content-ID"  => "image001.png@01CD4999.207EFEB0"
+    ),
+    
+    // Attach also the current script file
+    ltrim (getenv("SCRIPT_NAME"), "/")
+);
+
+if (strpos (from,  "from@me.xyz")!==false)
+{
+	print ("Please set sender and recipient.");
+}
+else
+{
+	// Note! Also the php compatible mail() function can be used here,
+	// but send_mail() send attachments and multipart message much more easier.
+	ret = send_mail (
+        from,
+        to,
+        subject,
+        content_text,
+        content_html,
+        reply_to,
+        filenames,
+        user,
+        pass,
+        host,
+        port);
+
+	if (ret===true) {
+		print ("Mail was sent.");
+	}
+	else {
+		print ("Mail error: ", ret);
+	}
+}
+?>
+<?v1 require_once ("helpers/end.v1");?>

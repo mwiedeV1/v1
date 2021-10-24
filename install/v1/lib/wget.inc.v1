@@ -1,0 +1,527 @@
+<?v1
+dl ("ssl");
+require_once ("utils.inc.v1");
+
+/**
+ * Request a internet resource
+ * Supported schemes: http, https
+ *
+ * @parm url URL to request
+ *
+ * @param saveTo Filename or directory to save the content, if null then the content will be returned.
+ *
+ * @param fSimpleReturn If true then the content of HTTP-Status 200 will be returned.
+ * If no HTTP-Status 200 was received false will be returned.
+ * If fSimpleReturn is false, then an array with detailed information will be returned (see below).
+ *
+ * @param fVerbose If true then messages about progress will be printed.
+ *
+ * @param options Array with options, follwing options can be set:
+ * optHeaders = Optional HTTP headers truncated with \r\n
+ * cookieDatabase = Array with all cookies for this Website in following format cookieDatabase[cookieName]=array ("value"=>"xxx", "path"=>"xxx", ...)
+ * httpMethod = HTTP method (GET is default method)
+ * postData = Send string with post method
+ * postFilename =  Send contents of file with post method.
+ * user = Username for HTTP authorization (can be also given in URL)
+ * password = Password for HTTP authorization (can be also given in URL)
+ * askPassword = true then command prompt will ask for user/password for HTTP authorizantion
+ * saveHeaders = true then response HTTP headers will be saved within the "saveTo" file
+ * printClientRequest = true then print the client request headers
+ * printServerResponse = true then print the server response headers
+ *
+ *
+ * @return Array with response, following array keys will be set:
+ * url = The requested url
+ * httpStatus = HTTP status code
+ * httpHeaders = Array with all HTTP headers as key/values pairs, keys are uppercase
+ * cookieHeaders = Array with all Set-Cookie headers as list with index 0 .. n
+ * cookieDatabase = Array with all cookies for this Website in following format cookieDatabase[cookieName]=array ("value"=>"xxx", "path"=>"xxx", ...)
+ * content = The content or empty if "saveTo" is used
+ * contentLength = Length of content, can be differ from HTTP header Content-Length
+ * serverCert = Array with server SSL certificate information
+ * errText = Text with error message
+ *
+ * @return Content of requested URL or false on error.
+ * If saveTo is not null then on success true will be returned.
+ */
+
+function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=array ())
+{
+	redirectCnt = 0;
+
+	do {
+		// Init vars
+		ret = false;
+		ssl = ctx = socket = fh = null, statusCode = bytesReadTotal = 0, errText = "";
+		headerList = serverCert = setCookieList = array ();
+		redirectURL = null;
+
+		// Parse URL
+		urlTokens = parse_url (url);
+		if (!urlTokens || empty (urlTokens["host"])) {
+			errText = "Invalid URL format: ".url;
+			if (fVerbose) {
+				print (errText);
+			}
+			break;
+		}
+
+		port = 80;
+		fSSL = false;
+		switch (strtolower (urlTokens["scheme"])) {
+			case "https":
+				port = 443;
+				fSSL = true;
+				break;
+			case "http":
+				break;
+			default:
+				errText = "Unsupported scheme ".urlTokens["scheme"]." in ".url;
+				if (fVerbose)
+					print (errText);
+				break;
+		}
+
+		if (urlTokens["port"])
+			port = urlTokens["port"];
+
+		// Create classic socket
+		if (!empty (errText))
+			break;
+
+		autonl (false);
+		if (fVerbose)
+			print ("Connecting to ".urlTokens["host"].":".port." ... ");
+
+		socket = fsockopen (urlTokens["host"], port, 10000);
+		autonl (true);
+		if (!socket) {
+			errText = "Connection error";
+			if (fVerbose)
+				print (errText);
+			break;
+		}
+		if (fVerbose)
+			print ("connected");
+		res = null;
+		ssl = null;
+		ctx = null;
+
+		if (fSSL) {
+			// Create SSL Context
+			ctx = SSL_CTX_new ();
+			ssl = SSL_new (ctx);
+
+			// Set socket
+			SSL_set_fd (ssl, socket);
+			// Connect SSL
+			if (SSL_connect (ssl, urlTokens["host"])) {
+				res = ssl;
+			}
+			else {
+				// SSL connection problems
+				errText = "SSL error";
+				if (fVerbose)
+					print (errText);
+			}
+			serverCert = SSL_get_peer_certificate (ssl);
+		}
+		else {
+			res = socket;
+		}
+
+		if (res) {
+			postLength = 0;
+			fh = null;
+			if (isset (options["postFilename"])) {
+				if (!is_file (options["postFilename"])) {
+					errText = "File not found: ".options["postFilename"];
+					if (fVerbose)
+						print (errText);
+					break;
+				}
+
+				fh = fopen (options["postFilename"], "r");
+				if (!fh) {
+					errText = "Cannot open: ".options["postFilename"];
+					if (fVerbose)
+						print (errText);
+					break;
+				}
+				postLength+=filesize(fh);
+			}
+			if (isset (options["postData"]))
+				postLength+=strlen (options["postData"]);
+
+
+			// Write TTP header
+			optHeaders = "";
+			if (isset (options["optHeaders"]))
+				optHeaders.=options["optHeaders"];
+			if (strpos (strtolower (optHeaders), "user-agent")===false)
+				optHeaders.="User-Agent: Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36\r\n";
+
+			if (isset (options["user"]) || isset (options["password"])) {
+				optHeaders.="Authorization: Basic ".base64_encode (options["user"].":".options["password"])."\r\n";
+			}
+			else if (!empty (urlTokens["userinfo"]))
+				optHeaders.="Authorization: Basic ".base64_encode (urlTokens["userinfo"])."\r\n";
+
+			if (postLength>0)
+				optHeaders.="Content-Length: ".postLength."\r\n";
+
+			// Cookies
+			cookies = "";
+			foreach (options["cookieDatabase"] as cookieName => cookieData) {
+				if (strpos (urlTokens["path"], !empty (cookieData["path"]) ? cookieData["path"] : "/")===0) {
+					// Check expire date not yet implemented ...
+
+					if (!empty (cookies))
+						cookies.=";";
+					cookies.=(cookieName."=".cookieData["value"]);
+				}
+			}
+			if (!empty (cookies)) {
+				optHeaders.="Cookie: ".cookies."\r\n";
+			}
+
+			path = urlTokens["path"];
+			if (!empty (urlTokens["query"]))
+				path.="?".urlTokens["query"];
+			if (!empty (urlTokens["fragment"]))
+				path.="#".urlTokens["fragment"];
+
+			// Set content type if post data is sent
+			if (isset (options["postData"]) && strpos (strtolower (optHeaders), "content-type")===false) {
+				optHeaders.="Content-Type: application/x-www-form-urlencoded\r\n";
+			}
+			headers = (isset (options["httpMethod"]) ? options["httpMethod"] : (isset (options["postData"])||fh ? "POST" : "GET"))." ".path." HTTP/1.1\r\nHost: ".urlTokens["host"]."\r\n".optHeaders."Connection: close\r\n\r\n";
+
+			if (!empty (options["printClientRequest"]))
+				print (headers);
+			else if (fVerbose) {
+				print ("Path: ".urlTokens["path"]);
+			}
+			fwrite (res, headers);
+
+			// Optional post data
+			if (isset (options["postData"])) {
+				fwrite (res, options["postData"]);
+			}
+			if (fh) {
+				autonl (false);
+
+				if (fVerbose) {
+					print ("Sending ".formatKBText(filesize(fh))." from: ".options["postFilename"]." ...");
+				}
+				tmp = "";
+				while (fread (fh, tmp)) {
+					fwrite (res, tmp);
+				}
+				fclose (fh);
+				fh = null;
+				autonl (true);
+				if (fVerbose) {
+					print (" OK");
+				}
+			}
+
+			// Read HTTP header
+			line = "", responseHeaders="", lineIdx = 0, contentLength = 0, statusCode = 0, statusText = "";
+			while (freadln (res, line)) {
+				if (lineIdx==0) {
+					if ((p = strpos (line, ' '))!==false) {
+						statusText = trim (substr (line, p, strlen(line)-p));
+						statusCode = intval (statusText);
+					}
+				}
+				else {
+					if ((p=strpos (line, ":"))!==false) {
+						header = strtoupper (trim (substr(line,0,p)));
+						value = trim (substr(line,p+1));
+						if (header=="CONTENT-LENGTH")
+							contentLength = value;
+						if (header=="SET-COOKIE")
+							array_push (setCookieList, value);
+						else
+							headerList[header]=value;
+					}
+				}
+				responseHeaders.=line;
+				responseHeaders.="\r\n";
+
+				if (empty (line))
+					break;
+				lineIdx++;
+			}
+
+			// Parse cookies and set to cookie database (overwrite existing cookies)
+			foreach (setCookieList as cookie) {
+				cookieData = explode (";", cookie);
+				foreach (cookieData as idx => cookieToken) {
+					assign (name, value) = explode ("=", cookieToken);
+					name = trim (name);
+					value = trim (value);
+					if (idx==0) {
+						options["cookieDatabase"][cookieName=name]["value"]=value;
+					}
+					else {
+						options["cookieDatabase"][cookieName][name]=value;
+					}
+				}
+			}
+
+			if (!empty (options["printServerResponse"]))
+				print (responseHeaders);
+
+			if (statusCode>=301 && statusCode<=303) {
+				// Redirect
+				redirectCnt++;
+				if (redirectCnt>7) {
+					errText = "Too many redirects";
+					if (fVerbose)
+						print (errText);
+					break;
+				}
+				redirectURL = headerList["LOCATION"];
+
+				// Build correct redirect url
+				if (substr (redirectURL, 0, 1)=="/") {
+					redirectURL = urlTokens["scheme"]."://".urlTokens["host"].(!empty (urlTokens["port"]) ? ":".urlTokens["port"] : "").redirectURL;
+				}
+				url = redirectURL;
+				if (fVerbose)
+					print ("Redirect ".statusCode." to: ".url);
+			}
+			else if (statusCode==200) {
+				time0 = microtime (true);
+
+				fh = null;
+				ret = tmp = "";
+
+				if (saveTo) {
+					filename = saveTo;
+
+					// Create output file
+					fDontOverwrite = false;
+					if (is_dir (saveTo)) {
+						filename = saveTo."/".((empty (urlTokens["path"]) || urlTokens["path"]=="/") ? "index.html" : basename(urlTokens["path"]));
+						fDontOverwrite = true;
+					}
+					if (fDontOverwrite) {
+						testFilename = filename;
+						testCnt = 1;
+						while (is_file (testFilename)) {
+							testFilename = filename.".".testCnt;
+							testCnt++;
+						}
+						filename = testFilename;
+					}
+
+					fh = fopen (filename, "w+");
+					if (!fh) {
+						errText = "Cannot create output file: ".filename;
+						if (fVerbose)
+							print (errText);
+						break;
+					}
+					if (fVerbose)
+						print ("Saving to: ".str_replace ("\\", "/", filename));
+
+				}
+				if (!empty (options["saveHeaders"])) {
+					if (fh)
+						fwrite (fh, responseHeaders);
+					else
+						ret.=responseHeaders;
+				}
+
+				fChunked = false;
+				if (headerList["TRANSFER-ENCODING"]=="chunked")
+					fChunked = true;
+
+				// Read content
+				autonl (false);
+				if (fVerbose) {
+					if (contentLength)
+						print ("Status: 200, read ".formatKBText(contentLength)." ...");
+					else
+						print ("Status: 200, read ...");
+				}
+
+				if (!contentLength || fChunked) {
+					// Read line by line
+					while (freadln (res, tmp)) {
+						if (fChunked) {
+							size = 0;
+							sscanf (tmp, "%X", size);
+							// print ("Read chunked ".tmp."=".size." bytes<br>");
+							while (size>0) {
+								bytesRead = fread (res, tmp, size);
+								bytesReadTotal+=bytesRead;
+								size-=bytesRead;
+								if (saveTo && fh) {
+									fwrite (fh, tmp, bytesRead);
+									ret+=bytesRead;
+								}
+								else {
+									ret.=tmp;
+								}
+							}
+						}
+						else {
+							bytesReadTotal+=(strlen (tmp)+1);
+							if (saveTo && fh) {
+								fwrite (fh, tmp);
+								fwrite (fh, "\n");
+							}
+							else {
+								ret.=tmp;
+							}
+						}
+					}
+				}
+				else {
+					// Read in blocks
+					size = contentLength > 0xFFFF ? 0xFFFF :  contentLength;
+					bytesToRead = contentLength;
+					bytesRead = 0;
+					p = 0;
+					while (bytesToRead>0 &&  (bytesRead=fread (res, tmp, size))>0) {
+						// print ("bytesRead=", bytesRead, ", contentLength=", contentLength, "<br>");
+						bytesReadTotal+=bytesRead;
+						if (fVerbose) {
+							p2 = floor ((bytesReadTotal/contentLength)*30);
+							if (p2>p) {
+								print (".");
+								p = p2;
+							}
+						}
+						if (saveTo && fh)
+							fwrite (fh, tmp, bytesRead);
+						else
+							ret.=tmp;
+						bytesToRead-=bytesRead;
+						if (bytesToRead<size)
+							size=bytesToRead;
+					}
+				}
+				time = microtime (true) - time0;
+				autonl (true);
+				if (fVerbose) {
+					if (time>2)
+						print (" OK [".bytesReadTotal." bytes, ".round(time,2)." sec, ".formatKBText(round (bytesReadTotal/time,0))."/sec]");
+					else
+						print (" OK [".bytesReadTotal." bytes, ".round(time,2)." sec]");
+				}
+
+				if (contentLength>0 && bytesReadTotal!=(contentLength)) {
+					errText = "Received ".bytesReadTotal." bytes differs from HTTP Content-Length: ".contentLength;
+					if (fVerbose) {
+						print (errText);
+					}
+				}
+
+				if (fh) {
+					fclose (fh);
+					fh = null;
+				}
+			}
+			else {
+				autonl (true);
+				if (statusCode==401 && !empty (options["askPassword"])) {
+					// Ask for password
+					matches = array ();
+					if (preg_match ("(.*) realm=\"(.*)\"", headerList["WWW-AUTHENTICATE"], matches)) {
+						if (strtolower (matches[1])!="basic") {
+							errText = "Unsupported authorization method: ".matches[1];
+						}
+						else {
+							print ("Authentication required: ".matches[2]);
+						}
+					}
+					else {
+						print ("Authentication required: ".headerList["WWW-AUTHENTICATE"]);
+					}
+					if (empty (errText)) {
+						redirectURL = url;
+						redirectCnt=0;
+						options["user"]=input ("Username:");
+						console_echo (0);
+						options["password"]=input ("Password:");
+						console_echo (1);
+					}
+				}
+				else {
+					// Invalid status code
+					if (!statusCode)
+						errText = "Connection closed by server or invalid HTTP response";
+					else
+						errText = "Status: ".statusText;
+				}
+				if (fVerbose)
+					print (errText);
+			}
+		}
+
+		// Close handles before redirect
+		if (ssl) {
+			SSL_free (ssl);
+			ssl = null;
+		}
+		if (ctx) {
+			SSL_CTX_free (ctx);
+			ctx = null;
+		}
+		if (socket) {
+			fclose (socket);
+			socket = null;
+		}
+		if (fh) {
+			fclose (fh);
+			fh = null;
+		}
+
+	}
+	while (redirectURL);
+
+	// Finally close handles
+	if (ssl) {
+		SSL_free (ssl);
+		ssl = null;
+	}
+	if (ctx) {
+		SSL_CTX_free (ctx);
+		ctx = null;
+	}
+	if (socket) {
+		fclose (socket);
+		socket = null;
+	}
+	if (fh) {
+		fclose (fh);
+		fh = null;
+	}
+
+	// Return
+	if (fSimpleReturn) {
+		if (!empty (errText))
+			return false;
+		if (saveTo)
+			return true;
+		return ret;
+	}
+
+	// Detailed array
+	return array (
+		"url"=>url,
+		"httpStatus"=>statusCode,
+		"httpHeaders"=>headerList,
+		"cookieHeaders" => setCookieList,
+		"cookieDatabase"=>options["cookieDatabase"],
+		"content"=>ret,
+		"contentLength"=> bytesReadTotal,
+		"serverCert"=>serverCert,
+		"errText"=>errText);
+}
+?>

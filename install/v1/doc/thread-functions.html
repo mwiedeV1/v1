@@ -1,0 +1,112 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Thread functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Thread functions</h1>
+<p>The following thread functions are supported. </p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>thread_create</strong> (string <em>function</em>, [mixed <em>arg1</em>...])</td>
+<td>handle</td>
+<td>Create a new thread  which will be run on <em>function</em>.  Optional function arguments can be set. On success the new thread handle is returned, otherwise null is returned. Note! To start the thread you have to call thread_start().</td>
+</tr>
+<tr>
+<td><strong>thread_start</strong> (handle <em>thread</em>, bool <em>waitRunning</em>=true)</td>
+<td>bool</td>
+<td>Start the <em>thread</em>  which was created with thread_create(). If <em>waitRunning</em> is true thread_start() waits until the thread function is running. If <em>waitRunning</em> is false thread_start() return immediately, this could cause problems with variable initialization if the parent thread will be finished before the child thread begins to run. Otherwise you can create faster children threads if you keep care that the parent thread will be alive. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_join</strong> (handle <em>thread</em>, number <em>milliseconds</em>=0)</td>
+<td>bool</td>
+<td>Join the <em>thread</em> a specific time in <em>milliseconds</em>. If <em>milliseconds</em>=0 the thread is joined   infinite until it was finished. If the thread was finished then true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_wait</strong> (number <em>milliseconds</em>=0)</td>
+<td>bool</td>
+<td>thread_wait() must be called within the <em>thread</em> function and waits for a thread_signal().  If <em>milliseconds</em>=0 the thread waits infinite time.  If thread_signal() was received then true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_signal</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Send the waiting <em>thread</em> a signal to weak up from thread_wait() function. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_kill</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Kill a active <em>thread</em> immediately. On succes true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_close</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Close the <em>thread</em> handle.  If thread is still active it will be killed before. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_is_active</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Return true if the <em>thread</em> is active (running).</td>
+</tr>
+<tr>
+<td><strong>thread_set_finish</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Tell the <em>thread</em> that it should finish. thread_set_finish() only set a flag which can be checked with thead_is_finish(). If thread is waiting you have to weak up the thread with thread_signal(). On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_is_finish</strong> ()</td>
+<td>bool</td>
+<td>Return true if the current running thread should finish. See thread_set_finish()</td>
+</tr>
+<tr>
+<td><strong>thread_suspend</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Suspend the <em>thread</em>. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_resume</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Resume the <em>thread</em>. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_sync_enter</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Enter a <em>thread</em> synchronized program part. All instructions between  thread_sync_enter() and thread_sync_leave() are exclusive executed  and not involved by any other thread which will wait until thread_sync_leave() was called. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>thread_sync_leave</strong> (handle <em>thread</em>)</td>
+<td>bool</td>
+<td>Leave a <em>thread</em> synchronized program part. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>sleep</strong> (number <em>milliseconds</em>)</td>
+<td>true</td>
+<td>Sleep some <em>milliseconds</em>.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

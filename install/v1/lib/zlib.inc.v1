@@ -1,0 +1,427 @@
+<?v1
+// Replace with correct path of ZLib library (zlib.dll or libz.so)
+zLibLibName =  'libz';
+
+hDLLZLib = dl (zLibLibName, true);
+if (!hDLLZLib)
+{
+	// Search for libraries
+	libList = explode ("\n", system ('/usr/bin/find /usr -name "libz.so*"'));
+	if (!empty (libList[0])) {
+		hDLLZLib = dl (zLibLibName = libList[0], true);
+	}
+}
+
+if (!hDLLZLib)
+{
+	print ("ZLib library not found.\r\nSet zLibLibName in ".__FILE__." to libz.so or zlib.dll");
+	exit (1);
+}
+
+
+// ZLib functions
+// https://github.com/madler/zlib/blob/master/zlib.h
+
+const Z_OK                  =  0;
+const Z_STREAM_END          =  1;
+const Z_NEED_DICT           =  2;
+const Z_ERRNO               = -1;
+const Z_STREAM_ERROR        = -2;
+const Z_DATA_ERROR          = -3;
+const Z_MEM_ERROR           = -4;
+const Z_BUF_ERROR           = -5;
+const Z_VERSION_ERROR       = -6;
+
+const Z_NO_FLUSH            =  0;
+const Z_PARTIAL_FLUSH       =  1;
+const Z_SYNC_FLUSH          =  2;
+const Z_FULL_FLUSH          =  3;
+const Z_FINISH              =  4;
+
+const Z_NO_COMPRESSION      =  0;
+const Z_BEST_SPEED          =  1;
+const Z_BEST_COMPRESSION    =  9;
+const Z_DEFAULT_COMPRESSION = -1;
+
+const Z_BUF_SIZE            = 0xFFFF;
+
+// Return unitialized z_stream struct
+function z_streamCreate ()
+{
+	return array (
+	           array (
+	               "next_in"=> 0,
+	               "avail_in"=> 0,
+	               "total_in"=> 0,
+	               "next_out"=> 0,
+	               "avail_out"=> 0,
+	               "total_out"=> 0,
+	               "msg" => 0,
+	               "state"=> 0,
+	               "zalloc"=> 0,
+	               "zfree"=> 0,
+	               "opaque"=> 0,
+	               "data_type"=> 0,
+	               "adler"=> 0,
+	               "reserved"=> 0
+	           ),
+	           "" // Binary representation, filled by z_streamFormat
+	       );
+}
+
+// Format binary representation of z_stream
+function z_streamFormat (&z_stream, fReset=false)
+{
+	if (strlen (z_stream[1])==0) {
+		// Build the z_stream struct first
+		foreach (z_stream[0] as key => value) {
+			z_stream[1].=binformat(value);
+		}
+	}
+	else {
+		mem = memref (z_stream[1]);
+		// Only set the variables
+		pos = 0;
+		foreach (z_stream[0] as key => value) {
+			memset (mem, binformat (fReset ? 0 : value), pos);
+			pos+=_ALIGN;
+		}
+	}
+	return strlen (z_stream[1]);
+}
+
+// Parse binary representation of z_stream
+function z_streamParse (&z_stream)
+{
+	pos = 0;
+	foreach (z_stream[0] as key => value) {
+		z_stream[0][key]=binparse(z_stream[1], 7, pos);
+		pos+=_ALIGN;
+	}
+}
+
+function  z_streamLog (&z_stream)
+{
+	// Log the z_stream
+	foreach (z_stream[0] as key =>value) {
+		printf ("%s = %8X <br>", key, value);
+	}
+}
+
+function zlibVersion ()
+{
+	global hDLLZLib;
+	return call (hDLLZLib, "zlibVersion", [[], "s"]);
+}
+
+function deflateInit (&z_stream, level=9)
+{
+	global hDLLZLib, g_version;
+	size = z_streamFormat (z_stream);
+	ret = call (hDLLZLib, "deflateInit_", [["r", "i", "s", "i"], "i"], z_stream[1], level, zlibVersion (), size);
+	z_streamParse (z_stream);
+	return ret;
+}
+
+function deflate (&z_stream, flush=Z_SYNC_FLUSH)
+{
+	global hDLLZLib;
+	z_streamFormat (z_stream);
+	ret = call (hDLLZLib, "deflate", [["r", "i"], "i"], z_stream[1], flush);
+	z_streamParse (z_stream);
+	return ret;
+}
+
+function deflateEnd (&z_stream)
+{
+	global hDLLZLib;
+	ret = call (hDLLZLib, "deflateEnd", [["r"], "i"], z_stream[1]);
+	z_streamParse (z_stream);
+	return ret;
+}
+
+function inflateInit (&z_stream)
+{
+	global hDLLZLib, g_version;
+	size = z_streamFormat (z_stream);
+	ret = call (hDLLZLib, "inflateInit_", [["r", "s", "i"], "i"], z_stream[1], zlibVersion (), size);
+	z_streamParse (z_stream);
+	return ret;
+}
+
+function inflate (&z_stream, flush=Z_SYNC_FLUSH)
+{
+	global hDLLZLib;
+	z_streamFormat (z_stream);
+	ret = call (hDLLZLib, "inflate", [["r", "i"], "i"], z_stream[1], flush);
+	z_streamParse (z_stream);
+	return ret;
+}
+
+function inflateEnd (&z_stream)
+{
+	global hDLLZLib;
+	ret = call (hDLLZLib, "inflateEnd", [["r"], "i"], z_stream[1]);
+	z_streamParse (z_stream);
+	return ret;
+}
+
+function compress (&dst, &src, level=Z_DEFAULT_COMPRESSION)
+{
+	global hDLLZLib;
+	resize (dst, strlen (src));
+	len = binformat (strlen (src));
+	ret = call (hDLLZLib, "compress2", [["r", "r", "s", "i", "i"], "i"], dst, len, src, strlen(src), level);
+	len = binparse (len);
+	resize (dst, len);
+	return ret;
+}
+
+function uncompress (&dst, &src)
+{
+	global hDLLZLib;
+
+	if (strlen (dst)<=strlen (src))
+		resize (dst, strlen(src)*10); // Calc with factor 10
+
+	len = binformat (strlen(dst));
+	ret = call (hDLLZLib, "uncompress", [["r", "r", "s", "i"], "i"], dst, len, src, strlen(src));
+	len = binparse (len);
+	resize (dst, len);
+	return ret;
+}
+
+function gzopen (path, mode)
+{
+	global hDLLZLib;
+	ret = call (hDLLZLib, "gzopen", [["s", "s"], "p"], path, mode);
+	return ret;
+}
+
+function gzread (gzFile, &buf, size)
+{
+	global hDLLZLib;
+	if (strlen (buf)<size)
+		resize (buf, size);
+	ret = call (hDLLZLib, "gzread", [["p", "r", "i"], "i"], gzFile, buf, size);
+	return ret;
+}
+
+function gzwrite (gzFile, &buf, size)
+{
+	global hDLLZLib;
+	ret = call (hDLLZLib, "gzwrite", [["p", "r", "i"], "i"], gzFile, buf, size);
+	return ret;
+}
+
+function gzflush (gzFile, flush=Z_FINISH)
+{
+	global hDLLZLib;
+	ret = call (hDLLZLib, "gzflush", [["p", "i"], "i"], gzFile, flush);
+	return ret;
+}
+
+function gzclose (gzFile)
+{
+	global hDLLZLib;
+	ret = call (hDLLZLib, "gzclose", [["p"], "i"], gzFile);
+	return ret;
+}
+
+function gzerror (gzFile, &errnum)
+{
+	global hDLLZLib;
+	code = binformat(0);
+	ret = call (hDLLZLib, "gzerror", [["p", "r"], "i"], gzFile, code);
+	errnum = binparse (code);
+	return ret;
+}
+
+/* Higher level functions, not part of ZLIB */
+
+function gz_compress_file (srcFilename, dstFilename, fVerbose=false)
+{
+	global hDLLZLib;
+	errno = 0;
+	fh = fopen (srcFilename, 'r');
+	if (!fh) {
+		if (fVerbose)
+			print ("Cannot open file: ", srcFilename);
+		return Z_ERRNO;
+	}
+
+	file = gzopen (dstFilename, "wb");
+	if (!file) {
+		if (fVerbose)
+			print ("Cannot create gzip file: ", dstFilename);
+		return Z_ERRNO;
+	}
+
+	buf = "";
+	ret = 1;
+	while ((read=fread (fh, buf, 0xFFFF))>0) {
+		ret = gzwrite (file, buf, read);
+		if (ret==0)
+			break;
+	}
+
+	fclose (fh);
+	gzflush (file, Z_FINISH);
+	gzclose (file);
+
+	if (ret<=0) {
+		if (fVerbose)
+			print ("Compression error: ", Z_STREAM_ERROR);
+		return Z_STREAM_ERROR;
+	}
+	return Z_OK;
+}
+
+function gz_decompress_file (srcFilename, dstFilename, fVerbose=false)
+{
+	global hDLLZLib;
+	file = gzopen (srcFilename, "rb");
+	if (!file) {
+		if (fVerbose)
+			print ("Cannot open gzip file: ", srcFilename);
+		return Z_ERRNO;
+	}
+
+	fh = fopen (dstFilename, 'w+');
+	if (!fh) {
+		if (fVerbose)
+			print ("Cannot create file: ", dstFilename);
+		return Z_ERRNO;
+	}
+
+	buf = "";
+	while ((read=gzread (file, buf, 0xFFFF))>0) {
+		fwrite (fh, buf, read);
+	}
+
+	fclose (fh);
+	gzclose (file);
+
+	if (read<0) {
+		if (fVerbose)
+			print ("Decompression error: ", read);
+		return read;
+	}
+	return Z_OK;
+}
+
+// Compress with native inflate methods
+function z_inflate_file (srcFilename, dstFilename, fVerbose=false)
+{
+	fh = fopen (srcFilename, 'r');
+	if (!fh) {
+		if (fVerbose)
+			print ("Cannot open file: ", srcFilename);
+		return Z_ERRNO;
+	}
+
+	fh2 = fopen (dstFilename, 'w+');
+	if (!fh2) {
+		if (fVerbose)
+			print ("Cannot create file: ", dstFilename);
+		return Z_ERRNO;
+	}
+
+	z_stream = z_streamCreate ();
+
+	ret = inflateInit (z_stream);
+
+	if (ret<0) {
+		if (fVerbose)
+			print ("inflateInit() failed: ", ret);
+	}
+	else {
+		src = "";
+		dst = "";
+		resize (dst, Z_BUF_SIZE); // Make enough destination buffer
+		while (fread (fh, src, 4096)) { // Read with low buf size
+			z_stream[0]["avail_out"] = Z_BUF_SIZE;
+			z_stream[0]["next_out"]  = memref (dst);
+			z_stream[0]["avail_in"]  = strlen (src);
+			z_stream[0]["next_in"]   = memref (src);
+
+			ret = inflate (z_stream, feof (fh) ? Z_FINISH : Z_SYNC_FLUSH);
+			if (ret<0) {
+				if (fVerbose)
+					print ("inflate() failed: ", ret);
+				break;
+			}
+			size = Z_BUF_SIZE-z_stream[0]["avail_out"];
+
+			fwrite (fh2, dst, size);
+			if (ret==Z_STREAM_END)
+				break;
+		}
+		inflateEnd (z_stream);
+	}
+	if (ret!=0) {
+		if (fVerbose)
+			print ("Compression error: ", ret);
+	}
+	fclose (fh);
+	fclose (fh2);
+	return ret;
+}
+
+
+// Decompress with native deflate methods
+function z_deflate_file (srcFilename, dstFilename, fVerbose=false)
+{
+	fh = fopen (srcFilename, 'r');
+	if (!fh) {
+		if (fVerbose)
+			print ("Cannot open file: ", srcFilename);
+		return Z_ERRNO;
+	}
+
+	fh2 = fopen (dstFilename, 'w+');
+	if (!fh2) {
+		if (fVerbose)
+			print ("Cannot create file: ", dstFilename);
+		return Z_ERRNO;
+	}
+
+	z_stream = z_streamCreate ();
+
+	ret = deflateInit (z_stream);
+
+	if (ret<0) {
+		if (fVerbose)
+			print ("deflateInit() failed: ", ret);
+	}
+	else {
+		src = "";
+		dst = "";
+		resize (dst, Z_BUF_SIZE); // Make enough destination buffer
+		while (fread (fh, src)) {
+			z_stream[0]["avail_out"] = Z_BUF_SIZE;
+			z_stream[0]["next_out"]  = memref (dst);
+			z_stream[0]["avail_in"]  = strlen (src);
+			z_stream[0]["next_in"]   = memref (src);
+
+			ret = deflate (z_stream, feof (fh) ? Z_FINISH : Z_SYNC_FLUSH);
+			if (ret<0) {
+				if (fVerbose)
+					print ("deflate() failed: ", ret);
+				break;
+			}
+			size = Z_BUF_SIZE-z_stream[0]["avail_out"];
+			fwrite (fh2, dst, size);
+		}
+		deflateEnd (z_stream);
+	}
+	if (ret!=0) {
+		if (fVerbose)
+			print ("Decompression error: ", ret);
+	}
+	fclose (fh);
+	fclose (fh2);
+	return ret;
+}
+
+?>

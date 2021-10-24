@@ -1,0 +1,77 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Dataype functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Datatype functions</h1>
+<p>The following datatype and variable functions are supported. See also chapter <a href="datatypes.html">Datatypes</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>isset</strong> (mixed &amp;<em>var1</em>...)</td>
+<td>bool</td>
+<td>Return true if one or more variables <em>var</em> are defined and not null. isset() is also usable for array keys. For example isset(myArray['key']) will return true if array key with name 'key' hold a value that is not null.</td>
+</tr>
+<tr>
+<td><strong>unset</strong> (mixed &amp;<em>var1</em>...)</td>
+<td>true</td>
+<td>Unset/Remove one or more variables <em>var</em>. After operation the variables are undefined. unset() is also usable for array keys. For example unset(myArray['key']) will remove the entry with name 'key'. Everytime true is returned.</td>
+</tr>
+<tr>
+<td><strong>empty</strong> (mixed <em>arg</em>)</td>
+<td>bool</td>
+<td>Return true if <em>arg</em>  is empty. Examples for empty values: "",0,  false, array(), null - In difference to isset() and PHP it will not work for undefined variables but work for not existing array keys.  If variable is not defined empty() will abort the program with error.</td>
+</tr>
+<tr>
+<td><strong>gettype</strong> (mixed <em>arg</em>)</td>
+<td>string</td>
+<td>Get the name of the datatype of given argument <em>arg</em>. <br>Possible return values are: number, string, boolean, array, handle, null</td>
+</tr>
+<tr>
+<td><strong>is_array</strong> (mixed <em>arg</em>)</td>
+<td>bool</td>
+<td>Return true if <em>arg</em>  is an array.</td>
+</tr>
+<tr>
+<td><strong>intval</strong> (mixed <em>arg</em>)</td>
+<td>number</td>
+<td>Convert <em>arg</em>  to integer number.</td>
+</tr>
+<tr>
+<td><strong>doubleval</strong> (mixed <em>arg</em>)</td>
+<td>number</td>
+<td>Convert <em>arg</em>  to floating point double number.</td>
+</tr>
+<tr>
+<td><strong>strval</strong> (mixed <em>arg</em>)</td>
+<td>string</td>
+<td>Convert <em>arg</em>   to string.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

@@ -1,0 +1,124 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Web functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Web functions</h1>
+<p>V1 can be used as CGI interpreter. 
+Therefore you have to configurate your Webserver to call v1 -w <filename> (with -w option) for every file which should be interpretated with V1.</p>
+<p>In Web mode V1 will create the following global Arrays. The name and format of the arrays are compatible to theire PHP pendants.</p>
+<table>
+<thead>
+<tr>
+<th>Name of Array</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>_GET</td>
+<td>Contain all URL parameters and &lt;form method="get"&gt; values as key / value pairs.</td>
+</tr>
+<tr>
+<td>_POST</td>
+<td>Contain all &lt;form method="post"&gt; values as key / value pairs.</td>
+</tr>
+<tr>
+<td>_REQUEST</td>
+<td>Aggregation of _GET and _POST. Contain all request values as key / value pairs.</td>
+</tr>
+<tr>
+<td>_FILES</td>
+<td>Contain the uploaded filenames.  For further information about file uploads read <a href="http://php.net/manual/en/features.file-upload.php" target="_blank">PHP file upload</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>In difference to PHP, V1 has no _SERVER array.
+To get CGI environment variables you have to use the <strong>getenv ()</strong> function. For example getenv('SCRIPT_FILENAME') get the current V1 filename.
+More Information about possible CGI variables: <a href="https://en.wikipedia.org/wiki/Common_Gateway_Interface" target="_blank">https://en.wikipedia.org/wiki/Common_Gateway_Interface</a></p>
+<p>The following Web specific functions are supported. The functions are compatible with theire PHP pendants.</p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>header</strong> (string <em>header</em>)</td>
+<td>bool</td>
+<td>Set a HTTP <em>header</em>. The header () function need to be called before any other output from print() or document text outside the &lt;?v1 ?&gt; tags is sent to the client. For example: header ("Location: /newpath") will cause a HTTP redirect. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>htmlspecialchars</strong> (string <em>string</em>)</td>
+<td>string</td>
+<td>Return a HTML compatible <em>string</em>.   Characters &amp; &lt; &gt; " will be replaced with HTML characters.</td>
+</tr>
+<tr>
+<td><strong>nl2br</strong> (string <em>string</em>)</td>
+<td>string</td>
+<td>Replace all line feeds with HTML &lt;br> in the given <em>string</em> and return.</td>
+</tr>
+<tr>
+<td><strong>url_encode</strong> (string <em>string</em>)</td>
+<td>string</td>
+<td>Encode a given <em>string</em> to URL format and return. All incompatible characters will be encoded with %XX values.</td>
+</tr>
+<tr>
+<td><strong>url_decode</strong> (string <em>string</em>)</td>
+<td>string</td>
+<td>Decode a given URL formatted <em>string</em>  to plain text and return.</td>
+</tr>
+<tr>
+<td><strong>is_uploaded_file</strong> (string <em>filename</em>)</td>
+<td>bool</td>
+<td>Same as PHP function is_uploaded_file(). The function will return true if the given <em>filename</em> was uploaded with HTTP.</td>
+</tr>
+<tr>
+<td><strong>move_uploaded_file</strong> (string <em>filename</em>, string <em>destination</em>)</td>
+<td>bool</td>
+<td>Same as PHP function move_uploaded_file(). The function will move the uploaded <em>filename</em> from temporary path to <em>destination</em> path.</td>
+</tr>
+<tr>
+<td><strong>json_encode</strong> (array <em>array</em>)</td>
+<td>string</td>
+<td>Encode <em>array</em> to JSON format and return.</td>
+</tr>
+<tr>
+<td><strong>json_decode</strong> (string <em>string</em>)</td>
+<td>array</td>
+<td>Decode JSON formatted string  to <em>array</em> and return. If JSON format is bad then false is returned.</td>
+</tr>
+<tr>
+<td><strong>base64_encode</strong> (string <em>string</em>)</td>
+<td>string</td>
+<td>Encode <em>string</em> to BASE64 format and return.</td>
+</tr>
+<tr>
+<td><strong>base64_decode</strong> (string <em>string</em>)</td>
+<td>string</td>
+<td>Decode  BASE64 formatted <em>string</em> to plain text and return. On error empty string is returned.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

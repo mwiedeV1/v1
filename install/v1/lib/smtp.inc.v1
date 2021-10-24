@@ -1,0 +1,498 @@
+<?v1
+dl ("regex");
+
+// Full path to sendmail (only on Linux)
+const SENDMAIL_PATH = "/usr/sbin/sendmail";
+
+// Encoding of the email message used by send_mail()
+// Possible values: quoted-printable, base64
+const MAIL_ENCODING = "quoted-printable";
+
+// Helper functions
+function smtp_read (client)
+{
+	line = "";
+	if (freadln (client, line)) {
+		return array_merge (explode (" ", line), array ("line"=>line));
+	}
+	return false;
+}
+
+function smtp_write (client, line)
+{
+	fwrite (client, line."\r\n");
+}
+
+function encode_quoted_printable (input, line_max = 76)
+{
+	lines  = preg_split("/(?:\r\n|\r|\n)/", input);
+	eol    = "\n";
+	escape = "=";
+	output = "";
+	foreach (lines as line) {
+		// line  = rtrim(line); // remove trailing white space -> no =20\r\n necessary
+		linlen  = strlen(line);
+		newline = "";
+		ref = memref (line);
+		for (i = 0; i < linlen; i++) {
+			c   = memat (ref+i, 1);
+			dec = binparse(c, 1);
+
+			if ( (dec == 32) && (i == (linlen - 1)) ) {  // convert space at eol only
+				c = "=20";
+			}
+			else if ((dec == 61) || (dec < 32 ) || (dec > 126)) { // always encode "\t", which is *not* required
+				c =  escape.strtoupper (bin2hex (c));
+			}
+			if ((strlen(newline) + strlen(c)) >= line_max) { // CRLF is not counted
+				output .= newline.escape.eol; // soft line break; " =\r\n" is okay
+				newline = "";
+			}
+			newline .= c;
+		} // end of for
+		output .= newline.eol;
+	}
+	return trim(output);
+}
+
+/*
+ Mail function equal to PHP mail() but with optional authentication and TLS.
+
+ @return true or error text
+*/
+
+function mail (to, subject, message, optHeaders="", user="", pass="", host="", port=25, fTLS=true)
+{
+	errText = "";
+	fSent = false;
+
+	if (empty (host))
+		host = SENDMAIL_PATH;
+
+	// The complete message
+	sendmailIn = "To: ".to."\r\nSubject: ".subject."\r\n".(!empty (optHeaders) ? optHeaders."\r\n" : "").message."\r\n.";
+
+	if (substr (host,0,1)=="/") {
+		sendmailOut = "";
+		retCode = 0;
+
+		toList = explode (",", to, true);
+		to2 = "";
+		foreach (toList as to3) {
+			p = strpos (to3, "<");
+			if (p!==false) {
+				to3 = substr (to3, p, strlen (to3)-p);
+			}
+			if (!empty (to2))
+				to2.=",";
+			to2.=trim (to3,"<> ");
+		}
+
+		if (exec (host." -v ".to2, errText, retCode, sendmailIn, strlen(sendmailIn))) {
+			if (retCode==0)
+				return true;
+			if (empty (errText))
+				errText = host." finshed with code: ".retCode;
+		}
+		else {
+			errText = "Cannot start ".host;
+		}
+		return errText;
+	}
+
+	socket = fsockopen (host, port);
+	if (!socket) {
+		errText = "Connection to SMTP-Server ".host.":".port." failed.";
+	}
+	else {
+		// Extract "from" from optHeaders, on default from = user
+		from = user;
+		if ((p=strpos (optHeaders, "From:"))!==false) {
+			p2 = strpos (optHeaders, "\n", p);
+			if (!p2)
+				p2 = strlen (optHeaders)-1;
+			from = substr (optHeaders, p, p2-p);
+			p = strpos (from, "<");
+			if (p!==false) {
+				from = substr (from, p+1);
+			}
+			from = trim (from, "<>\r ");
+		}
+
+		pos = 0;
+		mode = 0;
+		sslCTX = null;
+		featureList = array ();
+		clientHost = gethostbyaddr ("127.0.0.1"); // gethostbyaddr (gethostbyname (""));
+		client = socket;
+
+		while  (ret = smtp_read (client)) {
+
+			code = ret[0];
+			fMore = strpos (code, '-')!==false;
+			if (pos==1 && (code==250 || fMore)) {
+				// Check features
+				feature = ltrim (code, "250-");
+				if (empty (feature))
+					feature = ret[1];
+
+				if (strpos (feature, "=")!==false) {
+					assign (feature, tmp) = explode ("=", feature);
+					if (feature=="AUTH") {
+						featureList["LOGIN"][tmp]=1;
+					}
+				}
+				if (feature=="AUTH") {
+					for (i=1; i<count (ret)-1; i++) {
+						featureList["LOGIN"][ret[i]]=1;
+					}
+				}
+				else {
+					featureList[feature]=1;
+				}
+			}
+
+			if (fMore)
+				continue;
+			pos++;
+
+			if (pos == 1) {
+				if (code==220) {
+					smtp_write (client, "EHLO ".clientHost);
+					continue;
+				}
+			}
+			else if (mode<2) {
+				if (mode==1 && code==220) {
+					dl ("ssl");
+
+					// Create SSL Context
+					sslCTX = SSL_CTX_new ();
+					// SSL_CTX_set_options (sslCTX, SSL_FLAG("SSL_OP_NO_SSLv3"));
+
+					// Create SSL
+					client = SSL_new (sslCTX);
+					// SSL_set_cipher_list (client, "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");
+
+					// Set socket
+					SSL_set_fd (client, socket);
+					if (SSL_connect (client, host)) {
+						smtp_write (client, "EHLO ".clientHost);
+						continue;
+					}
+					else {
+						errText = "SSL connection problems.";
+					}
+				}
+				else if (code==250) {
+					if (mode==0 && fTLS && !sslCTX && !empty (featureList["STARTTLS"])) {
+						smtp_write (client, "STARTTLS");
+						mode = 1;
+						continue;
+					}
+
+					if (empty (user))
+						mode = 10; // No login
+					else {
+
+						if (mode==1) {
+							// LOGIN
+							smtp_write (client, "AUTH LOGIN");
+							mode = 2;
+							continue;
+						}
+						else if (!empty (featureList["LOGIN"]["PLAIN"])) {
+							// PLAIN
+							authStr = base64_encode (user."\0".user."\0".pass."\0");
+							smtp_write (client, "AUTH PLAIN ".authStr);
+							mode = 3;
+							continue;
+						}
+						else {
+							mode = 10;
+							errText = "No proper login method supported. PLAIN required.";
+						}
+					}
+				}
+			}
+			else if (mode==2) {
+				// Login LOGIN
+				if (code==235) {
+					mode=10; // Data mode
+				}
+				else if (code==334) {
+					if (pos==3 || pos==5) {
+						smtp_write (client, base64_encode(user));
+						continue;
+					}
+					else if (pos==4 || pos==6) {
+						smtp_write (client, base64_encode(pass));
+						continue;
+					}
+				}
+			}
+			else if (mode==3) {
+				// Login PLAIN
+				if (code==235) {
+					mode=10; // Data mode
+				}
+			}
+			if (mode==10) {
+				smtp_write (client, "MAIL FROM: <".from.">");
+				mode++;
+				continue;
+			}
+			else if (mode==11) {
+				if (code==250) {
+					toList = explode (",", to, true);
+					foreach (toList as to2) {
+						p = strpos (to2, "<");
+						if (p!==false) {
+							to2 = trim (substr (to2, p, strlen (to2)-p), "<>\r ");
+						}
+						smtp_write (client, "RCPT TO: <".to2.">");
+						ret = smtp_read (client);
+						code = ret[0];
+						if (code!=250)
+							break;
+					}
+					if (code==250)
+						mode=12;
+				}
+			}
+
+			if (mode==12) {
+				if (code==250) {
+					smtp_write (client, "DATA");
+					mode++;
+					continue;
+				}
+			}
+			else if (mode==13) {
+				if (code==354) {
+					// Send email
+					smtp_write (client, sendmailIn);
+					mode++;
+					continue;
+				}
+			}
+			else if (mode==14) {
+				if (code==250) {
+					smtp_write (client, "QUIT");
+
+					mode++;
+					// Mail successful sent
+					fSent = true;
+					continue;
+				}
+			}
+			else if (mode==15) {
+				if (code==221) {
+					continue;
+					break;
+				}
+			}
+			if (empty (errText))
+				errText = ret["line"];
+			break;
+		}
+
+		if (sslCTX) {
+			// Free SSL
+			SSL_free (client);
+			// Free SSL Context
+			SSL_CTX_free (sslCTX);
+		}
+
+		// Close connection
+		fclose (socket);
+	}
+	return fSent ? true : errText;
+}
+
+/*
+ Send mail with optional attachments and user authentication.
+
+ @return true or error text
+*/
+
+function send_mail (from, to, subject, &content_text, &content_html, reply_to="", filenames=array (), user="", pass="", host="", port=25, fTLS=true)
+{
+	boundary_id0 = time()."_".rand ();
+	boundary_id1 = time()."_".rand ();
+	boundary_id2 = time()."_".rand ();
+
+	keys = array (
+	           "[boundary_id0]",
+	           "[boundary_id1]",
+	           "[boundary_id2]",
+	           "[content_length_text]",
+	           "[content_length_html]",
+	           "[content_length_file]",
+	           "[content_text]",
+	           "[content_html]",
+	           "[content_attachments0]",
+	           "[content_attachments1]");
+
+	if (MAIL_ENCODING=="base64") {
+		content_text_enc = chunk_split(base64_encode(content_text), 76, "\r\n");
+		content_html_enc = chunk_split(base64_encode(content_html), 76, "\r\n");
+	}
+	else {
+		content_text_enc = encode_quoted_printable (content_text);
+		content_html_enc = encode_quoted_printable (content_html);
+	}
+
+	content_file_enc      = "";
+	content_length_text   = strlen (content_text_enc);
+	content_length_html   = strlen (content_html_enc);
+	content_length_file   = 0;
+	content_attachments0  = "";
+	content_attachments1  = "";
+
+	body = "------=_NextPart_[boundary_id0]\r\n".
+	       "Content-Type: text/plain; charset=utf-8\r\n".
+	       "Content-Transfer-Encoding: ".MAIL_ENCODING."\r\n".
+	       "Content-Length: [content_length_text]\r\n".
+	       "\r\n".
+	       "[content_text]\r\n".
+	       "\r\n".
+	       "------=_NextPart_[boundary_id0]\r\n".
+	       "Content-Type: text/html; charset=utf-8\r\n".
+	       "Content-Transfer-Encoding: ".MAIL_ENCODING."\r\n".
+	       "Content-Length: [content_length_html]\r\n".
+	       "\r\n".
+	       "[content_html]\r\n".
+	       "\r\n".
+	       "------=_NextPart_[boundary_id0]--";
+
+	body2 = "This is a multi-part message in MIME format.\r\n".
+	        "\r\n".
+	        "------=_NextPart_[boundary_id0]\r\n".
+	        "Content-Type: multipart/related;type=\"multipart/alternative\";\r\n\tboundary=\"----=_NextPart_[boundary_id1]\"\r\n".
+	        "\r\n".
+	        "\r\n".
+	        "------=_NextPart_[boundary_id1]\r\n".
+	        "Content-Type: multipart/alternative;\r\n\tboundary=\"----=_NextPart_[boundary_id2]\"\r\n".
+	        "\r\n".
+	        "\r\n".
+	        "------=_NextPart_[boundary_id2]\r\n".
+	        "Content-Type: text/plain; charset=utf-8\r\n".
+	        "Content-Transfer-Encoding: ".MAIL_ENCODING."\r\n".
+	        "Content-Length: [content_length_text]\r\n".
+	        "\r\n".
+	        "[content_text]\r\n".
+	        "\r\n".
+	        "------=_NextPart_[boundary_id2]\r\n".
+	        "Content-Type: text/html; charset=utf-8\r\n".
+	        "Content-Transfer-Encoding: ".MAIL_ENCODING."\r\n".
+	        "Content-Length: [content_length_html]\r\n".
+	        "\r\n".
+	        "[content_html]\r\n".
+	        "\r\n".
+	        "------=_NextPart_[boundary_id2]--\r\n".
+	        "\r\n".
+	        "[content_attachments1]".
+	        "------=_NextPart_[boundary_id1]--\r\n".
+	        "\r\n".
+	        "[content_attachments0]".
+	        "------=_NextPart_[boundary_id0]--";
+
+	fAttachments=false;
+	foreach (filenames as fileData) {
+		fAttachment0 = true;
+		if (!is_array (fileData))
+			filename = visibleFilename = fileData;
+		else if (isset (fileData["filename"])) {
+			filename = fileData["filename"];
+			if (isset (fileData["visible_filename"]))
+				visibleFilename = fileData["visible_filename"];
+			else
+				visibleFilename = filename;
+		}
+		else
+			continue;
+
+		if (!empty (filename) && is_file (filename)) {
+			if (handle = fopen(filename, "r")) {
+				content_file = "";
+				content_length_file = filesize (filename);
+				fread (handle, content_file, content_length_file);
+				content_file_enc = chunk_split(base64_encode(content_file), 76, "\r\n");
+				fclose (handle);
+				contentType = "application/octet-stream";
+
+				visibleNameEnc = '=?UTF-8?B?'.base64_encode(basename(visibleFilename)).'?=';
+				extra = "Content-Disposition: attachment;\r\n\tfilename=\"".visibleNameEnc."\"\r\n";
+				if (is_array (fileData)) {
+					if (isset (fileData["Content-Type"])) {
+						contentType = fileData["Content-Type"];
+						fAttachment0 = false;
+					}
+					if (isset (fileData["Content-ID"])) {
+						extra =
+						    "Content-ID: <".fileData["Content-ID"].">\r\n".
+						    "Content-Description: ".basename(filename)."\r\n".
+						    "Content-Location: ".basename(filename)."\r\n";
+						fAttachment0 = false;
+					}
+				}
+				if (fAttachment0)
+					boundary = boundary_id0;
+				else
+					boundary = boundary_id1;
+
+				content_attachment=
+				    "------=_NextPart_".boundary."\r\n".
+				    "Content-Type: ".contentType.";\r\n\tname=\"".visibleNameEnc."\"\r\n".
+				    "Content-Transfer-Encoding: base64\r\n".
+				    extra.
+				    "Content-Length: ".content_length_file."\r\n".
+				    "\r\n".
+				    content_file_enc."\r\n".
+				    "\r\n";
+				if (fAttachment0)
+					content_attachments0.=content_attachment;
+				else
+					content_attachments1.=content_attachment;
+				fAttachments=true;
+			}
+		}
+	}
+
+	values = array (
+	             boundary_id0,
+	             boundary_id1,
+	             boundary_id2,
+	             content_length_text,
+	             content_length_html,
+	             content_length_file,
+	             content_text_enc,
+	             content_html_enc,
+	             content_attachments0,
+	             content_attachments1);
+
+	if (fAttachments)
+		body = str_replace(keys, values, body2);
+	else
+		body = str_replace(keys, values, body);
+
+	// Send mail
+	extra = "";
+	if (reply_to!="")
+		extra="Bcc: ".reply_to."\r\n";
+
+	if (fAttachments)
+		content_type = "multipart/mixed";
+	else
+		content_type = "multipart/alternative";
+
+	return mail(
+	           to,
+	           '=?UTF-8?B?'.base64_encode(subject).'?=',
+	           body,
+	           extra."From: ".from."\r\nMIME-Version: 1.0\r\n".
+	           "Content-Type: ".content_type.";\r\n\tboundary=\"----=_NextPart_".boundary_id0."\"",
+	           user, pass, host, port);
+}
+?>

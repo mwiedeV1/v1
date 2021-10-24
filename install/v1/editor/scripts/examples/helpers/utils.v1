@@ -1,0 +1,39 @@
+<?v1
+require_once ("../../../../lib/math_utils.inc.v1");
+const ROOT_PATH = dirname (getenv("SCRIPT_FILENAME"));
+
+function getDouble (name, def=0)
+{
+	if (isset (_REQUEST[name])) {
+		return doubleval(str_replace (",", ".", trim (_REQUEST[name])));
+	}
+	return def;
+}
+
+function getInt (name, def=0)
+{
+	if (isset (_REQUEST[name])) {
+		v = trim (_REQUEST[name]);
+		if (v!="")
+			return intval(v);
+	}
+	return def;
+}
+
+function getText (name, def="", fTrim=true)
+{
+	if (isset (_REQUEST[name])) {
+		return (fTrim ? trim (_REQUEST[name]) : _REQUEST[name]);
+	}
+	return def;
+}
+
+function showError (err)
+{
+	print ('<div class="error">', htmlspecialchars (err), "</div>");
+}
+function showSuccess(success)
+{
+	print ('<div class="success">', htmlspecialchars (success), "</div>");
+}
+?>

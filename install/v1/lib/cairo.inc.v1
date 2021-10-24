@@ -1,0 +1,364 @@
+<?v1
+/*
+  On Windows you can install GTK Runtime Environment (32 Bit) which include Cairo
+  with following link: https://sourceforge.net/projects/gtk-win/
+
+  On Linux Cairo is part of GTK or you can install it manually like this:
+  apt-get install libcairo2-dev
+*/
+
+// Replace with correct path of Cairo library (libcairo-2.dll or libcairo.so.2)
+if (version(1)=='Windows')
+{
+	require_once ("win32.inc.v1");
+	cairoLibName = 'libcairo-2.dll';
+}
+else
+{
+	cairoLibName = 'libcairo.so.2';
+}
+
+hDLLCairo = dl (cairoLibName, true);
+
+if (!hDLLCairo)
+{
+	// Search for Cairo library
+	libList = explode ("\n", system ('/usr/bin/find /usr -name "libcairo*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLCairo = dl (mySQLLibName = libList[0], true);
+		if (hDLLCairo) {
+			print ('Please replace for faster starting: cairoLibName="'.libList[0].'"; in '.__FILE__);
+		}
+	}
+}
+
+if (!hDLLCairo)
+{
+	msg = "Cairo library not found.\r\nSet cairoLibName in ".__FILE__." to libcairo.dll or libcairo.so";
+	if (version(1)=='Windows') {
+		MessageBox (msg."\r\n\r\nPlease install GTK environment from: https://sourceforge.net/projects/gtk-win/");
+	}
+	else {
+		print (msg);
+	}
+	exit (1);
+}
+
+// Constants
+const CAIRO_FONT_SLANT_NORMAL = 0;
+const CAIRO_FONT_SLANT_ITALIC = 1;
+const CAIRO_FONT_SLANT_OBLIQUE = 2;
+
+const CAIRO_FONT_WEIGHT_NORMAL = 0;
+const CAIRO_FONT_WEIGHT_BOLD = 1;
+
+// Cairo functions
+// Note: Not all Cairo functions are implemented here
+// You have to call your own Cairo functions with call (hDLLCairo, "cairo_xxx", ...)
+// https://www.cairographics.org/manual/
+
+function cairo_image_surface_create (format, width, height)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_image_surface_create', "iii:p", format, width, height);
+}
+
+function cairo_surface_create_similar (other, content, width, height)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_surface_create_similar', "piii:p", other, content, width, height);
+}
+
+function cairo_surface_create_similar_image (other, format, width, height)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_surface_create_similar_image', "piii:p", other, format, width, height);
+}
+
+function cairo_surface_create_for_rectangle (surface, x, y, width, height)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_surface_create_for_rectangle', "pdddd:p", surface, x, y, width, height);
+}
+
+function cairo_surface_destroy (surface)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_surface_destroy', "p:i", surface);
+}
+
+function cairo_surface_flush (surface)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_surface_flush', "p:i", surface);
+}
+
+function cairo_set_source_surface (cr, surface, x, y)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_set_source_surface', "ppdd:i", cr, surface, x, y);
+}
+
+function cairo_surface_finish (surface)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_surface_finish', "p:i", surface);
+}
+
+function cairo_image_surface_create_from_png (filename)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_image_surface_create_from_png', "s:p", filename);
+}
+
+function cairo_svg_surface_create (filename, width, height)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_svg_surface_create', "sdd:p", filename, width, height);
+}
+
+function cairo_pdf_surface_create (filename, width_in_points, height_in_points)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_pdf_surface_create', "sdd:p", filename, width_in_points, height_in_points);
+}
+
+function cairo_image_surface_get_width (surface)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_image_surface_get_width', "p:i", surface);
+}
+
+function cairo_image_surface_get_height (surface)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_image_surface_get_height', "p:i", surface);
+}
+
+function cairo_surface_write_to_png (surface, filename)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_surface_write_to_png', "ps:i", surface, filename);
+}
+
+function cairo_create (surface)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_create', "p:p", surface);
+}
+
+function cairo_win32_surface_create (hdc)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, "cairo_win32_surface_create", "p:p",  hdc);
+}
+
+function cairo_destroy (cr)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_destroy', "p:i", cr);
+}
+
+function cairo_get_target (cr)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_get_target', "p:p", cr);
+}
+
+
+/* Colors */
+
+function cairo_set_source_rgb (cr, r, g, b)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_set_source_rgb', "pddd:i", cr, r, g, b);
+}
+
+function cairo_set_source_rgba (cr, r, g, b, a)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_set_source_rgba', "pdddd:i", cr, r, g, b, a);
+}
+
+/* Drawing */
+
+function cairo_rectangle (cr, x, y, width, height)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_rectangle', "pdddd:i", cr, x, y, width, height);
+}
+
+function cairo_fill (cr)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_fill', "p:i", cr);
+}
+
+function cairo_move_to (cr, x, y)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_move_to', "pdd:i", cr, x, y);
+}
+
+function cairo_line_to (cr, x, y)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_line_to', "pdd:i", cr, x, y);
+}
+
+function cairo_curve_to (cr, x1, y1, x2, y2, x3, y3)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_curve_to', "pdddddd:i", cr, x1, y1, x2, y2, x3, y3);
+}
+
+function cairo_arc (cr, xc, yc, radius, angle1, angle2)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_arc', "pddddd:i", cr, xc, yc, radius, angle1, angle2);
+}
+
+function cairo_arc_negative (cr, xc, yc, radius, angle1, angle2)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_arc_negative', "pddddd:i", cr, xc, yc, radius, angle1, angle2);
+}
+
+function cairo_set_line_width (cr, width)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_set_line_width', "pd:i", cr, width);
+}
+
+function cairo_stroke (cr)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_stroke', "p:i", cr);
+}
+
+function cairo_new_path  (cr)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_new_path', "p:i", cr);
+}
+
+function cairo_new_sub_path  (cr)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_new_sub_path', "p:i", cr);
+}
+
+function cairo_close_path (cr)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_close_path', "p:i", cr);
+}
+
+function cairo_paint (cr)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_paint', "p:i", cr);
+}
+
+/* Transformation */
+
+function cairo_scale (cr, sx, sy)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_scale', "pdd:i", cr, sx, sy);
+}
+
+function cairo_translate (cr, tx, ty)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_translate', "pdd:i", cr, tx, ty);
+}
+
+function cairo_rotate (cr, angle)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_rotate', "pd:i", cr, angle);
+}
+
+/* Font */
+
+function cairo_set_font_size (cr, size)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_set_font_size', "pd:i", cr, size);
+}
+
+function cairo_select_font_face (cr, family, slant=0, weight=0)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_select_font_face', "psii:i", cr, family, slant, weight);
+}
+
+function cairo_show_text (cr, str)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_show_text', "ps:i", cr, str);
+}
+
+function cairo_text_extents (cr, str, &ext)
+{
+	global hDLLCairo;
+	extBin = "";
+	resize (extBin, 48);
+	call (hDLLCairo, 'cairo_text_extents', "psr:i", cr, str, extBin);
+
+	ext = array (
+		"x_bearing"=>binparse (extBin, 6, 0),
+		"y_bearing"=>binparse (extBin, 6, 8),
+		"width"=>binparse (extBin, 6, 16),
+		"height"=>binparse (extBin, 6, 24),
+		"x_advance"=>binparse (extBin, 6, 32),
+		"y_advance"=>binparse (extBin, 6, 40),
+	);
+}
+
+/* Pattern */
+
+function cairo_pattern_create_linear (x0, y0, x1, y1)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_pattern_create_linear', "dddd:p", x0, y0, x1, y1);
+}
+
+function cairo_pattern_create_radial (cx0, cy0, radius0, cx1, cy1, radius1)
+{
+	global hDLLCairo;
+	return call (hDLLCairo, 'cairo_pattern_create_radial', "dddddd:p", cx0, cy0, radius0, cx1, cy1, radius1);
+}
+
+function cairo_pattern_add_color_stop_rgb (pattern, offset, red, green, blue)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_pattern_add_color_stop_rgb', "pdddd:i", pattern, offset, red, green, blue);
+}
+
+function cairo_pattern_add_color_stop_rgba (pattern, offset, red, green, blue, alpha)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_pattern_add_color_stop_rgba', "pddddd:i", pattern, offset, red, green, blue, alpha);
+}
+
+function cairo_set_source (cr, pattern)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_set_source', 'pp:i', cr, pattern);
+}
+
+function cairo_pattern_destroy (pattern)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_pattern_destroy', 'p:p', pattern);
+}
+
+function cairo_mask (cr, pattern)
+{
+	global hDLLCairo;
+	call (hDLLCairo, 'cairo_mask', 'pp:p', cr, pattern);
+}
+
+?>

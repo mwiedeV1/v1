@@ -1,0 +1,99 @@
+<?v1
+testIdx = 0;
+successCnt = 0;
+
+print ("TESTS: Basics");
+
+a = 0;
+i = -2;
+a = ++i;
+if (a==-1)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+for (i=-2; i<10; i++)
+	i++;
+if (i==10)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+a = 10;
+b = null;
+if (a==10) b = 11;
+if (b==11)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+a = 10;
+b = null;
+b = a==10 ? 5 : -1;
+if (b==5)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+a = 10;
+b = null;
+b = a==10 ? 5 : -1;
+if (b==5)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+function testFunc () {
+	print ("Output");
+}
+
+if (testFunc ()==1)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+b = 0;
+for (a=0; a<10; a++,++b) ++b;
+
+if (b==20)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+list = ["Hello", "V1", 10];
+assign (a, b, c) = list;
+
+if (a=="Hello" && b=="V1" && c==10)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+const CONSTANT = 10;
+b = 0;
+a = 10;
+switch (a) {
+	case CONSTANT:
+		b = 10;
+		break;
+}
+
+if (b==10)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+print (successCnt." successful from ".testIdx." tests");
+?>

@@ -1,0 +1,95 @@
+<?v1
+// Replace with correct path of GLib library (libglib-2.0-0.dll or libglib.so)
+if (version(1)=='Windows')
+{
+	require_once ("win32.inc.v1");
+	glibLibName = 'libglib-2.0-0.dll';
+}
+else
+{
+	glibLibName = 'libglib-2.0.so.0';
+}
+
+hDLLGLib = dl (glibLibName, true);
+if (!hDLLGLib)
+{
+	// Search for GLib library
+	libList = explode ("\n", system ('/usr/bin/find /usr -name "libglib*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLGLib= dl (mySQLLibName = libList[0], true);
+		if (hDLLGLib) {
+			print ('Please replace for faster starting: glibLibName="'.libList[0].'"; in '.__FILE__);
+		}
+	}
+}
+
+if (!hDLLGLib)
+{
+	msg = "GLib library not found.\r\nSet glibLibName in ".__FILE__." to libglib-2.0-0.dll or libglib.so";
+	if (version(1)=='Windows') {
+		MessageBox (msg);
+	}
+	else {
+		print (msg);
+	}
+	exit (1);
+}
+
+// Global callback functions
+glibCallbackList = array ();
+
+function callbackA1 (data)
+{
+	global glibCallbackList;
+
+	if (isset (glibCallbackList[data])) {
+		return call_user_func (glibCallbackList[data]["name"], glibCallbackList[data]["data"]);
+	}
+	return false;
+}
+
+function callbackA2 (app, data)
+{
+	global glibCallbackList;
+
+	if (isset (glibCallbackList[data])) {
+		return call_user_func (glibCallbackList[data]["name"], app, glibCallbackList[data]["data"]);
+	}
+	return false;
+}
+
+function callbackA3 (app, evt, data)
+{
+	global glibCallbackList;
+
+	if (isset (glibCallbackList[data])) {
+		return call_user_func (glibCallbackList[data]["name"], app, evt, glibCallbackList[data]["data"]);
+	}
+	return false;
+}
+
+// GLib functions
+// Note: Not all GLib functions are implemented here
+// You have to call your own GLib functions with call (hDLLGLib, "g_xxx", ...)
+
+function g_timeout_add (ms, handler, data=null)
+{
+	global hDLLGLib, glibCallbackList;
+	if (gettype (handler)=="string") {
+		assign (handlerName, args) = explode (":", handler);
+		id = crc32(handler.data);
+		glibCallbackList[id]=["name" => handlerName, "data" => data];
+		handler = dlsym (null, "callbackA1");
+		data = id;
+	}
+
+	return call (hDLLGLib, "g_timeout_add", [['p','p', 'p'],'p'], ms, handler, data);
+}
+
+function g_source_remove (tag)
+{
+	global hDLLGLib;
+	return call (hDLLGLib, "g_source_remove", [['p'],'b'], tag);
+}
+
+?>

@@ -1,0 +1,219 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Date/Time functions</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Date/Time functions</h1>
+<p>The following date and time  functions are supported. </p>
+<table>
+<thead>
+<tr>
+<th>Function/Arguments</th>
+<th>Return</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>time</strong> ()</td>
+<td>number</td>
+<td>Return  the GMT/UTC timestamp in seconds from January 1, 1970.</td>
+</tr>
+<tr>
+<td><strong>date</strong> (string <em>format</em> [, number <em>timestamp</em>])</td>
+<td>string</td>
+<td>Format a <em>timestamp</em> to a readable local date <em>format</em>.  Date formats are described  in table below. If parameter <em>timestamp</em>  is not given then the current time from function time() is used. On success the formatted date/time is returned, otherwise the formatted date 1970-01-01 00:00:00 is returned.</td>
+</tr>
+<tr>
+<td><strong>gmdate</strong> (string <em>format</em> [, number <em>timestamp</em>])</td>
+<td>string</td>
+<td>Format a <em>timestamp</em> to a readable GMT/UTC date  <em>format</em>. Arguments are the same as in date() function. The difference is, that the timezone is GMT/UTC instead of the local timezone. The difference between local timezone and GMT/UTC in seconds can be determined with date ("%Z")</td>
+</tr>
+<tr>
+<td><strong>mktime</strong> ([number <em>hour</em>, number <em>minute</em>, number <em>second</em>, number <em>month</em>, number <em>day</em>, number <em>year</em>])</td>
+<td>number</td>
+<td>Return  a local timestamp  created from the optional parameters. If parameters are not set then the  values of current time are used. For example: mktime (19,30) will create the timestamp  19:30 o'clock of the current day. For invalid dates false is returned.</td>
+</tr>
+<tr>
+<td><strong>microtime</strong> (bool <em>asFloat</em>=false)</td>
+<td>number</td>
+<td>Return the timestamp in microseconds since start of the system. If parameter <em>asFloat</em> = true then the time will be returned as seconds in floating point format.</td>
+</tr>
+<tr>
+<td><strong>easter_date</strong> (number <em>year</em>)</td>
+<td>number</td>
+<td>Return  the timestamp of Easter date of the given <em>year</em>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Date formats:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Description</th>
+<th>date() format option</th>
+<th>Value (example)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Day of month with leading  0</td>
+<td>%d</td>
+<td>04</td>
+</tr>
+<tr>
+<td>Day of month without leading 0</td>
+<td>%j</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Name of weekday short</td>
+<td>%D</td>
+<td>Fri</td>
+</tr>
+<tr>
+<td>Name of weekday long</td>
+<td>%l</td>
+<td>Friday</td>
+</tr>
+<tr>
+<td>Numerical day of week (0 =Sunday, 6 = Satureday)</td>
+<td>%w</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Day of  year beginning from 1</td>
+<td>%z</td>
+<td>124</td>
+</tr>
+<tr>
+<td>Calendar week beginning from 1</td>
+<td>%W</td>
+<td>18</td>
+</tr>
+<tr>
+<td>Name of month long</td>
+<td>%F</td>
+<td>May</td>
+</tr>
+<tr>
+<td>Name of month short</td>
+<td>%M</td>
+<td>May</td>
+</tr>
+<tr>
+<td>Number of month with leading 0</td>
+<td>%m</td>
+<td>05</td>
+</tr>
+<tr>
+<td>Number of month without leading 0</td>
+<td>%n</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Maximal days of month</td>
+<td>%t</td>
+<td>31</td>
+</tr>
+<tr>
+<td>Leap year (1 = yes, 0 = no)</td>
+<td>%L</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Year with 4 digits</td>
+<td>%Y</td>
+<td>2018</td>
+</tr>
+<tr>
+<td>Year with 2 digits</td>
+<td>%y</td>
+<td>18</td>
+</tr>
+<tr>
+<td>Lower case: Ante meridiem (Forenoon) or Post meridiem (Afternoon)</td>
+<td>%a</td>
+<td>am</td>
+</tr>
+<tr>
+<td>Upper case: Ante meridiem (Forenoon) or Post meridiem (Afternoon)</td>
+<td>%A</td>
+<td>AM</td>
+</tr>
+<tr>
+<td>Hour in 12 hour format without leading 0</td>
+<td>%g</td>
+<td>9</td>
+</tr>
+<tr>
+<td>Hour in 24 hour format without leading 0</td>
+<td>%G</td>
+<td>19</td>
+</tr>
+<tr>
+<td>Hour in 12 hour format with leading 0</td>
+<td>%h</td>
+<td>09</td>
+</tr>
+<tr>
+<td>Hour in 24 hour format with leading 0</td>
+<td>%H</td>
+<td>19</td>
+</tr>
+<tr>
+<td>Minute with leading 0</td>
+<td>%i</td>
+<td>08</td>
+</tr>
+<tr>
+<td>Second with leading 0</td>
+<td>%s</td>
+<td>04</td>
+</tr>
+<tr>
+<td>Time difference to Greenwich time (GMT/UTC) in hours</td>
+<td>%O</td>
+<td>+0200</td>
+</tr>
+<tr>
+<td>Time difference to Greenwich time (GMT/UTC) in hours with colon</td>
+<td>%P</td>
+<td>+02:00</td>
+</tr>
+<tr>
+<td>Time difference of the system timezone to GMT/UTC in seconds</td>
+<td>%Z</td>
+<td>7200</td>
+</tr>
+<tr>
+<td>Is date in summer time (1 = yes, 0 = no)</td>
+<td>%I</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Name of the system timezone</td>
+<td>%e</td>
+<td>Western European Summer Time</td>
+</tr>
+</tbody>
+</table>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+	</footer>
+	</body>
+	</html>
+	
+	

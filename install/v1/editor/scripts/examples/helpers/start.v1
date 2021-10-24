@@ -1,0 +1,50 @@
+<?v1
+require_once ("utils.v1");
+?>
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>V1 Examples</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<meta name="robots" content="noindex,nofollow" />
+<style>
+body {
+    font-family:Arial,Verdana,sans-serif;
+	font-size:12pt;
+    background-color:white;
+	padding:10px;
+}
+
+.error, .success {
+    color:red;
+    font-weight:bold;
+	margin-bottom:20px;
+}
+.success {
+    color:green;
+}
+table {
+	margin-bottom:20px;
+}
+.data_tbl {
+    border-collapse:collapse;
+}
+.data_tbl tr td {
+	border:1px solid lightgray;
+	padding:3px;
+}
+
+.data_tbl tr:first-child td {
+    font-weight:bold;
+    color:#FFFFFF;
+    background-color:blue;
+}
+
+input[type=text], textarea {
+	padding:3px;
+	border:1px solid #CCCCCC;
+}
+</style>
+</head>
+<body>
+<h1>V1 Script Examples</h1>
+<h4>Version: <?v1 print (version());?><h4>

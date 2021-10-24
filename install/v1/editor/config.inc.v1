@@ -1,0 +1,44 @@
+<?v1
+/* 
+Global configuration of V1 Editor 
+*/
+
+CONFIG_GLOBAL = array (
+		
+	"script_path" => "scripts", // directory of the scripts, only local paths are allowed here
+	"use_index_files" => 0, // automatically load index files
+	
+	
+	// Editor types you can find in js/ace-builds-master/src-min/snippets
+	// "file extension " => "editor type"
+	"editor_types" => array (
+		"php" => "php",
+		"pl" => "perl",
+		"rb" => "ruby",
+		"py" => "python",
+		"htm" => "html",
+		"html" => "html",
+		"v1" => "php",
+		"css" => "css",
+		"js" => "javascript",
+		"sql" => "sql",
+		"sh" => "sh",
+		"cpp" => "c_cpp",
+		"h" => "c_cpp",
+		"c" => "c_cpp",
+		"bat" => "batchfile",
+		"java" => "java",
+		"svg" => "svg",
+		"xml" => "xml",
+		"json" => "json",
+		"txt" => "text",
+		"csv" => "text",
+		"ini" => "ini",
+		"htaccess" => "text"
+	),
+	
+	/* Dont change this paths */
+	"root_path" => dirname(__FILE__)
+);
+
+?>

@@ -1,0 +1,54 @@
+<?v1 require_once ("helpers/start.v1"); ?>
+<h3>Demonstrates access to MySQL database and native function calling</h3>
+<?v1
+error_reporting (0);
+require_once ("../../../lib/mysql.inc.v1");
+
+// Connection parameters
+const MYSQL_HOST = "localhost";
+const MYSQL_PORT = 3306;
+const MYSQL_USER = "root";
+const MYSQL_PASSWORD = "";
+const MYSQL_DATABASE = "mysql";
+
+print ("<p>Library: ", mySQLLibName, "</p>");
+
+// Connect to database and read table
+mysql = mysql_init ();
+
+if (mysql && mysql_connect (mysql, MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT))
+{
+	print (
+	    "<p>Connected to MySQL Server ",
+        mysql_get_server_info (mysql),
+        " with Client ",
+        mysql_get_client_info (mysql),
+        '</p>');
+        
+	mysql_query (mysql, "set names utf8");
+	if ( result=mysql_query (mysql, "select * from user")) {
+		data = array ();
+		htmlRow = "";
+		while (mysql_fetch_array (result, data)) {
+    		htmlRow.='
+             <tr>
+                 <td>'.data["Host"].'</td>
+                 <td>'.data["User"].'</td>
+             </tr>
+             ';
+		}
+		print ('<table class="data_tbl"><tr><td>Host</td><td>User</td></tr>'.htmlRow.'</table>');
+		mysql_free_result (result);
+	}
+	else {
+		print (mysql_error ( mysql));
+	}
+}
+else
+{
+	print (mysql_error (mysql));
+}
+mysql_close (mysql);
+
+?>
+<?v1 require_once ("helpers/end.v1");?>

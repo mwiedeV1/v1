@@ -1,0 +1,27 @@
+<?v1
+require_once ("config.inc.v1");
+
+/* Define some constants */
+ROOT_PATH = CONFIG_GLOBAL["root_path"];
+SCRIPT_PATH = CONFIG_GLOBAL["script_path"];
+USE_INDEX_FILES = CONFIG_GLOBAL["use_index_files"];
+
+
+/* Libraries */
+require_once ("utils.inc.v1");
+
+/* Get filename */
+filename = "";
+if (isset (_REQUEST["f"]))
+	filename = createSecurePath (_REQUEST["f"]);
+if (empty (filename))
+	filename = SCRIPT_PATH;
+if (!is_file (filename)) {
+	if (USE_INDEX_FILES) {
+		indexFile = getIndexFile (filename);
+		if (!empty (indexFile))
+			filename = filename."/".indexFile;
+	}
+}
+
+?>

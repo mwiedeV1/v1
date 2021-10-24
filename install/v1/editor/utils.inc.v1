@@ -1,0 +1,100 @@
+<?v1
+
+function rebuildURI (uri, params=null, fOnlyFirstParam=false, ignoreParams=null) {			
+	pos = strpos (uri, '?');
+	if (pos===false) {
+		// No params
+		ext2 = "";
+		base = uri;
+	}
+	else
+	{
+		base = substr (uri, 0, pos);	
+		ext  = substr (uri, pos+1, strlen (uri)-pos);			
+		ext2 = "";
+		list = explode ('&', ext);
+		foreach (list as token) {
+			assign (key, value) = explode ('=', token);
+			if (ignoreParams && (array_key_exists (key, ignoreParams) || in_array (key, ignoreParams)))
+				continue;				
+			if (!params || !isset (params[key])) {
+				if (empty (ext2))
+					ext2.='?';
+				else
+					ext2.='&';
+				ext2.=(key."=".value);
+			}
+			if (fOnlyFirstParam)
+				break;
+		}
+	}
+
+	if (params) {
+		foreach (params as key => value) {
+			if (empty (ext2))
+				ext2.='?';
+			else
+				ext2.='&';
+			ext2.=(key."=".value);
+		}
+	}
+	uri = base.ext2;
+	return uri;
+}
+
+function getIndexFile (dir) {
+	checkExt = array ("html", "php", "pl", "rb", "py");
+	foreach (checkExt as ext) {
+		if (is_file (dir."/index.".ext)) {
+			return "index.".ext;
+		}
+	}
+	return "";
+}
+	
+function createSecurePath (path) {
+	docRoot = getenv("DOCUMENT_ROOT");	
+
+	path = str_replace (array ("\\"), array("/"), path); 
+	p = strpos (path, ".");
+	if (p!==false && p==0)
+		return "";
+
+	if (file_exists (path)) {
+		// Security check if path is outside root directory
+		realPath = realpath (docRoot."/".path);
+		if (empty (realPath)) {
+			realPath = docRoot."/".path;
+		}
+		realPath = str_replace (array ("\\"), array("/"), realPath); 
+
+		p = strpos (realPath, docRoot."/".SCRIPT_PATH); 
+		if (p===false || p>0) {
+			return ""; // Path is outside script directory
+		}	
+	}
+	return rtrim (path, "/");
+}
+
+function getFileCSSClass (ext) {
+
+	classList = array (
+		"jpg,gif,png,bmp" => "img",
+		"cpp,c" => "cpp",
+		"h" => "h",
+		"php" => "php",
+		"pl" => "perl",
+		"py" => "python",
+		"rb" => "ruby",
+		"v1" => "v1"
+	);	
+	ext = strtolower (ext);
+	foreach (classList as check => class) {
+		if (strpos (check, ext)!==false)
+			return class;
+	}
+
+	return "textfile";
+}
+
+?>

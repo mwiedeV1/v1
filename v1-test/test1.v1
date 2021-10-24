@@ -1,0 +1,295 @@
+<?v1
+
+testIdx = 0;
+successCnt = 0;
+
+
+print ("TESTS: Numbers and Comparasions");
+c = 10e10;
+if (strlen(c)==12)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+c = 0b0101;
+if (c==5 && sprintf ("%016x", c)=="0000000000000005")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+c = "12.23"+"";
+if (gettype (c)=="number" && c==12.23)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = 10.2;
+if (a ^ 22 == 28)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = -1;
+if ("-1.000"==a)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+a = "ZZ";
+b = "BB";
+if (a>b)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+a=11;
+b = a==10 ? 11 : 12;
+if (b==12)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = 12;
+if (a==true)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = "12";
+b = "09";
+if (b<=a)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = null;
+b = "";
+if (b==a)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+a = null;
+b = "";
+if (!(b>a))
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = null;
+b = "0";
+if (b!=a)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = false;
+b = "0";
+if (b==a)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = null;
+b = "-1";
+if (b>a)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+print ("TESTS: Binary operations");
+a = 0xF0008FFF;
+a = ~a;
+
+if (sprintf ("%08x", a)=="0fff7000")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = 0xF0008FFF;
+a = a<<2;
+if (sprintf ("%08X", a)=="C0023FFC")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = 0xF0008FFF;
+a <<=2;
+if (sprintf ("%08X", a)=="C0023FFC")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = 0xF0008FFF;
+a = a>>2;
+if (sprintf ("%08X", a)=="3C0023FF")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = 0xF0008FFF;
+a >>=2;
+if (sprintf ("%08X", a)=="3C0023FF")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = 0xF800;
+b = a | 0x1;
+if (sprintf ("%04X", b)=="F801")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+a = 0xF800;
+a |= 0x1;
+if (sprintf ("%04X", b)=="F801")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+a = 0x80^0x81;
+if (a==1)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+a = 0x80;
+a ^= 0x81;
+if (a==1)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+print ("TESTS: printf()");
+str = sprintf ("%g", "18.8");
+if (!strcmp (str, "18.8"))
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+
+print ("TESTS: scanf()");
+text = "";
+number = 0;
+hex = 0;
+c= "";
+ret = sscanf ("MY STRING -1 0AAB", "MY %6s %i %04x",  text, number, hex);
+if (ret==3 && text=="STRING" && number==-1 && hex=2731)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+print ("TESTS: json_encode()");
+str = json_encode (pathinfo ("c:\\projects\\v1\\v1.exe"));
+if (str=='{"dirname":"c:\\projects\\v1","basename":"v1.exe","extension":"exe","filename":"v1"}')
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+print ("TESTS: json_decode()");
+ret = json_decode (str);
+if (ret["dirname"]=="c:\\projects\\v1" && !strcmp(ret["basename"], "v1.exe") && ret["extension"]=="exe" && isset (ret["filename"]) && ret["filename"]=="v1")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+print ("TESTS: pathinfo()");
+r = pathinfo('d.jjj/dd');
+if (r["dirname"]=="d.jjj" && r["basename"]=="dd" && r["filename"]=="dd" && !isset (r["extension"]))
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+r = pathinfo('/ss/.ext');
+if (r["dirname"]=="/ss" && r["basename"]==".ext" && r["filename"]=="" && r["extension"]=="ext")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+r = pathinfo('.ext');
+if (r["dirname"]=="." && r["basename"]==".ext" && r["filename"]=="" && r["extension"]=="ext")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+
+testIdx++;
+r = pathinfo('/.ext');
+if (r["dirname"]=="/" && r["basename"]==".ext" && r["filename"]=="" && r["extension"]=="ext")
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+
+testIdx++;
+
+
+print ("TESTS: microtime()");
+t0 = microtime(true);
+sleep (1500);
+t2 = microtime(true)-t0;
+if (t2>1.0 && t2<1.8)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+
+print ("TESTS: eval()");
+if (eval ("1+92;")==93.0)
+	successCnt++;
+else
+	print ("Error in Test ".testIdx." / near Line ".__LINE__);
+testIdx++;
+
+print (successCnt." successful from ".testIdx." tests");
+
+?>

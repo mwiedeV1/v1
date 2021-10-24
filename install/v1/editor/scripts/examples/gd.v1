@@ -1,0 +1,57 @@
+<?v1
+// Examples of gd module based of LibGD with PHP compatible functions.
+dl ('gd');
+
+img = imagecreatetruecolor (300, 200);
+imagesetinterpolation (img, IMG_GENERALIZED_CUBIC);
+if (!img)
+	exit ();
+
+white = imagecolorallocatealpha (img, 255,255,255,0);
+
+// imagefill (img, 30, 15, white);
+
+green = imagecolorallocatealpha (img, 0,255,10, 64);
+red = imagecolorallocatealpha (img, 255,0,0,40);
+yellow = imagecolorallocatealpha (img, 255,0,255,50);
+
+imagesetstyle (img, array (yellow, green, red));
+
+imagesetthickness (img, 10);
+imageline (img, 10, 10, 50, 50, IMG_COLOR_STYLED);
+imageline (img, 50, 50, 60, 10, red);
+imageline (img, 60, 10, 10, 10, red);
+
+imagefill (img, 30, 15, green);
+// imagefilltoborder (img,30,15, 2, green);
+
+imagesetthickness (img, 10);
+
+imagerectangle (img,10,10,100,100,green);
+
+imagesetthickness (img, 3);
+
+imagesetantialiased (img,red);
+
+imagearc (img,120,100,100,100, 100, 50, red);
+
+imagefilledarc (img,120,120,50,50, 50, 3, green, 4);
+
+imageellipse (img,120,120,50,50, red);
+
+imagefilledellipse (img,233,170,100,50, red);
+
+points = array (30, 30, 100, 100, 250, 120);
+imagefilledpolygon (img, points, count(points)/2, green);
+
+imagesetpixel (img, 7, 7, red);
+
+px = imagegetpixel (img, 8, 7);
+
+imageflip (img, IMG_FLIP_VERTICAL);
+img2 = imagerotate (img, -25.22,red);
+imagestringup (img2, 5, 10, 132, utf8_decode ("This is a Test"), white);
+
+imagepng(img2,null);
+
+?>

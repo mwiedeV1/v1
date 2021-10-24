@@ -1,0 +1,72 @@
+<?v1 require_once ("helpers/start.v1");?>
+<h3>SSL-Test</h3>
+<?v1
+dl ("ssl");
+// Create classic socket
+host = "www.v1-script.net";
+print ("<p>".host."</p>");
+
+socket = fsockopen (host, 443);
+if (socket)
+{
+	// Create SSL Context
+	ctx = SSL_CTX_new ();
+
+	SSL_CTX_set_options (ctx, SSL_FLAG("SSL_OP_NO_SSLv3"));
+	// printf ("<p>SSL_CTX_set_options Flags = 0x%.8x</p>", SSL_CTX_get_options (ctx));
+
+	// Create SSL
+	ssl = SSL_new (ctx);
+	SSL_set_cipher_list (ssl, "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");
+
+
+	// Set socket
+	SSL_set_fd (ssl, socket);
+
+	// Connect SSL
+	if (SSL_connect (ssl, host)) {
+
+		// Print certificate information
+		print ("<h4>Certificate</h4>");
+		cert = SSL_get_peer_certificate (ssl);
+
+		foreach (cert as key => data) {
+			if (!is_array (data))
+				print (key." = ".data."<br />");
+			else {
+				foreach (data as key2 => value2) {
+					print (key.":".key2." = ".value2."<br />");
+				}
+			}
+		}
+
+		// Print ciphers
+		print ("<h4>Ciphers</h4>");
+		print ("<p>".SSL_get_cipher_list (ssl)."</p>");
+
+		// Write HTTP header
+		SSL_write (ssl, "GET / HTTP/1.1\r\nHost: ".host."\r\nConnection: close\r\n\r\n");
+
+		// Read header
+		print ("<h4>HTTP-Header</h4>");
+		str = "";
+		while (SSL_readln (ssl, str)) {
+			print (str."<br >");
+			if (str=="")
+				break;
+		}
+	}
+
+	// Free SSL
+	SSL_free (ssl);
+
+	// Free SSL Context
+	SSL_CTX_free (ctx);
+
+	// Close original socket
+	fclose (socket);
+}
+
+
+?>
+<?v1 require_once ("helpers/end.v1");?>

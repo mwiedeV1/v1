@@ -1,0 +1,353 @@
+/* Input elements */
+form {
+	margin:0px;
+}
+
+input.inputfield, textarea.textarea, select.dropdown {
+	font-family:Verdana, sans-serif;
+	font-size:9pt;
+	border:none;
+	background:none;
+	margin:0;
+	padding:2px;
+}
+
+input.inputfield {
+	width:220px;
+}
+
+select.dropdown {
+	padding:0px;
+	margin:1px;
+}
+
+*+html select.dropdown {
+	height:18px;
+}
+
+* html select.dropdown {
+	height:18px;
+}
+
+textarea.textarea {
+	height:92px;
+	width:300px;
+}
+
+
+.input_wrap_locked {
+	padding-top:3px;
+	font-size:10pt;
+	min-height:18px;
+	display:inline-block;
+}
+
+.input_wrap_locked h1 {
+	background:none;
+	color:#000000;
+	padding-left:0px;
+}
+
+.input_wrap {
+	border:1px solid #CCCCCC;
+	padding:1px;
+	background-color:white;
+	display:inline-block;
+}
+
+*+html .input_wrap {
+	display:inline;
+	padding:0 1px 0 1px;
+}
+
+* html .input_wrap {
+	display:inline;
+	padding:1px;
+}
+
+.input_wrap_checkbox {
+	display:inline-block;
+}
+
+*+html .input_wrap_checkbox {
+	display:inline;
+}
+
+.input_error, #tooltip   {
+	background-color:#FFDFD2;	
+
+}
+
+.input_error_img {
+	display:inline-block;
+	line-height:22px;
+	vertical-align:top;
+}
+
+*+html .input_error_img {
+	display:inline;
+}
+
+* html .input_error_img {
+	display:inline;
+}
+
+.checkbox {
+	margin:5px 0px 4px 0px;
+	padding:0px;
+}
+
+/* IE7 Hack */
+*+html .checkbox {
+	margin:2px 0px 3px -4px;
+}
+
+
+/* Containers */
+.box {
+	font-size:11px;
+	padding:5px 5px 5px 5px;
+	background-color:#F6F6F6;
+	border:1px solid #CCCCCC;
+	overflow:hidden;
+	position:relative;
+	min-width:350px; 
+	margin-bottom:15px;
+}
+
+
+.box_header {
+	padding:3px;
+	border:1px #CCCCCC dotted;
+	background-color:#E8E8E8;
+	font-weight:bold;
+	line-height:16px;
+	margin-bottom:15px;
+	
+}
+
+.box_header span {
+	display:inline-block;
+	margin-left:5px;
+}
+
+/* Input form as rows */
+
+.input_frame_rows {
+	min-width:350px;
+	padding-left:2px;
+	padding-right:2px;
+}
+
+.input_frame_rows .input_item {
+	padding:2px 2px 2px 0;
+	clear:both;
+}
+
+.input_frame_rows .input_item .input_description {
+	float:left;
+	width:120px;
+	padding-bottom:0px;
+	line-height:22px;
+}
+
+.input_frame_rows .input_item .input_description span {
+
+}
+
+.input_frame_rows .input_item .input_value {
+	display:inline-block;
+
+}
+
+/* IE7 Hack */
+*+html .input_frame_rows div.input_item .input_value input.checkbox {
+	margin:1px 0px 0px -4px;
+	padding:0px;
+}
+
+/* IE6 Hack */
+* html .input_frame_rows .input_item .input_value input.checkbox {
+	margin:1px 0px 0px -4px;
+	padding:0px;
+}
+
+.input_frame_rows .input_item .input_value span {
+	padding-left:5px;
+
+}
+
+/* Input form as cols */
+
+.input_frame_cols {
+	display:inline-block;
+	min-width:350px; 
+}
+
+.input_frame_cols .input_item {
+	padding-right:4px;
+	padding-left:4px;
+	float:left;
+	white-space:nowrap;
+}
+
+.input_item .input_description {
+	padding-bottom:3px;
+}
+
+.input_frame_cols .input_item .input_description span {
+}
+
+.input_frame_cols .input_item .input_value {
+	padding-bottom:3px;
+}
+
+.input_frame_cols .input_item .input_value span {
+	padding-left:5px;
+}
+
+/* Own button style */
+
+
+input.button {
+	font-family:Arial, sans-serif;
+	font-size:10pt;
+	height:25px;
+	line-height:25px;
+	font-weight:bold; 
+	border:none;
+
+	color:#FFFFFF;
+	padding-left:15px;
+	padding-right:15px;
+
+	cursor:pointer;
+	outline-style:none;
+	outline-width:0;
+	vertical-align:middle;
+	-moz-border-radius:5px; 
+	-webkit-border-radius:5px;
+	-o-border-radius:5px;
+	-khtml-border-radius:5px; 
+	border-radius:5px;
+	margin-bottom:10px;
+}
+
+.box input.button, .popup_content input.button {
+	margin-top:14px;
+	margin-bottom:3px;
+}
+
+/* Default button */
+input.default_button {
+	background:url(../images/bt.png) repeat-x;
+}
+
+input.default_button:hover {
+	background:url(../images/bt_m.png) repeat-x;
+}
+
+input.default_button:active {
+	background:url(../images/bt_p.png) repeat-x;
+}
+
+/* New button */
+input.new_button {
+	background:url(../images/bt_save.png) repeat-x;
+}
+
+input.new_button:hover {
+	background:url(../images/bt_save_m.png) repeat-x;
+}
+
+input.new_button:active {
+	background:url(../images/bt_save_p.png) repeat-x;
+}
+
+/* Save button */
+input.edit_button {
+	background:url(../images/bt_save.png) repeat-x;
+}
+
+input.edit_button:hover {
+	background:url(../images/bt_save_m.png) repeat-x;
+}
+
+input.edit_button:active {
+	background:url(../images/bt_save_p.png) repeat-x;
+}
+
+/* Search button */
+input.search_button {
+	background:url(../images/bt.png) repeat-x;
+}
+
+input.search_button:hover {
+	background:url(../images/bt_m.png) repeat-x;
+}
+
+input.search_button:active {
+	background:url(../images/bt_p.png) repeat-x;
+}
+
+/* Delete button */
+input.delete_button {
+	background:url(../images/bt_delete.png) repeat-x;
+}
+
+input.delete_button:hover {
+	background:url(../images/bt_delete_m.png) repeat-x;
+}
+
+input.delete_button:active {
+	background:url(../images/bt_delete_p.png) repeat-x;
+}
+
+* html input.button {
+	padding:0px;
+}
+
+*+html input.button {
+	padding:0px;
+}
+
+input.button:disabled,  input.button:hover:disabled {
+	/* background:url(../images/bt_template_g.png) repeat-x; */
+	background:none;
+	background-color:#D4D4D4;
+	color:#A1A1A1;
+}
+
+
+/* Upload frame */
+.upload_frame {
+	border:0;
+	outline:0;
+	width:260px;
+	height:24px;
+	margin-bottom:10px;
+}
+
+a.upload_preview {
+	padding:10px;
+	background-color:#000000;
+	
+	-moz-border-radius:5px; 
+	-webkit-border-radius:5px;
+	-o-border-radius:5px;
+	-khtml-border-radius:5px; 
+	border-radius:5px;
+	
+	border:5px solid #B9B9B9; 
+	
+	display:inline-block;
+	width:240px;
+	height:200px;
+	color:#FFFFFF;
+	text-decoration:none;
+	text-align:center;
+	/*
+	-moz-box-shadow: 2px 2px 11px #666;
+	-webkit-box-shadow: 2px 2px 11px #666;
+	*/
+}

@@ -1,0 +1,25 @@
+<?v1 require_once ("helpers/start.v1");?>
+<h3>Demonstrates compression with ZLib and native function calling</h3>
+<?v1
+error_reporting (0);
+require_once ("../../../lib/zlib.inc.v1");
+
+print ("<p>ZLib-Version: ", zlibVersion(), "</p>");
+
+src = 'V1 is a simple functional interpreter language with syntax from C, PHP and JavaScript. It was developed from the scratch. The focus is on administrative and experimental programming, but it has enhanced benefits like Multithreading, CGI, Web functions and native function calling. The most buildin functions are compatible with PHP, for example fopen(). C Language Style PHP compatible functions Multithreading CGI Native function calling (.so,.dll) Documentation (Wiki) Online Code Editor';
+
+dst = "";
+ret = compress (dst, src, Z_BEST_COMPRESSION);
+print ("<p>Ret = ", ret, ", compressed from ", strlen(src), " to ", strlen (dst), " bytes (",round(strlen(dst)/strlen(src),2)*100, "%, Factor ", (round (strlen (src)/strlen (dst),1)),")</p>");
+
+// Write compressed data
+// print (dst);
+
+src = dst;
+ret = uncompress (dst, src);
+print ("<p>Ret = ", ret, ", uncompressed from ", strlen(src), " to ", strlen (dst), " bytes</p>");
+print (dst);
+
+?>
+<p><small><b>For file and stream compression see cli-examles/zlib.v1</b></small></p>
+<?v1 require_once ("helpers/end.v1");?>
