@@ -1,10 +1,3 @@
-/*
-Copyright (c), 2016-2021 mwiede Software
-Name of the Project: V1 Script
-Author(s): Matthias Wiede, mwiede@mwiede.de
-Licence: GPL V3
-*/
-
 #ifdef _WIN32
 #include <windows.h>
 #endif 
@@ -18,32 +11,17 @@ Licence: GPL V3
 
 #include "../../ast.h"
 
-// https://github.com/openssl/openssl/blob/master/include/openssl/ssl.h
-// https://wiki.openssl.org/index.php/SSL/TLS_Client
-
-// Create CSR
-// http://www.codepool.biz/how-to-use-openssl-to-generate-x-509-certificate-request.html
-
-// Encrypt file with AES
-// https://github.com/saju/misc/blob/master/misc/openssl_aes.c
-// https://eclipsesource.com/de/blogs/2017/01/17/tutorial-aes-encryption-and-decryption-with-openssl/
-// https://medium.com/@amit.kulkarni/encrypting-decrypting-a-file-using-openssl-evp-b26e0e4d28d4
-
-// Zertifikate anzeigen, CHAIN Zertifikat, Zertifikate validieren ...
-// https://stackoverflow.com/questions/4261369/openssl-verify-peer-client-certificate-in-c
-// https://wiki.openssl.org/index.php/Hostname_validation
-// https://github.com/iSECPartners/ssl-conservatory/blob/master/openssl/openssl_hostname_validation.c
-
-
 using namespace std;
 
 #ifdef _WIN32
 #define DLL_EXPORT __declspec( dllexport)
 #else
-#define DLL_EXPORT __attribute__ ((visibility ("default")))
+#define DLL_EXPORT 
+// __attribute__ ((visibility ("default")))
 #define SOCKET int
 #endif
 
+WMUTEX* g_mutexList = NULL;
 int g_handletype_SSL_CTX = 12;
 int g_handletype_SSL = 13;
 
@@ -51,8 +29,6 @@ typedef struct {
 	WCSTR name;
 	W32 flag;
 } SFlagCfg;
-
-
 
 SFlagCfg g_flagList[] = {
 	{ "SSL_OP_LEGACY_SERVER_CONNECT", SSL_OP_LEGACY_SERVER_CONNECT },
@@ -98,13 +74,13 @@ SFlagCfg g_flagList[] = {
 
 class _SSL_CTX;
 class _SSL;
+
 int openssl_pem_password_cb(char *, int, int, void *);
 int openssl_servername_cb(SSL *ssl, int *ad, void *arg);
 void ERR_print_errors (WString& str);
 
 #ifndef _WIN32
-void My_X509_get0_signature(ASN1_BIT_STRING **psig,
-                          X509_ALGOR **palg, const X509 *x)
+void My_X509_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, const X509 *x)
 {
     if (psig)
         *psig = (ASN1_BIT_STRING *) &x->signature;
@@ -140,58 +116,48 @@ public:
 	void create (WCSTR method) {
 		if (m_ctx)
 			return;
-
 		
-		const SSL_METHOD *methodPnt = TLSv1_2_client_method (); // SSLv23_method();
+		const SSL_METHOD *methodPnt = TLSv1_2_client_method ();
+		
 		if (!strcmp (method, "SSLv23_method"))
 			methodPnt = SSLv23_method();
-        else
-		if (!strcmp (method, "SSLv23_server_method")) {
-            methodPnt = SSLv23_server_method();
-        }
-        else
-		if (!strcmp (method, "SSLv23_client_method")) {
-            methodPnt = SSLv23_client_method();
-        }
-        else
+  	else
+		if (!strcmp (method, "SSLv23_server_method")) 
+			methodPnt = SSLv23_server_method();
+    else
+		if (!strcmp (method, "SSLv23_client_method"))
+			methodPnt = SSLv23_client_method();
+		else
 		if (!strcmp (method, "TLSv1_1_method"))
 			methodPnt = TLSv1_1_method();
-        else
+    else
 		if (!strcmp (method, "TLSv1_1_server_method"))
 			methodPnt = TLSv1_1_server_method();
-        else
+		else
 		if (!strcmp (method, "TLSv1_1_client_method"))
 			methodPnt = TLSv1_1_client_method();
-        else
+		else
 		if (!strcmp (method, "TLSv1_2_method"))
 			methodPnt = TLSv1_2_method();
-        else
+		else
 		if (!strcmp (method, "TLSv1_2_server_method"))
 			methodPnt = TLSv1_2_server_method();
-        else
+    else
 		if (!strcmp (method, "TLSv1_2_client_method"))
 			methodPnt = TLSv1_2_client_method();
-        else 
+    else 
 		if (method[0]!=0)
-        {
-            throw WException ("SSL method unsupported", -1);
-        }
-        
-        
+			throw WException ("SSL method unsupported", -1);
+
 		m_ctx = SSL_CTX_new(methodPnt);  
-		if ( m_ctx == NULL ) {
+		if ( m_ctx == NULL )
 			throw WException ("Cannot create SSL Context", -1);
-		}
-		// SSL_CTX_set_ecdh_auto(m_ctx, 1);
-        // SSL_CTX_up_ref (m_ctx);
-        // SSL_CTX_set_min_proto_version (m_ctx, SSL3_VERSION);
                                        
 		SSL_CTX_set_default_passwd_cb (m_ctx, openssl_pem_password_cb);
 		SSL_CTX_set_default_passwd_cb_userdata(m_ctx, this);
-
+		
 		SSL_CTX_set_tlsext_servername_callback (m_ctx, openssl_servername_cb);
-		SSL_CTX_set_tlsext_servername_arg (m_ctx, this);
-	
+		SSL_CTX_set_tlsext_servername_arg (m_ctx, this);	
 	}
 	
 	void close () {
@@ -315,9 +281,9 @@ public:
 	
 	void close () {
 		if (m_ssl) {
-			SSL_set_shutdown (m_ssl, SSL_RECEIVED_SHUTDOWN|SSL_SENT_SHUTDOWN);
-			SSL_shutdown (m_ssl); 
-			SSL_clear (m_ssl);
+			SSL_set_shutdown (m_ssl, SSL_RECEIVED_SHUTDOWN); // SSL_SENT_SHUTDOWN
+            SSL_shutdown (m_ssl); 
+            SSL_clear (m_ssl);
 			SSL_free (m_ssl);
 			m_ssl = NULL;
 		}
@@ -340,7 +306,7 @@ public:
 		if (hostname)
 			SSL_set_tlsext_host_name (m_ssl, hostname);
 		if ((err = SSL_connect (m_ssl))==-1) {
-        	    	WCSTR errText = ERR_lib_error_string(ERR_get_error ());
+			WCSTR errText = ERR_lib_error_string(ERR_get_error ());
 			if (!errText)
 				errText = "SSL connection failed";
 			throw WException (errText, ERR_get_error ());
@@ -410,8 +376,7 @@ public:
 			if ((err = SSL_accept(m_ssl))==-1) {
 				ERR_print_errors (m_openSSLWarning);
 				WCSTR libErrStr = ERR_lib_error_string(ERR_get_error ());
-                // printf ("SSL accept problems %s %x\r\n", libErrStr, ERR_get_error ());
-
+        // printf ("SSL accept problems %s %x\r\n", libErrStr, ERR_get_error ());
 				if (libErrStr)
 					throw WException (WFormattedString ("Cannot accept SSL connection. %s %s", (libErrStr==NULL ? "" : libErrStr), (WCSTR) m_openSSLWarning), ERR_get_error ());			
 				return false;
@@ -437,10 +402,9 @@ public:
 		return false;
 	}
 
-    operator SSL* () const {
-        return m_ssl;
-    };
-
+	operator SSL* () const {
+	    return m_ssl;
+	};
 
 private:
 	void initialize () {
@@ -469,16 +433,20 @@ int openssl_pem_password_cb(char *buf, int size, int rwflag, void *arg) {
 void openSSLLockFunction (int mode, int n, const char *file, int line)
 {
 	// printf ("openSSLLockFunction %i %s %i\r\n", mode, file, line);
+    if (mode & CRYPTO_LOCK)
+      WSystem::enterMutex (g_mutexList[n]);
+    else
+      WSystem::leaveMutex (g_mutexList[n]);
 }
 
 int openssl_servername_cb(SSL *ssl, int *ad, void *arg)
 {
-    if (ssl == NULL)
-        return SSL_TLSEXT_ERR_NOACK;
-
-    const char* servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
-    if (!servername || servername[0] == '\0')
-        return SSL_TLSEXT_ERR_NOACK;
+	if (ssl == NULL)
+		return SSL_TLSEXT_ERR_NOACK;
+	
+	const char* servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+	if (!servername || servername[0] == '\0')
+		return SSL_TLSEXT_ERR_NOACK;
 
 	_SSL_CTX* ctx = (_SSL_CTX*) arg;
 	if (ctx) {
@@ -590,18 +558,14 @@ int func_SSL_CTX_new (vector<DataValue*>& argvalues, DataValue& ret, Interpreter
 		ret = ctx.handleHT.put ((void*) h, h)->m_value;
 	}
 	catch (WException& e) {
-  		
-
 		// ctx._warnInterprete (e, ctx);
-
 		if (h->handle) {
 			delete (_SSL_CTX*) h->handle;
 			h->handle = NULL;
 		}
 		delete h;
-		h = NULL;
-        
-        ctx._abortInterprete (e.toString (), ctx);
+		h = NULL;   
+		ctx._abortInterprete (e.toString (), ctx);
 	}
 	return 0;
 }
@@ -1039,11 +1003,9 @@ int func_SSL_CTX_universal (WCSTR function, vector<DataValue*>& argvalues, DataV
 	if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
 		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_HANDLE_REQUIRED;
 	}
-	
-	
 
 	ret = false;
-    int retCode = 0;
+	int retCode = 0;
 	Handle* h = (Handle*) *argvalues[0];
 	try {
 		if (h && ctx.handleHT.isKey (h) && h->handletype==g_handletype_SSL_CTX) {			
@@ -1670,13 +1632,11 @@ WScriptFuncDef g_funcDefList[] = {
 	{ "SSL_CTX_get_options",  func_SSL_CTX_get_options },
 	{ "SSL_CTX_set_cipher_list", func_SSL_CTX_set_cipher_list },
 
-
 	{ "SSL_CTX_load_verify_locations",  func_SSL_CTX_load_verify_locations },
 	{ "SSL_CTX_use_certificate_chain_file",  func_SSL_CTX_use_certificate_chain_file },
 	{ "SSL_CTX_use_certificate_file",  func_SSL_CTX_use_certificate_file },
 	{ "SSL_CTX_use_PrivateKey_file",  func_SSL_CTX_use_PrivateKey_file },
 	{ "SSL_CTX_check_private_key",  func_SSL_CTX_check_private_key },
-
 	
 	{ "SSL_new",  func_SSL_new },
 	{ "SSL_free",  func_SSL_free },
@@ -1696,7 +1656,7 @@ WScriptFuncDef g_funcDefList[] = {
 
 	{ "SSL_create_selfsigned_cert", func_SSL_create_selfsigned_cert },
 
-   	{ "ERR_remove_state",  func_ERR_remove_state },
+  { "ERR_remove_state",  func_ERR_remove_state },
 	{ "ERR_get_error", func_ERR_get_error },    
 	{ "ERR_lib_error_string", func_ERR_lib_error_string },
 
@@ -1722,6 +1682,11 @@ int DLL_EXPORT wScriptDLLStartup (InterpreterContext& ctx) {
     OpenSSL_add_all_algorithms();
 
     
+    // Create mutex table    
+    int cnt = CRYPTO_num_locks();
+    g_mutexList = (WMUTEX*) malloc (cnt * sizeof (WMUTEX));
+    for (int i=0;i<cnt;i++)
+    	WSystem::initMutex (g_mutexList[i]);
     CRYPTO_set_locking_callback (openSSLLockFunction);	
 
 	for (unsigned int i=0;i<sizeof (g_funcDefList) / sizeof (WScriptFuncDef);i++)
@@ -1739,6 +1704,13 @@ int DLL_EXPORT wScriptDLLShutdown (InterpreterContext& ctx) {
 	for (unsigned int i=0;i<sizeof (g_funcDefList) / sizeof (WScriptFuncDef);i++)
 		ctx.nativeFunctionHT.remove (g_funcDefList[i].name);
     cleanupOpenSSL ();
+    
+    int cnt = CRYPTO_num_locks();
+    for (int i=0;i<cnt;i++)
+      WSystem::deleteMutex (g_mutexList[i]);
+    
+    if (g_mutexList)
+        free ((void*) g_mutexList);
     return 0;
 }
 
@@ -1755,18 +1727,17 @@ BOOL APIENTRY DllMain( HANDLE hModule,
                        LPVOID lpReserved)
 {
     switch (dwReason)
-	{
-		case DLL_PROCESS_ATTACH:
-
-            break;
-		case DLL_THREAD_ATTACH:
-			break;
-		case DLL_THREAD_DETACH:			
-            ERR_remove_state(0);
-          break;
-        case DLL_PROCESS_DETACH:           
-            break;
-    }
+		{
+			case DLL_PROCESS_ATTACH:			
+				break;
+			case DLL_THREAD_ATTACH:
+				break;
+			case DLL_THREAD_DETACH:			
+				ERR_remove_state(0);
+				break;
+			case DLL_PROCESS_DETACH:           
+				break;
+		}
     return TRUE;
 }
 #endif
