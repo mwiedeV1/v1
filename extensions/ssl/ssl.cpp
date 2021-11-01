@@ -17,7 +17,7 @@ using namespace std;
 #define DLL_EXPORT __declspec( dllexport)
 #else
 #define DLL_EXPORT 
-// __attribute__ ((visibility ("default")))
+#define DLL_EXPORT __attribute__ ((visibility ("default")))
 #define SOCKET int
 #endif
 
