@@ -93,7 +93,7 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
 		if (fVerbose)
 			print ("Connecting to ".urlTokens["host"].":".port." ... ");
 
-		socket = fsockopen (urlTokens["host"], port, 10000);
+		socket = fsockopen (urlTokens["host"], port, 600000);
 		autonl (true);
 		if (!socket) {
 			errText = "Connection error";

@@ -1,5 +1,6 @@
 <?v1
 dl ("regex");
+dl ("ssl");
 
 // Full path to sendmail (only on Linux)
 const SENDMAIL_PATH = "/usr/sbin/sendmail";
@@ -164,7 +165,6 @@ function mail (to, subject, message, optHeaders="", user="", pass="", host="", p
 			}
 			else if (mode<2) {
 				if (mode==1 && code==220) {
-					dl ("ssl");
 
 					// Create SSL Context
 					sslCTX = SSL_CTX_new ();
