@@ -3855,8 +3855,8 @@ void decodeJSONString(WCSTR src, int length, string &dst, bool fTrim = false)
 	char *c = (char *)src;
 	dst.reserve(length);
 	dst.resize(0);
-	char escapeList[] = {'"', 'n', 'r', 't', 'f', 'b', '\\'};
-	char replaceList[] = {'"', '\n', '\r', '\t', '\f', '\b', '\\'};
+	char escapeList[] = {'"', 'n', 'r', 't', 'f', 'b', '\\', '/'};
+	char replaceList[] = {'"', '\n', '\r', '\t', '\f', '\b', '\\', '/'};
 	int maxChars = sizeof(escapeList) / sizeof(char);
 	bool fSlash = false;
 
@@ -3918,7 +3918,7 @@ char *parseJSON(WCSTR jsonStr, ArrayHT &arrayList)
 		if (flag == 2 || flag == 5) {
 			// Overread strings
 			while (*c != '"' && *c != 0) {
-				if (*c == '\\' && *(c - 1) != '\\' && *(c + 1) == '"') {
+				if (*c == '\\' && *(c + 1) == '"') {
 					c++;
 				}
 				c++;

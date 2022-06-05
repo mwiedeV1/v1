@@ -66,7 +66,7 @@ function mysql_query (mysql, sql)
 function mysql_fetch_array (&result, &data)
 {
 	global hDLLMySQL;
-	if (is_array (result) && (row = call (hDLLMySQL, "mysql_fetch_row",  [['p'], 'i'], result[0]))) {
+	if (is_array (result) && (row = call (hDLLMySQL, "mysql_fetch_row",  [['p'], 'p'], result[0]))) {
 
 		data = array ();
 		for (i=0; i<count (result[1]); i++) {
@@ -104,8 +104,10 @@ function mysql_real_escape_string (mysql, from)
 	global hDLLMySQL;
 	to = "";
 	resize (to,strlen (from)*2);
-	if (call (hDLLMySQL, "mysql_real_escape_string", [['p', 'r', 's', 'i'], 'i'], mysql, to, from, strlen (from)))
+	if (len=call (hDLLMySQL, "mysql_real_escape_string", "prsi:i", mysql, to, from, strlen (from))) {
+	  resize (to, len);
 		return to;
+	}
 	return false;
 }
 
@@ -124,7 +126,7 @@ function mysql_get_client_info (mysql)
 function mysql_get_server_info (mysql)
 {
 	global hDLLMySQL;
-	return call (hDLLMySQL, "mysql_get_server_info", [['i'], "s"], mysql);
+	return call (hDLLMySQL, "mysql_get_server_info", [['p'], "s"], mysql);
 }
 
 ?>
