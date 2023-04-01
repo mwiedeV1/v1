@@ -1,0 +1,196 @@
+<?v1
+// Replace with correct path of SQLite3 library (sqlite3.dll or libsqlite3.so)
+sqlite3LibName =  'libsqlite3.so';
+
+hDLLSQLite3 = dl (sqlite3LibName, true);
+
+if (!hDLLSQLite3) {
+  // Search for libraries
+  libList = explode ("\n", system ('/usr/bin/find /usr/lib* -name "libsqlite3.so*"'));
+  if (!empty (libList[0])) {
+    hDLLSQLite3 = dl (sqlite3LibName = libList[0], true);
+  }
+}
+
+if (!hDLLSQLite3) {
+  print ("SQLlite3 library not found.\r\nSet sqlite3LibName in ".__FILE__." to sqlite3.dll or libsqlite3.so");
+  exit (1);
+}
+
+
+const SQLITE_OK           = 0;    /* Successful result */
+const SQLITE_ERROR        = 1;    /* SQL error or missing database */
+const SQLITE_INTERNAL     = 2;    /* An internal logic error in SQLite */
+const SQLITE_PERM         = 3;    /* Access permission denied */
+const SQLITE_ABORT        = 4;    /* Callback routine requested an abort */
+const SQLITE_BUSY         = 5;    /* The database file is locked */
+const SQLITE_LOCKED       = 6;    /* A table in the database is locked */
+const SQLITE_NOMEM        = 7;    /* A malloc() failed */
+const SQLITE_READONLY     = 8;    /* Attempt to write a readonly database */
+const SQLITE_INTERRUPT    = 9;    /* Operation terminated by sqlite_interrupt() */
+const SQLITE_IOERR        = 10;   /* Some kind of disk I/O error occurred */
+const SQLITE_CORRUPT      = 11;   /* The database disk image is malformed */
+const SQLITE_NOTFOUND     = 12;   /* (Internal Only) Table or record not found */
+const SQLITE_FULL         = 13;   /* Insertion failed because database is full */
+const SQLITE_CANTOPEN     = 14;   /* Unable to open the database file */
+const SQLITE_PROTOCOL     = 15;   /* Database lock protocol error */
+const SQLITE_EMPTY        = 16;   /* (Internal Only) Database table is empty */
+const SQLITE_SCHEMA       = 17;   /* The database schema changed */
+const SQLITE_TOOBIG       = 18;   /* Too much data for one row of a table */
+const SQLITE_CONSTRAINT   = 19;   /* Abort due to contraint violation */
+const SQLITE_MISMATCH     = 20;   /* Data type mismatch */
+const SQLITE_MISUSE       = 21;   /* Library used incorrectly */
+const SQLITE_NOLFS        = 22;   /* Uses OS features not supported on host */
+const SQLITE_AUTH         = 23;   /* Authorization denied */
+const SQLITE_ROW          = 100;  /* sqlite_step() has another row ready */
+const SQLITE_DONE         = 101;  /* sqlite_step() has finished executing */
+
+// Column types
+const SQLITE_INTEGER      = 1;
+const SQLITE_DOUBLE       = 2;
+const SQLITE_TEXT         = 3;
+const SQLITE_BLOB         = 4;
+const SQLITE_NULL   	  = 5;
+
+function sqlite3_libversion () {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_libversion", ":s");
+}
+
+function sqlite3_open (filename, &db) {
+  global hDLLSQLite3;
+  db = binformat (0);
+  ret = call (hDLLSQLite3, "sqlite3_open", "sr:i", filename, db);
+  db = binparse (db);
+  return ret;
+}
+
+function sqlite3_exec (db, sql, callback, param, &errmsg) {
+  global hDLLSQLite3;
+  tmp = binformat (0);
+  ret = call (hDLLSQLite3, "sqlite3_exec", "psppr:i", db, sql, callback, param, tmp);	
+  if (ret != SQLITE_OK) {
+     tmp = binparse (tmp);
+     errmsg = memat (tmp);
+     sqlite3_free(tmp);
+  }
+  return ret;
+}
+
+function sqlite3_prepare (db, sql, len, &stmt, tail=null) {
+  global hDLLSQLite3;
+  stmt = binformat (0);
+  ret = call (hDLLSQLite3, "sqlite3_prepare", "psirp:i", db, sql, len, stmt, tail);	
+  stmt = binparse (stmt);
+  return ret;
+}
+
+function sqlite3_bind_int (stmt, idx, value) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_bind_int", "pii:i", stmt, idx, value);	
+}
+
+function sqlite3_bind_double (stmt, idx, value) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_bind_double", "pid:i", stmt, idx, value);	
+}
+
+function sqlite3_bind_text (stmt, idx, &value, len=-1, callback=null) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_bind_text", "pirip:i", stmt, idx, value, len, callback);	
+}
+
+function sqlite3_bind_blob (stmt, idx, &value, len, callback=null) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_bind_blob", "pirip:i", db, idx, value, len, callback);	
+}
+
+function sqlite3_step (stmt) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_step", "p:i", stmt);	
+}
+
+function sqlite3_column_text (stmt, idx) {
+  global hDLLSQLite3;
+  ret = call (hDLLSQLite3, "sqlite3_column_text", "pi:p", stmt, idx);	
+  if (!ret)
+     return null;
+  return memat (ret);
+}
+
+function sqlite3_column_int (stmt, idx) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_column_int", "pi:i", stmt, idx);	
+}
+
+function sqlite3_column_double (stmt, idx) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_column_double", "pi:d", stmt, idx);	
+}
+
+function sqlite3_column_bytes (stmt, idx) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_column_bytes", "pi:i", stmt, idx);	
+}
+
+function sqlite3_column_blob (stmt, idx) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_column_blob", "pi:p", stmt, idx);	
+}
+
+function sqlite3_column_name (stmt, idx) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_column_name", "pi:s", stmt, idx);	
+}
+
+function sqlite3_column_count (stmt) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_column_count", "p:i", stmt);	
+}
+
+function sqlite3_column_type (stmt, idx) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_column_type", "p:ii", stmt, idx);	
+}
+
+function sqlite3_bind_parameter_index (stmt, name) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_bind_parameter_index", "ps:i", stmt, name);	
+}
+
+function sqlite3_bind_parameter_name (stmt, idx) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_bind_parameter_name", "pi:s", stmt, idx);	
+}
+
+function sqlite3_finalize (stmt) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_finalize", "p:i", stmt);	
+}
+
+function sqlite3_get_autocommit (db) {
+  global hDLLSQLite3;
+  call (hDLLSQLite3, "sqlite3_get_autocommit", "p:i", db);
+}
+
+function sqlite3_last_insert_rowid (db) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_last_insert_rowid", "p:i", db);
+}
+
+function sqlite3_free (pnt) {
+  global hDLLSQLite3;
+  call (hDLLSQLite3, "sqlite3_free", "p:i", pnt);
+}
+
+function sqlite3_close (db) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_close", "p:i", db);
+}
+
+function sqlite3_errmsg (db) {
+  global hDLLSQLite3;
+  return call (hDLLSQLite3, "sqlite3_errmsg", "p:s", db);
+}
+
+?>
