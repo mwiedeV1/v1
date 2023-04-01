@@ -1458,7 +1458,7 @@ while (*c!=0) {
 		if (*c=='x') {
 			// Hex
 			unsigned int hex=0;
-			if (sscanf ((c+1), "%x", &hex)==1) {
+			if (sscanf ((c+1), "%02x", &hex)==1) {
 				if (hex>255) {
 					yyerror (yylloc, yyscanner, NULL, WFormattedString ("String hex value %X too big for character", hex)); 
 					return 0;

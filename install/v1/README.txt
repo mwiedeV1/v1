@@ -8,4 +8,4 @@ To change the HTTP port please edit the file app/webserver.v1 and change constan
 
 See also: https://www.v1-script.net
 
-V1 is a project from Matthias Wiede 2016-2021.
+V1 is a project from Matthias Wiede 2016-2023.
