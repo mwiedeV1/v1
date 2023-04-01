@@ -111,6 +111,11 @@ function mysql_real_escape_string (mysql, from)
 	return false;
 }
 
+function mysql_insert_id (mysql) {
+  global hDLLMySQL;
+  return call (hDLLMySQL, "mysql_insert_id", "p:i", mysql);
+}
+
 function mysql_error (mysql)
 {
 	global hDLLMySQL;
