@@ -1,0 +1,88 @@
+<?v1 require_once ("helpers/start.v1"); ?>
+<h3>Demonstrates access to SQLite3 database and native function calling</h3>
+<?v1 
+error_reporting (0);
+require_once ("../../../lib/sqlite3.inc.v1");
+print ("<p>SQLite version: ", sqlite3_libversion (), "</p>");
+
+// Open/Create database
+dbName = "test.db";
+db = null;
+sqlite3_open (dbName, db);
+if (!db) {
+	print ("<p>Cannot open/create database: ".dbName, "</p>");
+	exit (1);
+}
+print ("<p><b>", dbName, "</b> created", "</p>");
+
+// Insert data
+sql = 
+	"DROP TABLE IF EXISTS Cars;". 
+	"CREATE TABLE Cars(Id INT, Name TEXT, Price INT);".
+	"INSERT INTO Cars VALUES(1, 'Audi', 52642);". 
+	"INSERT INTO Cars VALUES(2, 'Mercedes', 57127);". 
+	"INSERT INTO Cars VALUES(3, 'Skoda', 9000);". 
+	"INSERT INTO Cars VALUES(4, 'Volvo', 29000);". 
+	"INSERT INTO Cars VALUES(5, 'Bentley', 350000);". 
+	"INSERT INTO Cars VALUES(6, 'Citroen', 21000);". 
+	"INSERT INTO Cars VALUES(7, 'Hummer', 41400);". 
+	"INSERT INTO Cars VALUES(8, 'Volkswagen', 21600);";
+
+err_msg = "";
+rc = sqlite3_exec (db, sql, null, null, err_msg);
+print ("<p>Last rowid = ", sqlite3_last_insert_rowid (db), "</p>");
+
+if (rc != SQLITE_OK ) {
+  print ( "<p>Error (".rc."):", err_msg, "</p>");        
+  sqlite3_close(db);
+  exit (1);
+}
+
+// Select data with prepared statement
+stmt = 0;
+sql = "SELECT Id, Name, Price FROM Cars WHERE Price>@id order by Price Desc";
+
+rc = sqlite3_prepare (db, sql, -1, stmt);
+if (rc == SQLITE_OK) {
+	/*
+	searchFor = "9000";
+	sqlite3_bind_text (stmt, 1, searchFor);
+	*/
+	
+	paramIdx = sqlite3_bind_parameter_index (stmt, "@id");
+	/*
+	print ("Index of parameter @id = ", paramIdx, "<br>");
+	print ("Name of parameter ".paramIdx." = ", sqlite3_bind_parameter_name (stmt, paramIdx), "<br>");
+    */
+	sqlite3_bind_int (stmt, paramIdx, 9000);
+			
+	colCnt = sqlite3_column_count (stmt);
+	
+	print ("<table class=\"data_tbl\">");
+	print ("<tr>");
+	for (i=0;i<colCnt;i++) 
+        printf("<td>%s</td>", sqlite3_column_name (stmt, i));
+	print ("</tr>");
+	
+	while (sqlite3_step(stmt) != SQLITE_DONE) {	
+    	print ("<tr>");
+		for (i=0;i<colCnt;i++) {
+            printf("<td>%s</td>", htmlspecialchars (sqlite3_column_text (stmt, i)));
+		}
+    	print ("</tr>");
+    }
+    print ("</table>");
+}
+else {  
+	print ( "<p>Error (".rc."):", sqlite3_errmsg(db), "</p>");        
+	sqlite3_close(db);
+	exit (1);
+}
+
+sqlite3_finalize (stmt);
+sqlite3_close(db);
+
+unlink (dbName);
+print ("<p><b>", dbName, "</b> deleted", "</p>");
+?>
+<?v1 require_once ("helpers/end.v1"); ?>

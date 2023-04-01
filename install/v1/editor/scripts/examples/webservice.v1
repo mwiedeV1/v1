@@ -1,0 +1,22 @@
+<?v1
+// Simple Webservice
+header ("Status: 200 OK"); // Set other status here, e.g. 403 Forbidden
+header ("Content-Type: application/json; charset=utf-8");
+
+json = [
+    "remote_addr" => getenv ("REMOTE_ADDR"),
+    
+    "http" => [
+        "cache_control" => getenv ("HTTP_CACHE_CONTROL"),
+        "user_agent" => getenv ("HTTP_USER_AGENT"),
+    ],
+    
+    "data" => [
+        "a" => 1,
+        "b" => 9.1233,
+        "c" => "Test"
+    ]  
+];
+
+print_r (json_encode (json));
+?>
