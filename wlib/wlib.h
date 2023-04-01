@@ -9,6 +9,9 @@ Licence: GPL V3
 #ifndef _WLIB_H
 #define _WLIB_H
 
+#if defined(__CYGWIN__)
+#include <alloca.h>     // alloca
+#else //__CYGWIN__
 
 #include "WSystem.h"
 #include "WFile.h"
