@@ -7050,6 +7050,7 @@ void assignVariables(ExpressionList &arguments, DataValue &retvalue, Interpreter
 			// Its a variable
 			DataValue *v = getVariable(arguments, ctx, true, i);
 			*v = *value;
+			v->refPnt = v; // Set correct reference			
 		}
 	}
 }
