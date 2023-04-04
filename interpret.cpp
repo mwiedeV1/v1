@@ -5707,10 +5707,10 @@ int func_universal_call(vector<DataValue *> &argvalues, DataValue &ret, Interpre
 		}
 		else if (type == CALL_TYPE_STRING) {
 #ifndef _WITH_DYNCALL
-			v = (void *)argvalues[x + 3]->value.c_str();
+			v = argvalues[x+3]->datatype==0 ? NULL : (void*) argvalues[x+3]->value.c_str ();
 			voidList[x2++] = v;
 #else
-			dcArgPointer(vm, (DCpointer)argvalues[x + 3]->value.c_str());
+			dcArgPointer(vm, argvalues[x+3]->datatype==0 ? (DCpointer) NULL : (DCpointer) argvalues[x + 3]->value.c_str());
 #endif
 		}
 		else if (type >= CALL_TYPE_INT_ARRAY) {
@@ -6030,12 +6030,18 @@ int func_dl(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &
 		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_STR_REQUIRED;
 	}
 
-	bool fNative = false;
+	bool fNative = false, fWarn = true;
 	if (argvalues.size() > 1) {
 		if (argvalues[1]->datatype > DataValue::DATATYPE_STR) {
 			return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_BOOL_REQUIRED;
 		}
 		fNative = (bool)*argvalues[1];
+		if  (argvalues.size ()>2) {
+			if (argvalues[2]->datatype>DataValue::DATATYPE_STR) {
+				return WSCRIPT_RET_PARAM3|WSCRIPT_RET_BOOL_REQUIRED;
+			}
+			fWarn = (bool )*argvalues[2];
+		}
 	}
 
 	if (ctx.currThread != NULL) {
@@ -6101,6 +6107,7 @@ int func_dl(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &
 		if (!fNative)
 			ctx.abortInterprete(WFormattedString("Cannot load library %s. %s", argvalues[0]->value.c_str(), dlerror()));
 		else
+		if (fWarn)
 			ctx.warnInterprete(WFormattedString("Cannot load library %s. %s", argvalues[0]->value.c_str(), dlerror()));
 		ret = false;
 	}
