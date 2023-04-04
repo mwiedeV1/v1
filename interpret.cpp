@@ -5776,10 +5776,16 @@ int func_universal_call(vector<DataValue *> &argvalues, DataValue &ret, Interpre
 		ret = (bool)(v3 != 0);
 	}
 	else if (retDef == CALL_TYPE_STRING) {
-		ret = (WCSTR)v3;
+		if (!v3)
+			ret.initialize (); // NULL	
+		else
+			ret = (WCSTR)v3;
 	}
 	else if (retDef == CALL_TYPE_POINTER) {
-		ret = (double)v3;
+		if (!v3)
+			ret.initialize (); // NULL	
+		else
+			ret = (double)v3;
 	}
 	else if (retDef == CALL_TYPE_FLOAT) {
 		float f;
