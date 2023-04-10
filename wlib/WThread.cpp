@@ -95,7 +95,7 @@ void WThread::resume  ()
 
 void WThread::close ()
 {
-  join ();
+	join ();
 	WSystem::deleteMutex (m_mutex);
 	destroyAttributes (m_attr);
 	m_semaphore.close();
