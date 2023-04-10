@@ -10,9 +10,11 @@ Licence: GPL V3
 
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 #include <locale.h>
 #include <pthread.h>
 #include <termios.h>
+#include <signal.h>
 #include <math.h>
 
 #include <termios.h>

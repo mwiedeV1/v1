@@ -1,5 +1,6 @@
 <?v1
 require_once ("helpers/start.v1");
+
 fh = fopen ("/proc/cpuinfo", "r");
 print ('
 	<h2>CPU-Info</h2>

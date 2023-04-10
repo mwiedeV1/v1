@@ -1,22 +1,7 @@
 <?v1
-// Replace with correct path of SQLite3 library (sqlite3.dll or libsqlite3.so)
-sqlite3LibName =  'libsqlite3.so';
+require_once ("libconf.inc.v1");
 
-hDLLSQLite3 = dl (sqlite3LibName, true);
-
-if (!hDLLSQLite3) {
-  // Search for libraries
-  libList = explode ("\n", system ('/usr/bin/find /usr/lib* -name "libsqlite3.so*"'));
-  if (!empty (libList[0])) {
-    hDLLSQLite3 = dl (sqlite3LibName = libList[0], true);
-  }
-}
-
-if (!hDLLSQLite3) {
-  print ("SQLlite3 library not found.\r\nSet sqlite3LibName in ".__FILE__." to sqlite3.dll or libsqlite3.so");
-  exit (1);
-}
-
+assign (hDLLSQLite3, sqlite3LibName) = libOpen ("sqlite3", "sqlite3.dll", "libsqlite3.so"); 
 
 const SQLITE_OK           = 0;    /* Successful result */
 const SQLITE_ERROR        = 1;    /* SQL error or missing database */
@@ -50,7 +35,7 @@ const SQLITE_INTEGER      = 1;
 const SQLITE_DOUBLE       = 2;
 const SQLITE_TEXT         = 3;
 const SQLITE_BLOB         = 4;
-const SQLITE_NULL   	  = 5;
+const SQLITE_NULL         = 5;
 
 function sqlite3_libversion () {
   global hDLLSQLite3;
@@ -58,7 +43,7 @@ function sqlite3_libversion () {
 }
 
 function sqlite3_open (filename, &db) {
-  global hDLLSQLite3;
+  global hDLLSQLite3;  
   db = binformat (0);
   ret = call (hDLLSQLite3, "sqlite3_open", "sr:i", filename, db);
   db = binparse (db);
@@ -67,6 +52,7 @@ function sqlite3_open (filename, &db) {
 
 function sqlite3_exec (db, sql, callback, param, &errmsg) {
   global hDLLSQLite3;
+
   tmp = binformat (0);
   ret = call (hDLLSQLite3, "sqlite3_exec", "psppr:i", db, sql, callback, param, tmp);	
   if (ret != SQLITE_OK) {

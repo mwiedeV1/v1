@@ -16,6 +16,7 @@ using namespace std;
 #ifdef _WIN32
 #define DLL_EXPORT __declspec( dllexport)
 #else
+#include <signal.h>
 #define DLL_EXPORT 
 #define DLL_EXPORT __attribute__ ((visibility ("default")))
 #define SOCKET int
@@ -1666,6 +1667,13 @@ extern "C" {
 
 int DLL_EXPORT wScriptDLLStartup (InterpreterContext& ctx) {
 
+	// Delete SIGPIPE signal
+	{struct sigaction act;
+	act.sa_handler = SIG_IGN;
+	sigemptyset (&act.sa_mask);
+	act.sa_flags = 0;
+	sigaction (SIGPIPE, &act, NULL);}
+
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
 #else
@@ -1673,21 +1681,21 @@ int DLL_EXPORT wScriptDLLStartup (InterpreterContext& ctx) {
 //  SSL_library_init();
 #endif    
 
-    // CRYPTO_malloc_init();
-    // CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
-    // OPENSSL_config(NULL);
-    SSL_load_error_strings();
-    ERR_load_crypto_strings ();
-    // OpenSSL_add_ssl_algorithms ();
-    OpenSSL_add_all_algorithms();
+  // CRYPTO_malloc_init();
+  // CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
+  // OPENSSL_config(NULL);
+  SSL_load_error_strings();
+  ERR_load_crypto_strings ();
+  // OpenSSL_add_ssl_algorithms ();
+  OpenSSL_add_all_algorithms();
 
-    
-    // Create mutex table    
-    int cnt = CRYPTO_num_locks();
-    g_mutexList = (WMUTEX*) malloc (cnt * sizeof (WMUTEX));
-    for (int i=0;i<cnt;i++)
-    	WSystem::initMutex (g_mutexList[i]);
-    CRYPTO_set_locking_callback (openSSLLockFunction);	
+  
+  // Create mutex table    
+  int cnt = CRYPTO_num_locks();
+  g_mutexList = (WMUTEX*) malloc (cnt * sizeof (WMUTEX));
+  for (int i=0;i<cnt;i++)
+  	WSystem::initMutex (g_mutexList[i]);
+  CRYPTO_set_locking_callback (openSSLLockFunction);	
 
 	for (unsigned int i=0;i<sizeof (g_funcDefList) / sizeof (WScriptFuncDef);i++)
 		ctx.nativeFunctionHT.put (g_funcDefList[i].name, (WSCRIPT_NATIVE_FUNCTION) g_funcDefList[i].func);

@@ -1,0 +1,407 @@
+<?v1
+// https://refspecs.linuxbase.org/LSB_3.1.0/LSB-Desktop-generic/LSB-Desktop-generic/libxml2-ddefs.html
+
+require_once ("iconv.inc.v1");
+assign (hDLLXML2, xml2LibName) = libOpen ("libxml2", "libxml2.dll", "libxml2.so.2"); 
+
+const XML_DEFAULT_VERSION	= "1.0";
+const XML_SAX2_MAGIC = 0xDEEDBEAF;
+const XML_DETECT_IDS = 2;
+const XML_COMPLETE_ATTRS = 4;
+const XML_SKIP_IDS = 8;
+
+const XML_ELEMENT_NODE = 1;
+const XML_ATTRIBUTE_NODE = 2;
+const XML_TEXT_NODE = 3;
+const XML_CDATA_SECTION_NODE = 4;
+const XML_ENTITY_REF_NODE = 5;
+const XML_ENTITY_NODE = 6;
+const XML_PI_NODE = 7;
+const XML_COMMENT_NODE = 8;
+const XML_DOCUMENT_NODE = 9;
+const XML_DOCUMENT_TYPE_NODE = 10;
+const XML_DOCUMENT_FRAG_NODE = 11;
+const XML_NOTATION_NODE = 12;
+const XML_HTML_DOCUMENT_NODE = 13;
+const XML_DTD_NODE = 14;
+const XML_ELEMENT_DECL = 15;
+const XML_ATTRIBUTE_DECL = 16;
+const XML_ENTITY_DECL = 17;
+const XML_NAMESPACE_DECL = 18;
+const XML_XINCLUDE_START = 19;
+const XML_XINCLUDE_END = 20;
+const XML_DOCB_DOCUMENT_NODE = 21;
+
+const XML_ATTRIBUTE_CDATA = 1;
+const XML_ATTRIBUTE_ID = 2;
+const XML_ATTRIBUTE_IDREF = 3;
+const XML_ATTRIBUTE_IDREFS = 4;
+const XML_ATTRIBUTE_ENTITY = 5;
+const XML_ATTRIBUTE_ENTITIES = 6;
+const XML_ATTRIBUTE_NMTOKEN = 7;
+const XML_ATTRIBUTE_NMTOKENS = 8;
+const XML_ATTRIBUTE_ENUMERATION = 9;
+const XML_ATTRIBUTE_NOTATION = 10;
+
+const XML_PARSE_RECOVER = 1 << 0;
+const XML_PARSE_NOENT = 1 << 1;
+const XML_PARSE_DTDLOAD = 1 << 2;
+const XML_PARSE_DTDATTR = 1 << 3;
+const XML_PARSE_DTDVALID = 1 << 4;
+const XML_PARSE_NOERROR = 1 << 5;
+const XML_PARSE_NOWARNING = 1 << 6;
+const XML_PARSE_PEDANTIC = 1 << 7;
+const XML_PARSE_NOBLANKS = 1 << 8;
+const XML_PARSE_SAX1 = 1 << 9;
+const XML_PARSE_XINCLUDE = 1 << 10;
+const XML_PARSE_NONET = 1 << 11;
+const XML_PARSE_NODICT = 1 << 12;
+const XML_PARSE_NSCLEAN = 1 << 13;
+const XML_PARSE_NOCDATA = 1 << 14;
+const XML_PARSE_NOXINCNODE = 1 << 15;
+const XML_PARSE_COMPACT = 1 << 16;
+
+function xmlBufferCreate () {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlBufferCreate", ":p");
+}
+
+function xmlBufferFree (buf) {
+  global hDLLXML2;
+  call (hDLLXML2, "xmlBufferFree", "p:i", buf);
+}
+
+function xmlNewTextWriterDoc (&doc, compression) {
+  global hDLLXML2;
+  doc = binformat (0);
+  ret = call (hDLLXML2, "xmlNewTextWriterDoc", "ri:p", doc, compression);
+  doc = binparse (doc);
+  return ret;
+}
+
+function xmlNewDoc (version) {
+  global hDLLXML2;
+  call (hDLLXML2, "xmlNewDoc", "s:p", version);
+}
+
+function xmlNewDocNode (doc, ns, name, content) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlNewDocNode", "ppss:p", doc, ns, name, content);
+}
+
+function xmlDocSetRootElement (doc, node) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlDocSetRootElement", "pp:i", doc, node);
+}
+
+function xmlFreeDoc (doc) {
+  global hDLLXML2;
+  call (hDLLXML2, "xmlFreeDoc", "p:i", doc);
+}
+
+function xmlReadFile (filename, encoding, options) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlReadFile", "ssi:p", filename, encoding, options);
+}
+
+function xmlParseMemory (&buffer, length) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlParseMemory", "si:p", buffer, length);
+}
+
+function xmlReaderForFile (filename, encoding, options) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlReaderForFile", "ssi:p", filename, encoding, options);
+}
+
+function xmlReaderForMemory (&buffer, size, url, encoding, options) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlReaderForMemory", "sissi:p", buffer, size, url, encoding, options);
+}
+
+function xmlReaderWalker (doc) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlReaderWalker", "p:p", doc);
+}
+
+function xmlSaveFileEnc (filename, doc, encoding) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlSaveFileEnc", "sps:i", filename, doc, encoding);
+}
+
+function xmlNewTextWriterMemory (buf, compression) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlNewTextWriterMemory", "pi:p", buf, compression);
+}
+
+function xmlNewTextWriterFilename (uri) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlNewTextWriterFilename", "s:p", uri);
+}
+
+function xmlNewTextWriterTree (doc, node, compression) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlNewTextWriterTree", "ppi:i", doc, node, compression);
+}
+
+function xmlTextWriterStartDocument (writer, version, encoding, standalone) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextWriterStartDocument", "psss:i", writer, version, encoding, standalone);
+}
+
+function xmlTextWriterStartElement (writer, name) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextWriterStartElement", "ps:i", writer, name);
+}
+
+function xmlTextWriterWriteAttribute (writer, name, content) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextWriterWriteAttribute", "pss:i", writer, name, content);
+}
+
+function xmlTextWriterWriteComment  (writer, content) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextWriterWriteComment", "ps:i", writer, content);
+}
+
+function xmlTextWriterWriteElement (writer, name, content) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextWriterWriteElement", "pss:i", writer, name, content);
+}
+
+function xmlDocGetRootElement (doc) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlDocGetRootElement", "p:p", doc);
+}
+
+function xmlTextWriterEndElement (writer) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextWriterEndElement", "p:i",writer);
+}
+
+function xmlTextWriterEndDocument (writer) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextWriterEndDocument", "p:i",writer);
+}
+
+function xmlFreeTextWriter (writer) {
+  global hDLLXML2;
+  call (hDLLXML2, "xmlFreeTextWriter", "p:i",writer);
+}
+
+function xmlTextReaderRead (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderRead", "p:i", reader);
+}
+
+function xmlTextReaderConstName (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderConstName", "p:s", reader);
+}
+
+function xmlTextReaderConstValue (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderConstValue", "p:s", reader);
+}
+
+function xmlTextReaderName (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderName", "p:s", reader);
+}
+
+function xmlTextReaderValue (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderValue", "p:s", reader);
+}
+
+function xmlTextReaderGetAttribute (reader, name) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderGetAttribute", "ps:s", reader, name);
+}
+
+function xmlTextReaderHasAttributes (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderHasAttributes", "p:i", reader);
+}
+
+function xmlTextReaderMoveToFirstAttribute (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderMoveToFirstAttribute", "p:i", reader);
+}
+
+function xmlTextReaderMoveToNextAttribute (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderMoveToNextAttribute", "p:i", reader);
+}
+
+function xmlTextReaderDepth (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderDepth", "p:i", reader);
+}
+
+function xmlTextReaderNodeType (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderNodeType", "p:i", reader);
+}
+
+function xmlTextReaderIsEmptyElement (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderIsEmptyElement", "p:i", reader);
+}
+
+function xmlTextReaderHasValue (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderHasValue", "p:i", reader);
+}
+
+function xmlTextReaderIsValid (reader) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlTextReaderIsValid", "p:i", reader);
+}
+
+function xmlStrlen (str) {
+  global hDLLXML2;
+  return call (hDLLXML2, "xmlStrlen", "s:i", str);
+}
+
+function xmlFreeTextReader (reader) {
+  global hDLLXML2;
+  call (hDLLXML2, "xmlFreeTextReader", "p:i", reader);
+}
+
+function xmlCleanupParser () {
+  global hDLLXML2;
+  call (hDLLXML2, "xmlCleanupParser", ":i");
+}
+
+/* Own functions */
+
+function xmlBufferGetString (buf) {
+  xmlStrPnt = binparse (memat (buf, _ALIGN));
+  if (xmlStrPnt)
+    return memat (xmlStrPnt);
+  return null;
+}
+
+function setXMLTreeValue (&xmlTree, &keyList, &dupCheckList, depth, maxDepth, &value, fAttr=false) {
+  key = keyList[depth];
+  
+  fPush = false;   
+  if (!fAttr && dupCheckList[key.":".depth]>0) { 
+    hasNoArray = isset (xmlTree[key]) && !is_array (xmlTree[key][0]);
+    if (!isset (dupCheckList["$push:".key.":".depth])) {
+      if (hasNoArray) {
+        xmlTree[key]=[xmlTree[key]];      
+      }  
+      dupCheckList["$push:".key.":".depth] = true;
+      fPush = true;
+      fPushLast = false;
+    }
+    else 
+    if (!hasNoArray) {
+      fPush = true;
+      fPushLast = true;
+    }
+  }
+  
+  if (depth==maxDepth) {
+    if (!isset (xmlTree[key]))
+      xmlTree[key] = value;
+    else
+      xmlTree[key]["value"]=value; /* keyList[depth+1]] */
+  }
+  else {
+    if (!isset (xmlTree[key]))
+      xmlTree[key] = array ();       
+    if (fPush) {      
+      i = count (xmlTree[key]);      
+      if (i==0) {
+        setXMLTreeValue (xmlTree[key], keyList, dupCheckList, depth+1, maxDepth, value, fAttr);    
+      }
+      else {
+        if (fPushLast) {
+          setXMLTreeValue (xmlTree[key][i-1], keyList, dupCheckList, depth+1, maxDepth, value, fAttr);  
+        }
+        else {
+          array_push (xmlTree[key], array ());       
+          setXMLTreeValue (xmlTree[key][i], keyList, dupCheckList, depth+1, maxDepth, value, fAttr);    
+        }
+      }
+    }
+    else
+      setXMLTreeValue (xmlTree[key], keyList, dupCheckList, depth+1, maxDepth, value, fAttr);
+  }
+}
+
+
+function xmlProcessReader (reader, &xmlTree) {
+  keyList = array (); 
+  dupCheckList = array ();  
+  ret = xmlTextReaderRead(reader);
+  
+  lastName = "";
+  while (ret == 1) {
+    
+      name = xmlTextReaderConstName (reader);
+      if (name === null)
+        name = "--";
+      
+      type = xmlTextReaderNodeType(reader);
+      value = xmlTextReaderConstValue(reader);
+      depth = xmlTextReaderDepth(reader);
+
+      keyList[depth]=name;  
+
+      if (type==1)
+        lastName=name;
+        
+      if (type==1 && isset (dupCheckList[name.":".depth])) {
+         dupCheckList[name.":".depth]++;
+         unset (dupCheckList["$push:".name.":".depth]);
+      }
+      else {
+        dupCheckList[name.":".depth]=0;
+      }
+        
+      if (type==3 || type==4) {
+        setXMLTreeValue (xmlTree, keyList, dupCheckList, 0, depth-1, value);
+        lastName = "";
+      }
+      if (type==15 && name==lastName) {
+        // Empty value
+        setXMLTreeValue (xmlTree, keyList, dupCheckList, 0, depth, "");
+      }
+
+      // Atributes
+      if (type==1) {
+        if (xmlTextReaderHasAttributes (reader)) {
+          fAttr = xmlTextReaderIsEmptyElement (reader) && !xmlTextReaderHasValue(reader); // Simple attribute
+          xmlTextReaderMoveToFirstAttribute (reader);
+          do {
+            keyList[depth+1]=xmlTextReaderName (reader);        
+            setXMLTreeValue (xmlTree, keyList, dupCheckList, 0, depth+1, xmlTextReaderValue (reader), fAttr);
+          } while (xmlTextReaderMoveToNextAttribute (reader));
+        }
+      }
+      
+      ret = xmlTextReaderRead(reader);
+  }
+  xmlFreeTextReader (reader);
+}
+
+function parseXMLFile (filename, &xmlTree, encoding=null, options=0) {
+  reader = xmlReaderForFile (filename, encoding, options);
+  if (!reader)
+    return false;
+  return xmlProcessReader (reader, xmlTree);
+}
+
+function parseXMLString (xmlStr, &xmlTree, url=null, encoding=null, options=0) {
+  reader = xmlReaderForMemory (xmlStr, strlen (xmlStr), url, encoding, options) ;
+  if (!reader)
+    return false;
+  return xmlProcessReader (reader, xmlTree);
+}
+
+
+?>

@@ -1,0 +1,66 @@
+<?v1
+
+// Static configurated libaries
+libStaticList = [
+  // "sqlite" => ("sqlite3.dll", "libsqlite3.so")
+];
+
+function libOpen (name, libWIN, libUNIX, infoText="", extraRequireWIN="", extraRequireUNIX="") 
+{
+  if (isset (libStaticList[name]))
+    assign (libWIN, libUNIX) = libStaticList[name];
+
+  fWindows = false;
+  if (version(1)=='Windows') {
+    fWindows = true;
+    libName = libWIN;
+    if (!empty (extraRequireWIN))
+      require_once (extraRequireWIN);
+  }
+  else {
+    libName = libUNIX;
+    if (!empty (extraRequireUNIX))
+      require_once (extraRequireUNIX);
+  }
+  hDLL = dl (libName, true, false);
+  if (!hDLL && !fWindows) {
+    cfgFilename = dirname(__FILE__)."/".name.".lib.conf";    
+    if (is_file (cfgFilename)) {
+      fh = fopen (cfgFilename, "r");
+      freadln (fh, libName);
+      fclose (fh);
+      hDLL = dl (libName, true);
+      if (!hDLL) {
+        unlink (cfgFilename);
+      }
+    }
+    else {
+      // Search for libraries on unix systems
+      searchInList = array ('/usr/lib*/', '/usr/local/');
+      foreach (searchInList as searchIn) {
+        libList = explode ("\n", system ('/usr/bin/find '.searchIn.' -name "'.libUNIX.'*"'));
+        if (!empty (libList[0])) {
+          libName =  libList[0];
+          hDLL = dl (libName, true, false);
+          if (hDLL) {
+            fh = fopen (cfgFilename, "w+");
+            fwrite (fh, libName);
+            fclose (fh);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!hDLL) {
+    print ("Cannot open ".name." library.\r\nSet libStaticList[] in ".__FILE__." to ".libWIN." or ".libUNIX.".");
+    if (!empty (infoText))
+      print (infoText);
+    exit (1);
+  }
+  return [hDLL, libName];
+}
+
+
+?>

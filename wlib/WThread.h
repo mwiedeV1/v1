@@ -32,7 +32,7 @@ public:
 };
 
 /**
- WSemaphore wird für Zählfunktionen in Threads verwendet.
+ WSemaphore wird fï¿½r Zï¿½hlfunktionen in Threads verwendet.
 */
 class WSemaphore {
 	bool m_fActive;
@@ -59,7 +59,7 @@ public:
 class WRunable;
 
 /**
- WThread stellt Thread-Funktionen zur Verfügung.
+ WThread stellt Thread-Funktionen zur Verfï¿½gung.
 */
 class WThread {
 private:
@@ -77,8 +77,6 @@ private:
 	static void destroyAttributes    (pthread_attr_t& attr);
 	void setDetach (bool on);
 
-	// kill and close
-	void terminate ();
 	void close ();
 
 public:
@@ -114,7 +112,7 @@ public:
 };
 
 /**
- WRunable ist die Basis für alle Thread-Klassen.
+ WRunable ist die Basis fï¿½r alle Thread-Klassen.
 */
 
 class WRunable {

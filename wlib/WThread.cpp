@@ -73,12 +73,6 @@ void WThread::signal ()
 	m_semaphore.signal ();
 }
 
-void WThread::terminate ()
-{
-	if (!kill ())
-		close ();
-}
-
 void WThread::suspend ()
 {
 	WSystem::enterMutex (m_mutex);
@@ -101,6 +95,7 @@ void WThread::resume  ()
 
 void WThread::close ()
 {
+  join ();
 	WSystem::deleteMutex (m_mutex);
 	destroyAttributes (m_attr);
 	m_semaphore.close();
@@ -126,37 +121,32 @@ WThread::WThread ()
 WThread::~WThread ()
 {
 	try {
-		terminate ();
+		kill ();
 	}
 	catch (WException) {
 	}
+	close ();
 }
 
 bool WThread::join (W32 ms)
 {
-	if (isActive ()) {
+	void* ret;
+	if (ms>0) {
+		struct timespec ts;
+		struct timeval  tp;
 
-		void* ret;
-		if (ms>0) {
-			struct timespec ts;
-			struct timeval  tp;
+		gettimeofday(&tp, NULL);
 
-			gettimeofday(&tp, NULL);
-
-			ts.tv_sec   = tp.tv_sec;
-			ts.tv_nsec  = tp.tv_usec * 1000;
-			ts.tv_sec  += ms / 1000;
-			ts.tv_nsec += ((W64) ms * 1000000) % 1000000000;
-			return pthread_timedjoin_np (m_id, &ret, &ts)==0;
-
-
-		}
-		else {
-			return pthread_join (m_id, &ret)==0;
-
-		}
-		// return wait (ms);
+		ts.tv_sec   = tp.tv_sec;
+		ts.tv_nsec  = tp.tv_usec * 1000;
+		ts.tv_sec  += ms / 1000;
+		ts.tv_nsec += ((W64) ms * 1000000) % 1000000000;
+		return pthread_timedjoin_np (m_id, &ret, &ts)==0;
 	}
+	else {
+		return pthread_join (m_id, &ret)==0;
+	}
+	// return wait (ms);
 	return false;
 }
 
