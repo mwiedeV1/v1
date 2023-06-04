@@ -1,0 +1,30 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - Iconv</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Example: Work with Iconv library</h1>
+<p>Demonstrates how to work with Iconv library to convert charsets.<br>
+Iconv functions are defined in <strong>lib/iconv.inc.v1</strong></p>
+<p>Note: You have to install Iconv libraries.
+On Windows copy the 32-Bit DLL's from <a href="https://v1-script.net/download/libXML2Iconv-WIN32.zip" target="_blank">HERE</a> into the home directory of V1 where v1.exe is located.</p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1<br /></span><span style="color: #0000BB;">require_once&nbsp;(</span><span style="color: #DD0000">"lib/iconv.inc.v1"</span><span style="color: #0000BB;">);<br /><br /></span><span style="color: #000000">src&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #DD0000">"ÄÖÜß"</span><span style="color: #0000BB;">;<br /><br /></span><span style="color: #008000">//&nbsp;Convert&nbsp;from&nbsp;UTF8&nbsp;to&nbsp;CP850<br /></span><span style="color: #000000">dst&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">iconv&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #DD0000">"CP850"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"UTF-8"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">src</span><span style="color: #0000BB;">);<br /><br />print&nbsp;(</span><span style="color: #000000">src</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"&nbsp;=&nbsp;"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">dst</span><span style="color: #0000BB;">);<br /><br /></span><span style="color: #008000">//&nbsp;Save&nbsp;converted&nbsp;text&nbsp;to&nbsp;file<br /></span><span style="color: #000000">fh&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">fopen&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #DD0000">"out.txt"</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"w+"</span><span style="color: #0000BB;">);<br /></span><span style="color: #000000">fwrite&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">fh</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">dst</span><span style="color: #0000BB;">);<br /><br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Sun, 04 Jun 2023 12:38</p>
+	</footer>
+	</body>
+	</html>
+	
+	

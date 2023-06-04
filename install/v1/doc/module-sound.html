@@ -36,14 +36,19 @@
 <td>Create MIDI device handle for specific <em>deviceId</em>. The default device is 0. On success the handle is returned, on error null is returned. Note: Win7+ has no default MIDI device! Please install MIDI device manually.</td>
 </tr>
 <tr>
-<td><strong>midi_play</strong>    (handle <em>handle</em>, number <em>frequency</em>, number <em>duration</em>, number <em>volume</em>, number <em>voice</em>)</td>
-<td>bool</td>
-<td>Play sound on created MIDI <em>handle</em> with <em>frequency</em>, <em>duration</em> in milliseconds, <em>volume</em> from 0 to 127 and MIDI <em>voice</em> from 0 to 255. On success true is returned.</td>
+<td><strong>midi_voice</strong>    (handle <em>handle</em>, number <em>voice</em>)</td>
+<td>number</td>
+<td>Set the <em>voice</em> from 0 to 255 to MIDI device <em>handle</em>. Returns the status code of MIDI device.</td>
 </tr>
 <tr>
-<td><strong>midi_wait</strong>    (handle <em>handle</em>)</td>
-<td>bool</td>
-<td>Wait until played sound on MIDI <em>handle</em> is finished. On success true is returned.</td>
+<td><strong>midi_play</strong>    (handle <em>handle</em>, number <em>note</em>, number <em>volume</em> [, <em>stop</em>=false])</td>
+<td>number</td>
+<td>Play or stop sound on created MIDI device <em>handle</em> with <em>note</em> and <em>volume</em> from 0 to 127. Optional <em>stop</em> marks to stop/mute the note. You should use sleep(ms) for the duration of the note. Returns the status code of MIDI device.</td>
+</tr>
+<tr>
+<td><strong>midi_freq2note</strong>    (handle <em>handle</em>, number <em>frequency</em>)</td>
+<td>number</td>
+<td>Returns the MIDI note number of a <em>frequency</em>.</td>
 </tr>
 <tr>
 <td><strong>midi_close</strong>    (handle <em>handle</em>)</td>
@@ -55,7 +60,7 @@
 <p><a href="index.html">back to Home</a></p>
 	</div>
 	<footer>
-		<p>V1 Version 0.96 - Documentation generated Mon, 11 Jan 2021 10:33</p>
+		<p>V1 Version 0.96 - Documentation generated Sun, 04 Jun 2023 12:38</p>
 	</footer>
 	</body>
 	</html>
