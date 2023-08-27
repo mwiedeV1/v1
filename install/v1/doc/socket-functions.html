@@ -25,19 +25,19 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>fsockopen</strong> (string <em>host</em>, number <em>port</em>, number <em>rcvTimeout</em>=0)</td>
+<td><strong>fsockopen</strong> (string <em>hostname</em>, number <em>port</em>, number <em>rcvTimeout</em>=0, bool <em>forceIPV4</em>=false)</td>
 <td>handle</td>
-<td>Open a TCP/IP client socket and connect to a specified <em>host</em> and <em>port</em>. Optional parameter <em>rcvTimeout</em> set the timeout in milliseconds data should be received from socket (0=no timeout).  On success the socket handle is returned, otherwise null is returned and a warning is shown.</td>
+<td>Open a TCP/IP client socket and connect to a specified <em>hostname</em> (or ip) and <em>port</em>. Optional parameter <em>rcvTimeout</em> set the timeout in milliseconds data should be received from socket (0=no timeout). If optional parameter <em>forceIPV4</em> is true then a IPV4 socket will be connected, otherwise IPV6 is preferred. On success the socket handle is returned, otherwise false is returned and a warning is shown.</td>
 </tr>
 <tr>
-<td><strong>fsockserver</strong> (string <em>host</em>, number <em>port</em>, number <em>backlog</em>=10)</td>
+<td><strong>fsockserver</strong> (string <em>hostname</em>, number <em>port</em>, number <em>backlog</em>=10, bool <em>forceIPV4</em>=false)</td>
 <td>handle</td>
-<td>Create a TCP/IP server socket on a specified <em>host</em> and <em>port</em>. On success the socket handle is returned, otherwise null is returned and a warning is shown The optional <em>backlog</em> parameter set the number of possible waiting clients in background until fsockaccept() return a new client socket.</td>
+<td>Bind a TCP/IP server socket on a specified <em>hostname</em> (or ip) and <em>port</em> and listen for connections. If <em>port</em> is 0 then the next free port number is used, see also fsockport(). The optional <em>backlog</em> parameter set the number of possible waiting clients in background. If optional parameter <em>forceIPV4</em> is true then a IPV4 socket will be bound, otherwise IPV6 is preferred. On success the socket handle is returned. On errors false is returned.</td>
 </tr>
 <tr>
 <td><strong>fsockaccept</strong> (handle <em>socket</em>, number <em>rcvTimeout</em>=0)</td>
 <td>handle</td>
-<td>Accept a new connection on a TCP/IP server <em>socket</em>. On success the new client socket handle is returned, otherwise null is returned and a warning is shown. Optional parameter <em>rcvTimeout</em> set the timeout in milliseconds data should be received from new client socket (0=no timeout).</td>
+<td>Accept a new connection on a TCP/IP server <em>socket</em>. Optional parameter <em>rcvTimeout</em> set the timeout in milliseconds data should be received from new client socket (0=no timeout). On success the socket handle of the new client is returned. On errors false is returned.</td>
 </tr>
 <tr>
 <td><strong>fclose</strong> (handle <em>socket</em>)</td>
@@ -55,14 +55,19 @@
 <td>Return the port number of a given <em>socket</em>.</td>
 </tr>
 <tr>
-<td><strong>gethostbyaddr</strong> (string <em>ipaddress</em>)</td>
-<td>string</td>
-<td>Lookup the hostname of a <em>ipaddress</em> (IPV4). On success the hostname is returned, otherwise false is returned.</td>
+<td><strong>fsockipv6</strong> (handle <em>socket</em>)</td>
+<td>bool</td>
+<td>Return true if <em>socket</em> is conncted or bound to a IPV6 address.</td>
 </tr>
 <tr>
-<td><strong>gethostbyname</strong> (string <em>hostname</em>)</td>
+<td><strong>gethostbyaddr</strong> (string <em>ipaddress</em>)</td>
 <td>string</td>
-<td>Lookup the IPV4 address of a <em>hostname</em>. On success the IP address is returned, otherwise false is returned.</td>
+<td>Lookup the hostname of a <em>ipaddress</em>. It can be a IPV4 or IPV6 address. On success the hostname is returned, otherwise false is returned.</td>
+</tr>
+<tr>
+<td><strong>gethostbyname</strong> (string <em>hostname</em>, number <em>type</em>=0)</td>
+<td>string</td>
+<td>Lookup the IP address of a <em>hostname</em>. Optional parameter <em>type</em> marks the type of the IP address: 0 = IPV4 (default), 1 = IPV6. On success the IP address is returned as string, otherwise false is returned.</td>
 </tr>
 </tbody>
 </table>
@@ -101,7 +106,7 @@
 <p><a href="index.html">back to Home</a></p>
 	</div>
 	<footer>
-		<p>V1 Version 0.96 - Documentation generated Sun, 04 Jun 2023 12:38</p>
+		<p>V1 Version 0.96 - Documentation generated Sun, 27 Aug 2023 15:40</p>
 	</footer>
 	</body>
 	</html>

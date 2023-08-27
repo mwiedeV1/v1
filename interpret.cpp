@@ -431,7 +431,7 @@ int func_plusstr(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCont
 	argvalues[1]->toString();
 	ret = *argvalues[0];
 	ret.toString();
-	ret.value.append(argvalues[1]->value.c_str(), argvalues[1]->value.size());
+  ret.value+=argvalues[1]->value;
 	ret.datatype = DataValue::DATATYPE_STR;
 	return 0;
 }
@@ -440,7 +440,7 @@ int func_plusstr_equal(vector<DataValue *> &argvalues, DataValue &ret, Interpret
 {
 	ret.toString();
 	argvalues[0]->toString();
-	ret.value.append(argvalues[0]->value.c_str(), argvalues[0]->value.size());
+  ret.value+=argvalues[0]->value;
 	ret.datatype = DataValue::DATATYPE_STR;
 	return 0;
 }
@@ -1183,6 +1183,9 @@ int func_sprintf(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCont
 		}
 		c++;
 	}
+	if (ctx.securityMode & 1) {
+		memset (result, 0, sizeof (result));
+	}
 	return 0;
 }
 
@@ -1361,6 +1364,9 @@ int func_sscanf(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 	}
 	if (ret.datatype != DataValue::DATATYPE_ARRAY)
 		ret = matchCnt;
+	if (ctx.securityMode & 1) {
+		memset (result, 0, sizeof (result));
+	}
 	return 0;
 }
 
@@ -2097,20 +2103,19 @@ int func_exec(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext
 	if (argvalues.size() > 1) {
 		argvalues[1]->refPnt->value.resize(0);
 	}
+	W8 buf[0xFFFF]; 
+ 	WString envAllStr (1024);
 	try {
 		Process process;
-		WString envAllStr(1024);
-
 		if (envParamStr) {
 			envAllStr.append((W8 *)argvalues[5]->value.c_str(), argvalues[5]->value.size());
 			// Ending 0
 			envAllStr.append(0);
 		}
 
-		if (process.execute(argvalues[0]->value.c_str(), (void *)(envAllStr.length() > 0 ? (WCSTR)envAllStr : NULL))) {
+		if (process.execute(argvalues[0]->value.c_str(), (void *)(envAllStr.length() > 0 ? (WCSTR)envAllStr : NULL), ctx.securityMode & 1)) {
 			const Process::Handles *handles = process.getHandles();
 
-			W8 buf[0xFFFF];
 			W32 bytesRead = 0;
 			W32 bytesWritten = 0;
 			buf[sizeof(buf) - 1] = 0;
@@ -2180,6 +2185,10 @@ int func_exec(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext
 	catch (WException &e) {
 		ctx.warnInterprete(e);
 	}
+	if (ctx.securityMode & 1) {
+		memset (buf, 0, sizeof (buf));
+		memset (envAllStr.getBuf (), 0, envAllStr.getBufLength ());
+	}
 	ret = retCode;
 	return 0;
 }
@@ -2228,17 +2237,16 @@ int func_system(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 	if (argvalues[0]->datatype != DataValue::DATATYPE_STR) {
 		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_STR_REQUIRED;
 	}
-
+  char buf[4096+1];
 	try {
 		Process process;
-		if (process.execute(argvalues[0]->value.c_str())) {
+		if (process.execute(argvalues[0]->value.c_str(), NULL, ctx.securityMode & 1)) {
 			const Process::Handles *handles = process.getHandles();
 			// Close the pipe handles so the child process stops reading
 			process.startRead();
 
 			// Read output from process
 			W32 bytesRead;
-			char buf[4096 + 1];
 			buf[sizeof(buf) - 1] = 0;
 
 			ret.datatype = DataValue::DATATYPE_STR;
@@ -2259,6 +2267,10 @@ int func_system(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 	catch (WException &e) {
 		ctx.warnInterprete(e);
 		ret = false;
+	}
+	ret.setAutoDataType (true); // Maybe number
+	if (ctx.securityMode & 1) {
+		memset (buf, 0, sizeof (buf));
 	}
 	return 0;
 }
@@ -2532,12 +2544,18 @@ int func_fsockopen(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCo
 		else
 			return WSCRIPT_RET_PARAM3 | WSCRIPT_RET_NUM_REQUIRED;
 	}
+	int type = 0;
+	if (argvalues.size ()>3) {
+		if (argvalues[3]->datatype<=DataValue::DATATYPE_STR)
+			type = (int) *argvalues[3];
+		else
+			return WSCRIPT_RET_PARAM4|WSCRIPT_RET_NUM_REQUIRED;
+	}
+
 	Handle *h = new Handle;
 
 	try {
-		h->handle = (void *)new WSocket;
-		WIPAddress ip(argvalues[0]->value.c_str(), port);
-		((WSocket *)*h)->init(ip);
+		h->handle = (void *)new WSocket (argvalues[0]->value.c_str(), port, type==1);
 		((WSocket *)*h)->create();
 		((WSocket *)*h)->connect();
 		if (rcvTimeout)
@@ -2560,45 +2578,52 @@ int func_fsockopen(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCo
 	return 0;
 }
 
-int func_fsockserver(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
+int func_fsockserver (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 	if (PARAM1_NOSTR) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_STR_REQUIRED;
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
 	}
-	argvalues[0]->toString();
+	argvalues[0]->toString ();
 
 	int port = 80;
-	if (argvalues.size() > 1) {
-		if (argvalues[1]->datatype <= DataValue::DATATYPE_STR)
-			port = (int)*argvalues[1];
+	if (argvalues.size ()>1) {
+		if (argvalues[1]->datatype<=DataValue::DATATYPE_STR)
+			port = (int) *argvalues[1];
 		else
-			return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_NUM_REQUIRED;
+			return WSCRIPT_RET_PARAM2|WSCRIPT_RET_NUM_REQUIRED;
 	}
 	int backlog = 10;
-	if (argvalues.size() > 2) {
-		if (argvalues[2]->datatype <= DataValue::DATATYPE_STR)
-			backlog = (int)*argvalues[2];
+	if (argvalues.size ()>2) {
+		if (argvalues[2]->datatype<=DataValue::DATATYPE_STR)
+			backlog = (int) *argvalues[2];
 		else
-			return WSCRIPT_RET_PARAM3 | WSCRIPT_RET_NUM_REQUIRED;
+			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_NUM_REQUIRED;
 	}
-	Handle *h = new Handle;
 
+	int type = 0;
+	if (argvalues.size ()>3) {
+		if (argvalues[3]->datatype<=DataValue::DATATYPE_STR)
+			type = (int) *argvalues[3];
+		else
+			return WSCRIPT_RET_PARAM4|WSCRIPT_RET_NUM_REQUIRED;
+	}
+	Handle* h = new Handle;
 	try {
-
-		WIPAddress ip(argvalues[0]->value.c_str(), port);
-		h->handle = (void *)new WServerSocket(ip, backlog);
-		((WServerSocket *)*h)->create();
-		((WServerSocket *)*h)->setReuseAddress(true);
+		h->handle = (void*) new WServerSocket (argvalues[0]->value.c_str(), port, type==1);
+		((WServerSocket*) *h)->create ();
+		((WServerSocket*) *h)->setBacklog (backlog);
+		((WServerSocket*) *h)->bind ();
+		((WServerSocket*) *h)->setReuseAddress (true);
 
 		// Register handle
 		h->handletype = Handle::HANDLETYPE_SERVERSOCKET;
 		h->freeFunction = freeHandle;
-		ret = ctx.handleHT.put((void *)h, h)->m_value;
+		ret = ctx.handleHT.put ((void*) h, h)->m_value;
+
 	}
-	catch (WException &e) {
-		ctx.warnInterprete(e);
+	catch (WException& e) {
+		ctx.warnInterprete (e);
 		if (h->handle) {
-			delete (WServerSocket *)h->handle;
+			delete (WServerSocket*) h->handle;
 			h->handle = NULL;
 		}
 		delete h;
@@ -2608,118 +2633,180 @@ int func_fsockserver(vector<DataValue *> &argvalues, DataValue &ret, Interpreter
 	return 0;
 }
 
-int func_fsockaccept(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
-	if (argvalues[0]->datatype != DataValue::DATATYPE_HANDLE) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_HANDLE_REQUIRED;
+
+int func_fsockaccept (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_HANDLE_REQUIRED;
 	}
 	int rcvTimeout = 0;
-	if (argvalues.size() > 1) {
-		if (argvalues[1]->datatype <= DataValue::DATATYPE_STR)
-			rcvTimeout = (int)*argvalues[1];
+	if (argvalues.size ()>1) {
+		if (argvalues[1]->datatype<=DataValue::DATATYPE_STR)
+			rcvTimeout = (int) *argvalues[1];
 		else
-			return WSCRIPT_RET_PARAM3 | WSCRIPT_RET_NUM_REQUIRED;
+			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_NUM_REQUIRED;
 	}
-	Handle *h = (Handle *)*argvalues[0];
-
-	if (h && ctx.handleHT.isKey(h) && h->handletype == Handle::HANDLETYPE_SERVERSOCKET) {
-		Handle *h2 = NULL;
-		WSocket *socket = NULL;
+	Handle* h = (Handle*) *argvalues[0];
+	if (h && ctx.handleHT.isKey (h) && h->handletype==Handle::HANDLETYPE_SERVERSOCKET) {
+		Handle* h2 = NULL;
+		WSocket* socket = NULL;
 		try {
 			// Accept socket
-			WSocket *socket = new WSocket;
-			((WServerSocket *)h->handle)->accept(*socket);
-			if (rcvTimeout)
-				socket->setRecvTimeout(rcvTimeout);
+			WSocket* socket = new WSocket;
+			((WServerSocket*) h->handle)->accept (*socket);
+			if (rcvTimeout) {
+				socket->setRecvTimeout (rcvTimeout);
+      }
 
 			// Create new socket handle
 			h2 = new Handle;
 			h2->handletype = Handle::HANDLETYPE_SOCKET;
-			h2->handle = (void *)socket;
+			h2->handle = (void*) socket;
 			h2->freeFunction = freeHandle;
-			ret = ctx.handleHT.put((void *)h2, h2)->m_value;
+			ret = ctx.handleHT.put ((void*) h2, h2)->m_value;
 		}
-		catch (WException &e) {
-			ctx.warnInterprete(e);
+		catch (WException& e) {
+			ctx.warnInterprete (e);
 			if (socket) {
 				delete socket;
-				socket = NULL;
+				socket=NULL;
 			}
 			ret = false;
 		}
 	}
 	else {
+		ctx._warnInterprete (WException ("No valid socket handle", -1), ctx);
 		ret = false;
 	}
 	return 0;
 }
 
-int func_fsockip(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
-	if (argvalues[0]->datatype != DataValue::DATATYPE_HANDLE) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_HANDLE_REQUIRED;
+int func_fsockip (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_HANDLE_REQUIRED;
 	}
 
-	Handle *h = (Handle *)*argvalues[0];
+	Handle* h = (Handle*) *argvalues[0];
 
-	if (h && ctx.handleHT.isKey(h) && (h->handletype == Handle::HANDLETYPE_SOCKET || h->handletype == Handle::HANDLETYPE_SERVERSOCKET)) {
-		ret.value.assign(WSocketUtils::ipAddr2String(((WSocket *)h->handle)->getIpAddress()));
+	if (h && ctx.handleHT.isKey (h) && (h->handletype==Handle::HANDLETYPE_SOCKET || h->handletype==Handle::HANDLETYPE_SERVERSOCKET)) {
+		WSocket* socket = (WSocket*) h->handle;
+		WString ipStr;
+		if (socket->isIPV6 ())
+			WSocketUtils::ipAddr2String (socket->getIpAddressIPV6 (), ipStr);
+		else
+			WSocketUtils::ipAddr2String (socket->getIpAddress (), ipStr);
+		ret.value.assign ((WCSTR) ipStr, ipStr.length ());
 		ret.datatype = DataValue::DATATYPE_STR;
 	}
 	else {
+		ctx._warnInterprete (WException ("No valid socket handle", -1), ctx);
 		ret = false;
 	}
 	return 0;
 }
 
-int func_fsockport(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
-	if (argvalues[0]->datatype != DataValue::DATATYPE_HANDLE) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_HANDLE_REQUIRED;
+int func_fsockipv6 (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_HANDLE_REQUIRED;
 	}
-	Handle *h = (Handle *)*argvalues[0];
-	if (h && ctx.handleHT.isKey(h) && (h->handletype == Handle::HANDLETYPE_SOCKET || h->handletype == Handle::HANDLETYPE_SERVERSOCKET)) {
-		ret = (int)((WSocket *)h->handle)->getPort();
+	Handle* h = (Handle*) *argvalues[0];
+	if (h && ctx.handleHT.isKey (h) && (h->handletype==Handle::HANDLETYPE_SOCKET || h->handletype==Handle::HANDLETYPE_SERVERSOCKET)) {
+		WSocket* socket = (WSocket*) h->handle;
+		ret = socket->isIPV6 ();
 	}
 	else {
+		ctx._warnInterprete (WException ("No valid socket handle", -1), ctx);
 		ret = false;
 	}
 	return 0;
 }
 
-int func_gethostbyaddr(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
-	if (PARAM1_NOSTR) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_STR_REQUIRED;
+int func_fsockport (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_HANDLE_REQUIRED;
 	}
-	argvalues[0]->toString();
 
-	try {
-		W32 ip = WSocketUtils::ipAddr2NBO(argvalues[0]->value.c_str());
-		ret.value.assign(WSocketUtils::resolveIpAddress(ip));
-		ret.datatype = DataValue::DATATYPE_STR;
+	Handle* h = (Handle*) *argvalues[0];
+	ret = false;
+	if (h && ctx.handleHT.isKey (h) && (h->handletype==Handle::HANDLETYPE_SOCKET || h->handletype==Handle::HANDLETYPE_SERVERSOCKET)) {
+		ret = (int) ((WSocket*) h->handle)->getPort ();
 	}
-	catch (WException &e) {
-		ctx.warnInterprete(e);
+	else {
+		ctx._warnInterprete (WException ("No valid socket handle", -1), ctx);
 		ret = false;
 	}
 	return 0;
 }
 
-int func_gethostbyname(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
+
+int func_gethostbyaddr (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 	if (PARAM1_NOSTR) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_STR_REQUIRED;
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
 	}
-	argvalues[0]->toString();
+	argvalues[0]->toString ();
 
 	try {
-		W32 ip = WSocketUtils::resolveHost(argvalues[0]->value.c_str());
-		ret.value.assign(WSocketUtils::ipAddr2String(ip));
-		ret.datatype = DataValue::DATATYPE_STR;
+		WString hostname; bool fValid = false;
+		if (WSocketUtils::isIpAddress (argvalues[0]->value.c_str ())) {
+			in_addr in4;			
+			if (fValid = WSocketUtils::ipAddr2INADDR  (argvalues[0]->value.c_str (), in4))
+				WSocketUtils::resolveIpAddress (*(W32*) &in4, hostname);
+		}
+		else {
+			in6_addr in6;
+			if (fValid=WSocketUtils::ipAddr2INADDR (argvalues[0]->value.c_str (), in6))
+				WSocketUtils::resolveIpAddress (in6, hostname);
+		}
+		if (fValid) {
+
+			ret.value.assign ((WCSTR) hostname, hostname.length ());
+			ret.datatype=DataValue::DATATYPE_STR;
+			ret.setAutoDataType (true); // Maybe number
+		}
+		else {
+			ret = false; // Invalid IP format
+		}
 	}
-	catch (WException &e) {
-		ctx.warnInterprete(e);
+	catch (WException& e) {
+		ctx.warnInterprete (e);
+		ret = false;
+	}
+	return 0;
+}
+
+int func_gethostbyname (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (PARAM1_NOSTR) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
+	}
+	argvalues[0]->toString ();
+
+	bool fIPV6 = false;		
+	if (argvalues.size ()>1) {
+		if (argvalues[1]->datatype>DataValue::DATATYPE_STR)
+			return WSCRIPT_RET_PARAM2|WSCRIPT_RET_BOOL_REQUIRED;		
+		fIPV6 = (bool) *argvalues[1];
+	}
+	if (argvalues.size ()>2) {
+		if (argvalues[2]->datatype>DataValue::DATATYPE_STR)
+			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_STR_REQUIRED;		
+	}	
+
+	try {
+		WString ipStr;
+		if (!fIPV6) {
+			W32 ip = WSocketUtils::resolveHost (argvalues[0]->value.c_str ());
+			WSocketUtils::ipAddr2String (ip, ipStr);
+		}
+		else {
+			in6_addr ip6;
+			WSocketUtils::resolveHost (argvalues[0]->value.c_str (), ip6, argvalues.size ()>2 ? argvalues[2]->value.c_str () : "");
+			WSocketUtils::ipAddr2String (ip6, ipStr);
+		}
+		ret.value.assign ((WCSTR) ipStr, ipStr.length ());
+		ret.datatype=DataValue::DATATYPE_STR;
+		ret.setAutoDataType (true); // Maybe number
+	}
+	catch (WException& e) {
+		ctx.warnInterprete (e);
 		ret = false;
 	}
 	return 0;
@@ -2879,6 +2966,9 @@ int func_fread(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 				ctx.warnInterprete(e);
 				ret = false;
 			}
+			if (ctx.securityMode & 1) {
+				memset (str.getBuf (), 0, str.getBufLength ());
+			}
 		}
 		else if (h->handletype == Handle::HANDLETYPE_SOCKET) {
 			WSocket *socket = (WSocket *)h->handle;
@@ -2912,6 +3002,9 @@ int func_fread(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 			catch (WException &e) {
 				ctx.warnInterprete(e);
 				ret = false;
+			}
+			if (ctx.securityMode & 1) {
+				memset (str.getBuf (), 0, str.getBufLength ());
 			}
 		}
 		else if (h->handletype == 13) {
@@ -2953,12 +3046,18 @@ int func_freadln(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCont
 					argvalues[1]->refPnt->datatype = DataValue::DATATYPE_STR;
 					argvalues[1]->refPnt->value.assign(str, str.length());
 				}
+				if (ctx.securityMode & 1) {
+					memset (str.getBuf (), 0, str.getBufLength ());
+				}
 			}
 			else if (h->handletype == Handle::HANDLETYPE_SOCKET) {
 				WSocket *socket = (WSocket *)h->handle;
 				if (ret = socket->readln(str)) {
 					argvalues[1]->refPnt->datatype = DataValue::DATATYPE_STR;
 					argvalues[1]->refPnt->value.assign(str, str.length());
+				}
+				if (ctx.securityMode & 1) {
+					memset (str.getBuf (), 0, str.getBufLength ());
 				}
 			}
 			else if (h->handletype == 13) {
@@ -3000,12 +3099,24 @@ int func_fgets(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 					ret.datatype = DataValue::DATATYPE_STR;
 					ret.value.assign(str, str.length());
 				}
+        else {
+					ret = false;
+        }
+				if (ctx.securityMode & 1) {
+					memset (str.getBuf (), 0, str.getBufLength ());
+				}
 			}
 			else if (h->handletype == Handle::HANDLETYPE_SOCKET) {
 				WSocket *socket = (WSocket *)h->handle;
 				if (socket->readln(str)) {
 					ret.datatype = DataValue::DATATYPE_STR;
 					ret.value.assign(str, str.length());
+				}
+        else {
+					ret = false;
+        }
+				if (ctx.securityMode & 1) {
+					memset (str.getBuf (), 0, str.getBufLength ());
 				}
 			}
 			else if (h->handletype == 13) {
@@ -6590,6 +6701,9 @@ int func_base64_encode(vector<DataValue *> &argvalues, DataValue &ret, Interpret
 	ret.datatype = DataValue::DATATYPE_STR;
 
 	ret.value.assign((WCSTR)str, Base64encode((char *)str.getBuf(), argvalues[0]->value.c_str(), len) - 1);
+	if (ctx.securityMode & 1) {
+		memset (str.getBuf (), 0, str.getBufLength ());
+	}
 	return 0;
 }
 
@@ -6603,6 +6717,9 @@ int func_base64_decode(vector<DataValue *> &argvalues, DataValue &ret, Interpret
 	WString str(Base64encode_len(len));
 	ret.datatype = DataValue::DATATYPE_STR;
 	ret.value.assign((WCSTR)str, Base64decode((char *)str.getBuf(), argvalues[0]->value.c_str()));
+	if (ctx.securityMode & 1) {
+		memset (str.getBuf (), 0, str.getBufLength ());
+	}
 	return 0;
 }
 
@@ -6679,6 +6796,17 @@ int func_current_line(vector<DataValue *> &argvalues, DataValue &ret, Interprete
 	ret = (int)WSCRIPT_LINE(ctx.line);
 	return 0;
 }
+
+int func_security_mode (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+
+	if (argvalues.size ()<1 || PARAM1_NOSTR) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_BOOL_REQUIRED;
+	}
+	ctx.securityMode = (int) *argvalues[0];
+	ret = true;
+	return 0;
+}
+
 
 void wScriptInitFunctions(InterpreterContext &ctx)
 {
@@ -6780,6 +6908,7 @@ void wScriptInitFunctions(InterpreterContext &ctx)
 		{"shellexec", func_shell_exec},
 		{"system", func_system},
 		{"autonl", func_autonl},
+		{"security_mode",  func_security_mode},		
 		{"error_reporting", func_show_warnings},
 		{"getreg", func_getreg},
 		{"putreg", func_putreg},
@@ -6937,6 +7066,7 @@ void wScriptInitFunctions(InterpreterContext &ctx)
 		{"fsockserver", func_fsockserver},
 		{"fsockaccept", func_fsockaccept},
 		{"fsockip", func_fsockip},
+		{"fsockipv6", func_fsockipv6},    
 		{"fsockport", func_fsockport},
 		{"gethostbyaddr", func_gethostbyaddr},
 		{"gethostbyname", func_gethostbyname},
@@ -6978,11 +7108,11 @@ void freeArgValues(vector<DataValue *> &argvalues)
 
 DataValue *getVariable(ExpressionList &arguments, InterpreterContext &ctx, bool fCreateNew, unsigned int &argOffs, unsigned int *flags = NULL)
 {
-	string name = arguments[argOffs].operation;
+	string* name = &arguments[argOffs].operation;
 	DataValue *v = NULL, *v2 = NULL;
 	int j = 0;
 	for (j = ctx.funcDeep; j >= 0; j -= ctx.funcDeep) {
-		v = ctx.symbols[j]->getPnt(name.c_str());
+		v = ctx.symbols[j]->getPnt(name->c_str());
 		if (v) {
 			break;
 		}
@@ -6993,12 +7123,12 @@ DataValue *getVariable(ExpressionList &arguments, InterpreterContext &ctx, bool 
 	if (!v) {
 		if (fCreateNew) {
 			DataValue datavalue;
-			v = &ctx.symbols[ctx.funcDeep]->put(name.c_str(), datavalue)->m_value;
+			v = &ctx.symbols[ctx.funcDeep]->put(name->c_str(), datavalue)->m_value;
 		}
 	}
 	else {
 		if (fCreateNew && j == 0) {
-			ctx.abortInterprete(WFormattedString("Illegal overwriting of %s", (WCSTR)name.c_str()));
+			ctx.abortInterprete(WFormattedString("Illegal overwriting of %s", (WCSTR)name->c_str()));
 			return NULL;
 		}
 
@@ -7034,7 +7164,7 @@ DataValue *getVariable(ExpressionList &arguments, InterpreterContext &ctx, bool 
 	}
 
 	if (!v) {
-		ctx.abortInterprete(WFormattedString("Variable %s is not defined", name.c_str()));
+		ctx.abortInterprete(WFormattedString("Variable %s is not defined", name->c_str()));
 	}
 	return v;
 }

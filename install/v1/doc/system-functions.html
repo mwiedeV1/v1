@@ -100,9 +100,9 @@
 <td>Return true if <em>function</em> exists. User functions and buildin functions will be checked.</td>
 </tr>
 <tr>
-<td><strong>exec</strong>    (string <em>filename</em> [, string&amp;   <em>result</em>, number&amp;  <em>exitCode</em>, mixed <em>stdInput</em>, number <em>stdInputLen</em>])</td>
+<td><strong>exec</strong>    (string <em>filename</em> [, string&amp;   <em>result</em>, number&amp;  <em>exitCode</em>, mixed <em>stdInput</em>, number <em>stdInputLen</em>, string <em>envVars</em>])</td>
 <td>bool</td>
-<td>Execute a program <em>filename</em> . If parameters <em>result</em> and <em>exitCode</em> are given as references to  variables, then the output of the program and the exit code will be stored in these variables. If <em>stdInput</em>  is given, then the standard input of the program will be the content of this parameter. <em>stdInput</em> can be also a File or Socket handle.  Optional parameter <em>stdInputLen</em> set the length of input in bytes. On success true is returned.</td>
+<td>Execute a program <em>filename</em> . If parameters <em>result</em> and <em>exitCode</em> are given as references to  variables, then the output of the program and the exit code will be stored in these variables. If <em>stdInput</em>  is given, then the standard input of the program will be the content of this parameter. <em>stdInput</em> can be also a File or Socket handle.  Optional parameter <em>stdInputLen</em> set the length of input in bytes. Optional <em>envVars</em> contain a list with environment variables in following format "KEY1=VALUE1\0KEY2=VALUE2\0\0". On success true is returned.</td>
 </tr>
 <tr>
 <td><strong>system</strong>    (string <em>filename</em>)</td>
@@ -138,6 +138,11 @@
 <td><strong>error_reporting</strong>    (number <em>id</em>)</td>
 <td>true</td>
 <td>Set the reporting of errors and warnings. <em>id</em> can have following values: 0 = no errors and warnings are shown, 1 = errors and warnings are shown.</td>
+</tr>
+<tr>
+<td><strong>security_mode</strong>    (number <em>mode</em>)</td>
+<td>true</td>
+<td>Set the security mode. <em>mode</em> can have the following values: 0 = no security mode (default), 1 = temporary memory of files, sockets and processes will be blanked with zero bytes after the operation. This is useful to prevent reading sensitive data via memory dumps. Allthough you should take care to blank sensitive string variables manually with blankStr() function defined in lib/utils.inc.v1.</td>
 </tr>
 <tr>
 <td><strong>version</strong> (<em>type</em>=0)</td>
@@ -182,7 +187,7 @@
 <p><a href="index.html">back to Home</a></p>
 	</div>
 	<footer>
-		<p>V1 Version 0.96 - Documentation generated Sun, 04 Jun 2023 12:38</p>
+		<p>V1 Version 0.96 - Documentation generated Sun, 27 Aug 2023 15:40</p>
 	</footer>
 	</body>
 	</html>

@@ -1,64 +1,81 @@
 <?v1
 
-dl ("regex");
-
 /**
- * Parses a URI into the components and fragment identifier as specified by RFC 3986.
- * @param url URL to parse
- * @return Array with tokens of parsed URL
+ * Format byte size to readable format.
+ *  
  */
-function parse_url (url)
-{
-	r_URI =
-	    '^(([a-zA-Z0-9\.\+\-]+):)?'. //  Scheme
-	    '(//([^/?#"<>]*))?'. // Authority
-	    '([^?#"<>]*)'.       // Path
-	    '(\?([^#"<>]*))?'.   // Query
-	    '(#([^"<>]*))?'.     // Fragment
-	    '/i';
-	matches = array();
-	result = preg_match(r_URI, url, matches);
-	if (!result)
-		return false; // *really* invalid URI
-	// seperate out parts
-	scheme = !empty(matches[1]) ? matches[2] : null;
-	authority = !empty(matches[3]) ? matches[4] : null;
-	path = matches[5]; // always present, can be empty
-	if (empty (path))
-		path = "/";
-	query = !empty(matches[6]) ? matches[7] : null;
-	fragment = !empty(matches[8]) ? matches[9] : null;
-
-	// further parse authority
-	if (authority !== null) {
-		r_authority = '/^((.+?)@)?(\[[^\]]+\]|[^:]*)(:(\d*))?/';
-		matches = array();
-		preg_match(r_authority, authority, matches);
-		userinfo = !empty(matches[1]) ? matches[2] : null;
-		host = !empty(matches[3]) ? matches[3] : '';
-		port = !empty(matches[4]) ? intval(matches[5]) : null;
-	}
-	else {
-		port = host = userinfo = null;
-	}
-	ret = array ("scheme"=>scheme, "userinfo"=>userinfo, "host"=>host, "port" =>port, "path" => path, "query" => query, "fragment" => fragment);
-	return ret;
+function formatKBText (sizeBytes) {
+	if (sizeBytes>=(1048576*1024))
+		return round (sizeBytes / (1048576*1024), 1)." GB";
+	else
+	if (sizeBytes>=1048576)
+		return round (sizeBytes / 1048576, 1)." MB";
+	else	
+	if (sizeBytes>=1024)
+		return round (sizeBytes / 1024)." KB";		
+	return sizeBytes." bytes";
 }
 
 
 /**
- * Format byte size to readable format.
- *
+ * Create a compatible filename
+ * Replace special characters and blanks
+ *  
  */
-function formatKBText (sizeBytes)
-{
-	if (sizeBytes>=(1048576*1024))
-		return round (sizeBytes / (1048576*1024), 1)." GB";
-	else if (sizeBytes>=1048576)
-		return round (sizeBytes / 1048576, 1)." MB";
-	else if (sizeBytes>=1024)
-		return round (sizeBytes / 1024)." KB";
-	return sizeBytes." bytes";
+ 
+function createCompatibleFilename (name, separator="_", maxChars=0, fLower=false) {
+	filename = "";
+	ignoreSpace = false;
+	// Replace special chars
+	name = str_replace (
+		array ("|", "ä","Ä","ö","Ö","ü","Ü","ß","é"),
+		array (" ", "ae","Ae","oe","Oe","ue","Ue","ss","ee"),
+		name);
+	
+	name = utf8_decode (name);	
+	length = strlen(name);
+
+	for (i=0;i<length;i++) {
+		c = substr (name, i, 1);
+    
+    if (ignoreSpace && (c==' '|| c==separator))
+			continue;
+      
+	  cO = c;		
+		if (c==' ') {
+			c= cO = separator; ignoreSpace=true;
+		}
+		else {
+			c = strtolower (c);
+			if ((c<"a" || c>"z") && (c<"0" || c>"9") && c!="." && c!="_" && c!="-") {
+				if (c==separator && !ignoreSpace) {
+					ignoreSpace = true;
+				}
+				else {
+					continue;
+				}
+			}
+			else
+				ignoreSpace=false;	
+		}
+		if (fLower)
+			filename.=c;
+		else
+			filename.=cO;
+	}
+	if (maxChars>0 && strlen (filename)>maxChars)
+		filename=substr (filename, 0, maxChars);
+	
+	return trim (filename, separator);
+}	
+
+/* Blank a string with zero bytes in memory */
+function blankStr (&str, fZeroLen=false) {
+  blank = "";
+  resize (blank, strlen (str));
+  memset (memref (str), blank);
+  if (fZeroLen)
+    resize (str, 0);
 }
 
 ?>

@@ -134,6 +134,8 @@ public:
 	WSCRIPT_SETCONSTANTFUNC _setConstant;
 	WSCRIPT_UNSETCONSTANTFUNC _unsetConstant;
 	WSCRIPT_BINARYPRINTOUTFUNC _binaryPrintOut;
+  
+	int securityMode; // Current security mode
 };
 
 // Universal Handle class

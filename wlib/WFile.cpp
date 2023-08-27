@@ -110,6 +110,7 @@ void WFile::open(WCSTR filename, W32 flag)
 
 void WFile::close()
 {
+	memset (m_readlnBuf, 0, sizeof (m_readlnBuf));
 	if (!m_fClosable)
 		return;
 	if (m_hFile != NULL)

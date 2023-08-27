@@ -218,6 +218,7 @@ InterpreterContext::InterpreterContext()
 	currThread = NULL;
 	fAbort = 0;
 	programMode = 0;
+  securityMode = 0;
 	exitCode = 0;
 	line = 0;
 	userData = NULL;

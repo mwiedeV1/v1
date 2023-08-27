@@ -133,7 +133,7 @@ int Process::getExitCode () const
 
 
 
-bool Process::execute (WCSTR cmdLine, void* env)
+bool Process::execute (WCSTR cmdLine, void* env,  bool fSecure)
 {
 	kill ();
 	m_handles.free ();
@@ -154,7 +154,10 @@ bool Process::execute (WCSTR cmdLine, void* env)
 	if (!fExecutable) {
 		if (!wordexpRet)
 			wordfree (&result);
-		throw WException (WFormattedString ("Cannot execute: %s", (WCSTR) cmdLine),-1);
+		if (fSecure)
+			throw WException ("Cannot create process", -1);  
+    else
+			throw WException (WFormattedString ("Cannot create process: %s", (WCSTR) cmdLine),-1);
 	}
 
 	if (pipe(m_handles.aStdinPipe) < 0) {
@@ -259,7 +262,10 @@ bool Process::execute (WCSTR cmdLine, void* env)
 		// Failed to create child
 		wordfree (&result);
 		m_handles.free ();
-		throw WException (WFormattedString ("Cannot execute: %s", (WCSTR) cmdLine),-1);
+		if (fSecure)
+			throw WException ("Cannot create process", -1);  
+    else
+			throw WException (WFormattedString ("Cannot create process: %s", (WCSTR) cmdLine),-1);
 		return false;
 	}
 	return true;

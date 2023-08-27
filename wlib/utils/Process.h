@@ -31,7 +31,7 @@ public:
 	Process (WCSTR cmdLine);
 	~Process ();
 
-	bool execute (WCSTR cmdLine, void* env=NULL);
+	bool execute (WCSTR cmdLine, void* env=NULL, bool fSecure=false);
 	void startRead ();
 	void join (W32 ms = 0);
 

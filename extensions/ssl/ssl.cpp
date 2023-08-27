@@ -329,7 +329,7 @@ public:
 		return err;
 	}
 
-	bool readln (string& str)
+	bool readln (string& str, int zeroStr=0)
 	{
 		str.clear ();
 
@@ -356,6 +356,8 @@ public:
 		} while (readCnt>0);
 		// append rest of line
 		*pnt=0; str += buf;
+		if (zeroStr)
+			memset (buf, 0, sizeof (buf));
 		return readCnt>0;
 	}
 
@@ -793,15 +795,12 @@ int func_SSL_read (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCon
 		sizeMax = argvalues[2]->numvalue;
 	}
 
-
+	WString str (4096);
 	ret = false;
 	Handle* h = (Handle*) *argvalues[0];
 	try {
 		if (h && ctx.handleHT.isKey (h) && h->handletype==g_handletype_SSL) {			
-			_SSL* obj = (_SSL*) h->handle;			
-
-			WString str (4096);
-				
+			_SSL* obj = (_SSL*) h->handle;							
 			int bufSize = 4096;
 			int bytesRead = 0;
 			int size = 0;
@@ -826,7 +825,10 @@ int func_SSL_read (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCon
 	}
 	catch (WException& e) {
 		ctx._warnInterprete (e, ctx);
-	}	
+	}
+	if (ctx.securityMode & 1) {
+		memset (str.getBuf (), 0, str.getBufLength ());
+	}  	
 	return 0;
 }
 
@@ -849,7 +851,7 @@ int func_SSL_readln (vector<DataValue*>& argvalues, DataValue& ret, InterpreterC
 		if (h && ctx.handleHT.isKey (h) && h->handletype==g_handletype_SSL) {			
 			_SSL* obj = (_SSL*) h->handle;			
 			argvalues[1]->refPnt->datatype = DataValue::DATATYPE_STR;
-			ret = obj->readln (argvalues[1]->refPnt->value);
+			ret = obj->readln (argvalues[1]->refPnt->value, ctx.securityMode & 1);
 		}
 		else {
 			throw WException ("No valid SSL handle", -1);
@@ -875,15 +877,19 @@ int func_SSL_gets (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCon
 
 	ret = false;
 	Handle* h = (Handle*) *argvalues[0];
+	string tmp;
+	tmp.reserve (256);
 	try {
 		if (h && ctx.handleHT.isKey (h) && h->handletype==g_handletype_SSL) {			
 			_SSL* obj = (_SSL*) h->handle;			
 			argvalues[1]->refPnt->datatype = DataValue::DATATYPE_STR;
-			string tmp;
-			if (obj->readln (tmp)) {
+			if (obj->readln (tmp, ctx.securityMode & 1)) {
 				ret.datatype = DataValue::DATATYPE_STR;
 				ret.value=tmp;
 			}
+      else {
+				ret = false;
+      }
 		}
 		else {
 			throw WException ("No valid SSL handle", -1);
@@ -892,6 +898,9 @@ int func_SSL_gets (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCon
 	catch (WException& e) {
 		ctx._warnInterprete (e, ctx);
 	}	
+	if (ctx.securityMode & 1) {
+		memset ((void*) tmp.c_str (), 0, tmp.capacity ());
+	}
 	return 0;
 }
 
@@ -1618,7 +1627,41 @@ int func_SSL_create_selfsigned_cert  (vector<DataValue*>& argvalues, DataValue& 
 	return 0;
 }
 
+int func_SSL_copy_session_id (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 
+	if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_HANDLE_REQUIRED;
+	}
+
+	if (argvalues.size ()<2 || argvalues[1]->datatype!=DataValue::DATATYPE_HANDLE) {
+		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_HANDLE_REQUIRED;
+	}
+
+	Handle* h = (Handle*) *argvalues[0];
+	Handle* h2 = (Handle*) *argvalues[1];
+	try {
+		if (h && ctx.handleHT.isKey (h) && h->handletype==g_handletype_SSL) {			
+			_SSL* obj = (_SSL*) h->handle;			
+			if (h2 && ctx.handleHT.isKey (h2) && h2->handletype==g_handletype_SSL) {
+				_SSL* obj2 = (_SSL*) h2->handle;					
+				SSL_copy_session_id ((SSL*) *obj, (SSL*) *obj2);
+        ret = true;
+			}
+			else {
+				throw WException ("No valid SSL handle", -1);
+			}
+		}
+		else {
+			throw WException ("No valid SSL handle", -1);
+		}
+
+	}
+	catch (WException& e) {
+		ctx._warnInterprete (e, ctx);
+		ret = false;
+	}	
+	return 0;
+}
 
 WScriptFuncDef g_funcDefList[] = {
 	// Functions
@@ -1654,6 +1697,7 @@ WScriptFuncDef g_funcDefList[] = {
 	{ "SSL_write",  func_SSL_write },
 	{ "SSL_get_peer_certificate", func_SSL_get_peer_certificate },
 	{ "SSL_FLAG",  func_SSL_FLAG },
+	{ "SSL_copy_session_id", func_SSL_copy_session_id },
 
 	{ "SSL_create_selfsigned_cert", func_SSL_create_selfsigned_cert },
 
