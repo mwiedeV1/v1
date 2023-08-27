@@ -39,8 +39,7 @@ function createCompatibleFilename (name, separator="_", maxChars=0, fLower=false
 		c = substr (name, i, 1);
     
     if (ignoreSpace && (c==' '|| c==separator))
-			continue;
-      
+      continue;
 	  cO = c;		
 		if (c==' ') {
 			c= cO = separator; ignoreSpace=true;
