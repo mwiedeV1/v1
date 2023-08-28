@@ -493,7 +493,7 @@ int InterpreterContext::execute(WCSTR filename, int fRequireOnce)
 
 		// Parse
 		yyReadMax = file.getSize();
-		yyInputBuf = (char *)malloc(yyReadMax);
+		yyInputBuf = (char *) WMemory::allocMemory (yyReadMax);
 		file.read(yyInputBuf, yyReadMax);
 		file.close();
 
@@ -501,6 +501,12 @@ int InterpreterContext::execute(WCSTR filename, int fRequireOnce)
 		yylex_init(&scanner);
 		ret = yyparse(scanner, &ast);
 		yylex_destroy(scanner);
+
+		if (securityMode & 1) {
+			memset (yyInputBuf, 0, yyReadMax);
+			WMemory::freeMemory (yyInputBuf);
+			yyInputBuf=NULL;
+		}
 
 		if (!ret && !fOnlySyntaxCheck) {
 
@@ -533,8 +539,9 @@ int InterpreterContext::execute(WCSTR filename, int fRequireOnce)
 	yyLine = oldLine;
 
 	if (yyInputBuf) {
-		free(yyInputBuf);
-		yyInputBuf = NULL;
+		memset (yyInputBuf, 0, yyReadMax);
+		WMemory::freeMemory (yyInputBuf);
+		yyInputBuf=NULL;
 	}
 	if (ast) {
 		// Free all expressions except user defined functions
