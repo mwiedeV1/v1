@@ -31,11 +31,6 @@ Note: String functions work byte orientated. UTF8 and Unicode characters can con
 <td>Return the length of the given <em>string</em>  in bytes.</td>
 </tr>
 <tr>
-<td><strong>resize</strong> (string&amp; <em>string</em>, number <em>length</em>)</td>
-<td>bool</td>
-<td>Resize <em>string</em> buffer to <em>length</em>. If <em>length</em> is greater than existing length, it will be filled with zero bytes.  On success true is returned.</td>
-</tr>
-<tr>
 <td><strong>strcmp</strong> (string <em>string1</em>, string <em>string2</em>)</td>
 <td>number</td>
 <td>Compare <em>string1</em> and <em>string2</em>. Return values: 1 = <em>string1</em> &gt; <em>string2</em>, -1 = <em>string1</em> &lt; <em>string2</em>, 0 = <em>string1</em> equal to <em>string2</em></td>
@@ -120,12 +115,22 @@ Note: String functions work byte orientated. UTF8 and Unicode characters can con
 <td>number</td>
 <td>Return the CRC32 checksum of a <em>string</em>.</td>
 </tr>
+<tr>
+<td><strong>resize</strong> (string&amp; <em>string</em>, number <em>length</em> [,<em>reserve</em>=false, <em>fillWith</em>=''])</td>
+<td>bool</td>
+<td>Resize <em>string</em> buffer to <em>length</em>. If <em>length</em> is greater than the existing length, the complete string will be filled with zero bytes. If optional parameter <em>reserve</em> is true, only memory buffer will be reserved and nothing will be resized/overwritten. Optional paramer <em>willWith</em> can contain a string with length of 1 ascii character to fill the resized string instead of zero bytes. On success true is returned. Note: You can use this function to truncate strings, create empty strings with individual length or reserve memory buffer.</td>
+</tr>
+<tr>
+<td><strong>blank</strong> (string&amp; <em>string</em>, [,<em>zeroLength</em>=false, <em>fillWith</em>=''])</td>
+<td>bool</td>
+<td>Blank out a <em>string</em> with zero bytes. If optional parameter <em>zeroLength</em> is true, the string will also resized to length of 0 after filling. Optional paramer <em>willWith</em> can contain a string with length of 1 ascii character to fill the string instead of zero bytes. On success true is returned. Note: You can use this function to blank out sensitive strings in memory.</td>
+</tr>
 </tbody>
 </table>
 <p><a href="index.html">back to Home</a></p>
 	</div>
 	<footer>
-		<p>V1 Version 0.96 - Documentation generated Sun, 27 Aug 2023 15:40</p>
+		<p>V1 Version 0.96 - Documentation generated Tue, 05 Sep 2023 11:27</p>
 	</footer>
 	</body>
 	</html>

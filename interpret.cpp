@@ -1059,6 +1059,7 @@ int func_input(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 		ret.value = defValue;
 	else
 		ret.value = line;
+	memset (line, 0, sizeof (line)); // Erase buffer
 	return 0;
 }
 
@@ -1775,36 +1776,61 @@ int func_substr(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 	return 0;
 }
 
-int func_strpos(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
+
+int func_strpos (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 	if (PARAM1_NOSTR) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_STR_REQUIRED;
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
 	}
-	if (argvalues.size() < 2 || argvalues[1]->datatype > DataValue::DATATYPE_STR) {
-		return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_STR_REQUIRED;
+	if (argvalues.size ()<2 || argvalues[1]->datatype>DataValue::DATATYPE_STR) {
+		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_STR_REQUIRED;
 	}
-	argvalues[0]->toString();
+	argvalues[0]->toString ();
 
-	unsigned int offs = 0;
-	if (argvalues.size() > 2) {
-		if (argvalues[2]->datatype > DataValue::DATATYPE_STR)
-			return WSCRIPT_RET_PARAM3 | WSCRIPT_RET_NUM_REQUIRED;
-		offs = (int)*argvalues[2];
-		if (offs >= argvalues[0]->value.size())
+	int offs = 0;
+	if (argvalues.size ()>2) {
+		if (argvalues[2]->datatype>DataValue::DATATYPE_STR)
+			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_NUM_REQUIRED;
+		offs = (int) *argvalues[2];
+		if (offs<0) {
+			offs = argvalues[0]->value.length ()+offs;
+			if (offs<0)
+				offs = 0;
+		}
+		else
+		if (offs>=argvalues[0]->value.length ()) {
 			offs = 0;
+		}
 	}
+	
+	const char* str1 = argvalues[0]->value.c_str () + offs;
+	const char* str2 = argvalues[1]->value.c_str ();
+	const char* end1  = argvalues[0]->value.c_str () + argvalues[0]->value.length ();
+	const char* end2  = argvalues[1]->value.c_str () + argvalues[1]->value.length ();
 
-	const char *str1 = argvalues[0]->value.c_str() + offs;
-	const char *str2 = argvalues[1]->value.c_str();
-	if (str2[0] == 0) {
+	// Check 0 termination
+	if (str2[0]==0) {	
 		ret = false;
 	}
 	else {
-		const char *pos = strstr(str1, str2);
-		if (!pos)
-			ret = false;
-		else
-			ret = (int)(pos - str1);
+		bool fFound = false;
+		const char* c1 = str1;
+		while (c1<end1) {
+			const char* c11 = c1;
+			const char* c2 = str2;
+			while (*c11==*c2 && c11<end1 && c2<end2) {
+				c11++;
+				c2++;
+			}
+			if (c2==end2 || *c2==0) {
+				// Found
+				ret = (int) (c1 - str1 + offs);
+				fFound = true;
+				break;
+			}
+			c1++;
+		}
+		if (!fFound)
+			ret = false;	
 	}
 	return 0;
 }
@@ -1887,7 +1913,7 @@ int func_trim_universal(vector<DataValue *> &argvalues, DataValue &ret, Interpre
 	int l = (c1 - c0) + 1;
 	if (*c0 == 0)
 		l = 0;
-
+	ret.value.reserve (l);
 	ret.value.assign(c0, l);
 	ret.datatype = DataValue::DATATYPE_STR;
 	return 0;
@@ -6231,20 +6257,71 @@ int func_dl(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &
 	return 0;
 }
 
-int func_resize(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
+
+int func_resize (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 
 	if (PARAM1_NOSTR) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_STR_REQUIRED;
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
 	}
-	if (argvalues.size() < 2 || argvalues[1]->datatype > DataValue::DATATYPE_STR) {
-		return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_NUM_REQUIRED;
+	if (argvalues.size ()<2 || argvalues[1]->datatype>DataValue::DATATYPE_STR) {
+		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_NUM_REQUIRED;
 	}
-	ret = false;
+	bool fReserve = false;
+
+	if (argvalues.size ()>2) {
+		if (argvalues[2]->datatype>DataValue::DATATYPE_STR)
+			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_BOOL_REQUIRED;
+		fReserve = (bool) *argvalues[2];
+	}
+
+	char fillWith = 0;
+	if (argvalues.size ()>3) {
+		if (argvalues[3]->datatype>DataValue::DATATYPE_STR)
+			return WSCRIPT_RET_PARAM4|WSCRIPT_RET_STR_REQUIRED;
+		fillWith = (char) argvalues[3]->value.c_str ()[0];
+	}
+
 	if (argvalues[0]->refPnt) {
-		argvalues[0]->refPnt->value.resize((int)argvalues[1]->numvalue);
+		if (!fReserve)
+			argvalues[0]->refPnt->value.resize ((int) argvalues[1]->numvalue, fillWith);
+		else
+			argvalues[0]->refPnt->value.reserve ((int) argvalues[1]->numvalue);
 		argvalues[0]->refPnt->datatype = DataValue::DATATYPE_STR;
 		ret = true;
+	}
+	else {
+		ret = false;
+	}
+	return 0;
+}
+
+
+int func_blank (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (PARAM1_NOSTR) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
+	}
+	bool fZeroLength = false;
+	if (argvalues.size ()>1) {
+		if (argvalues[1]->datatype>DataValue::DATATYPE_STR)
+			return WSCRIPT_RET_PARAM2|WSCRIPT_RET_BOOL_REQUIRED;
+		fZeroLength = (bool) *argvalues[1];
+	}
+
+	char fillWith = 0;
+	if (argvalues.size ()>2) {
+		if (argvalues[2]->datatype>DataValue::DATATYPE_STR)
+			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_STR_REQUIRED;
+		fillWith = (char) argvalues[2]->value.c_str ()[0];
+	}
+
+	if (argvalues[0]->refPnt) {
+		memset ((char*) argvalues[0]->refPnt->value.c_str (), fillWith, argvalues[0]->refPnt->value.length ());
+		if (fZeroLength)
+			argvalues[0]->refPnt->value.resize (0);
+		ret = true;
+	}
+	else {
+		ret = false;
 	}
 	return 0;
 }
@@ -6994,6 +7071,7 @@ void wScriptInitFunctions(InterpreterContext &ctx)
 		{"utf8_decode", func_utf8_decode},
 		{"explode", func_explode},
 		{"resize", func_resize},
+		{"blank",  func_blank},
 		{"chunk_split", chunk_split},
 
 		// File functions

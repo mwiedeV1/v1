@@ -502,11 +502,9 @@ int InterpreterContext::execute(WCSTR filename, int fRequireOnce)
 		ret = yyparse(scanner, &ast);
 		yylex_destroy(scanner);
 
-		if (securityMode & 1) {
-			memset (yyInputBuf, 0, yyReadMax);
-			WMemory::freeMemory (yyInputBuf);
-			yyInputBuf=NULL;
-		}
+		memset (yyInputBuf, 0, yyReadMax);
+		WMemory::freeMemory (yyInputBuf);
+		yyInputBuf=NULL;
 
 		if (!ret && !fOnlySyntaxCheck) {
 

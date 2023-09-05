@@ -37,8 +37,10 @@ function createCompatibleFilename (name, separator="_", maxChars=0, fLower=false
 
 	for (i=0;i<length;i++) {
 		c = substr (name, i, 1);
-		if (ignoreSpace && (c==' '|| c==separator))
+    
+    if (ignoreSpace && (c==' '|| c==separator))
 			continue;
+      
 	  cO = c;		
 		if (c==' ') {
 			c= cO = separator; ignoreSpace=true;
@@ -67,13 +69,5 @@ function createCompatibleFilename (name, separator="_", maxChars=0, fLower=false
 	return trim (filename, separator);
 }	
 
-/* Blank a string with zero bytes in memory */
-function blankStr (&str, fZeroLen=false) {
-	blank = "";
-	resize (blank, strlen (str));
-	memset (memref (str), blank);
-	if (fZeroLen)
-		resize (str, 0);
-}
 
 ?>

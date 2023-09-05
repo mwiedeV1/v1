@@ -36,7 +36,7 @@ filename = input ("CSR filename (CN.csr on default):", subject["CN"].".csr");
 
 print ("Generate CSR ...");
 
-if (ret = openssl_csr (subject, filename, 2048, "sha256", true)==1) {
+if (openssl_csr (subject, filename, 2048, "sha256", true)) {
 	print (filename, " successful created.");
 	exit (0);
 }

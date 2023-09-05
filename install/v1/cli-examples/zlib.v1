@@ -21,14 +21,14 @@ do
 
 	mode = getch ();
 	if (mode=="c") {
-		srcFilename = input ("File to compress:");
+		srcFilename = input ("File to compress: ");
 		dstFilename = srcFilename.".gz";
 		if ((ret=gz_compress_file (srcFilename, dstFilename, true))==0) {
 			print (srcFilename, " (", formatKBText (filesize (srcFilename)), ") compressed to ", dstFilename, " (", formatKBText (filesize (dstFilename)), ")");
 		}
 	}
 	else if (mode=="d") {
-		srcFilename = input ("File to decompress:");
+		srcFilename = input ("File to decompress: ");
 		dstFilename = srcFilename.".original";
 		if ((ret=gz_decompress_file (srcFilename, dstFilename, true))==0) {
 			print (srcFilename, " (", formatKBText (filesize (srcFilename)), ") decompressed to ", dstFilename, " (", formatKBText (filesize (dstFilename)), ")");
