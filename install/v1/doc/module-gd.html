@@ -49,9 +49,24 @@
 <td>Create image from <em>filename</em>. On success a image handle is returned.</td>
 </tr>
 <tr>
+<td><strong>imagecreatefromstring</strong> (string <em>buffer</em>, string <em>type</em>)</td>
+<td>handle</td>
+<td>Create image from string <em>buffer</em>. <em>type</em> can be the following images types: jpg, png, gif, wbmp, webp, tif, bmp.  On success a image handle is returned.</td>
+</tr>
+<tr>
 <td><strong>imagefile</strong> (handle <em>image</em>, string <em>filename</em>)</td>
 <td>bool</td>
-<td>Save <em>image</em> to  <em>filename</em>. On success true is returned.</td>
+<td>Save <em>image</em> to  <em>filename</em>. Note: This function does not use quality parameter. To specify a quality you have to use the default functions such as imagejpeg() or imagetostring(). On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>imagetostring</strong> (handle <em>image</em>, string <em>type</em>, [number <em>quality</em>=-1])</td>
+<td>string</td>
+<td>Get <em>image</em> data as string. <em>type</em> can be the following images types: jpg, png, gif, wbmp, webp, tif, bmp. Optional parameter <em>quality</em> can be the quality in percent of the JPEG image or compression flag for BMP images. On success a string with image data is returned.</td>
+</tr>
+<tr>
+<td><strong>imagetruecolorattachbuffer</strong> (number <em>address</em>, number <em>width</em>, number <em>height</em>, number <em>stride</em>)</td>
+<td>handle</td>
+<td>Create image from a RGB32 image buffer. Memory <em>address</em> is usually a string buffer. memref() function return the memory address of a string. <em>width</em> and <em>height</em> give the resolution in pixels. If <em>stride</em> is the negative <em>width</em> then <em>address</em> starts at the top/left position of the image. If <em>stride</em> is the positive <em>width</em> then <em>address</em> starts at the bottom/left position of the image. On success a new image handle is returned.</td>
 </tr>
 </tbody>
 </table>
@@ -164,7 +179,7 @@
 <li>imagefilter</li>
 <li>imagecompare</li>
 </ul>
-<p><strong>Special functions only available on Windows</strong></p>
+<p><strong>Special functions only available on Windows</strong>, not part of PHP GD.</p>
 <table>
 <thead>
 <tr>
@@ -179,12 +194,77 @@
 <td>handle</td>
 <td>Capture image from screen or specific window handle given by <em>hWnd</em>. If <em>hWnd</em> is null then the entire screen is captured. If <em>clientRect</em> is true, only the inner rectangle of a window is captured. On success the captured image handle is returned.</td>
 </tr>
+<tr>
+<td><strong>videogetalldrivers</strong> ()</td>
+<td>array</td>
+<td>Get a list with all video drivers available. Driver index is beginning from 0.</td>
+</tr>
+<tr>
+<td><strong>videocreate</strong> (number <em>index</em>)</td>
+<td>handle</td>
+<td>Create and connect to video driver <em>index</em>. On success a video handle is returned. On error false is returned.</td>
+</tr>
+<tr>
+<td><strong>videosetdriverindex</strong> (handle <em>video</em>, number <em>index</em>)</td>
+<td>bool</td>
+<td>Connect to a individual video driver <em>index</em> on an existing <em>video</em> handle. On success true is returned. See videogetalldrivers() to get a list of all available drivers.</td>
+</tr>
+<tr>
+<td><strong>videosetformat</strong> (handle <em>video</em>, number <em>width</em>, number <em>height</em> [,number <em>bits</em>=-1])</td>
+<td>bool</td>
+<td>Set a video format. <em>video</em> is the video handle created by videocreate(). <em>width</em> and <em>height</em> give the resolution in screen pixels. Optional parameter <em>bits</em> give the color depth (8, 16, 24, 32). If <em>bits</em> is not given the default color depth is used. On success true is returned. See also videogetprops() to get the properties of default resolution after videocreate().</td>
+</tr>
+<tr>
+<td><strong>videogetprops</strong> (handle <em>video</em>)</td>
+<td>array</td>
+<td>Return an array with properties of current video resolution. <em>video</em> is the video handle created by videocreate(). On success an array with the following array keys is returned: device_index, device_name, device_version, width, height, bits, compression, size_image, planes, has_overlay, capture_initialized. On error false is returned.</td>
+</tr>
+<tr>
+<td><strong>videosetcapturebuffer</strong> (number <em>address</em>, [bool <em>autoConvertRGB32</em>=true, number <em>notifyId</em>=0 ])</td>
+<td>bool</td>
+<td>Set a capture buffer to hold a camera image. Memory <em>address</em> is usually a string buffer. memref() function return the memory address of a string. Optional parameter <em>autoConvertRGB32</em> marks if the camera raw image should be converted automatically to RGB32, otherwise the raw data will be captured. Take care to allocate enough RGB32 buffer with resize() which is calculated by width x height x 4 bytes. Note: Not all image data formats will be converted automatically to RGB32. In time only RGB24 and YUY2 will be convered. All other formats are transferred as raw data. See also <em>compression</em> flag returned by videogetprops(). For more details of the available compression flags read the <a target="_blank" href="https://learn.microsoft.com/en-us/windows/win32/directshow/fourcc-codes">Microsoft FOURCC Codes</a>. If the optional parameter <em>notifyId</em> is not 0 than it holds a WM_COMMAND identifier to notify the preview window that a new frame was received, see also videoenablepreviewwindow(). On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>videoenablepreviewwindow</strong> (handle <em>video</em>, number <em>hWndParent</em>, number <em>x</em>, number <em>y</em>, number <em>width</em>, number <em>height</em>, [number <em>scale</em>=1, number <em>refreshRate</em>=30])</td>
+<td>bool</td>
+<td>Set a video preview window. <em>video</em> is the video handle created by videocreate(). <em>hWndParent</em> is the parent window handle where the preview is shown. <em>x</em>, <em>y</em>, <em>width</em> and <em>height</em> are the position and resolution of the preview in parent window. Parameters <em>scale</em> and <em>refreshRate</em> are optional. On success true is returned. Note: After enabling a preview window the frame grabbing begins to start and new frames are transferred constantly to capture buffer set with videosetcapturebuffer(). If you only want to grab the frames you should set the <em>width</em> and <em>height</em> of the preview window to 1 pixel (0 does not work). In the example application win-video the frames are transferred to a memory DC, the preview window itself is has only the dimension of 1x1 pixels.</td>
+</tr>
+<tr>
+<td><strong>videodisablepreviewwindow</strong> (handle <em>video</em>)</td>
+<td>bool</td>
+<td>Disable the video preview window. <em>video</em> is the video handle created by videocreate(). Note: After disabling a preview window the frame grabbing stops and no new frames are transferred to capture buffer set with videosetcapturebuffer(). On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>videograbframe</strong> (handle <em>video</em>)</td>
+<td>bool</td>
+<td>Grab a new frame manually from <em>video</em> handle created by videocreate() to a capture buffer set with videosetcapturebuffer(). Note: In contrast to videoenablepreviewwindow() this function will not grab frames constantly into the capture buffer. On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>videocapturebmp</strong> (handle <em>video</em>, string <em>filename</em>)</td>
+<td>bool</td>
+<td>Save the current frame as BMP image <em>filename</em>. <em>video</em> is the handle created by videocreate(). Note: This function does not need to set own capture buffer with videosetcapturebuffer() and does not need to enable a preview window with videoenablepreviewwindow(). On success true is returned.</td>
+</tr>
+<tr>
+<td><strong>videogetwindow</strong> (handle <em>video</em>)</td>
+<td>number</td>
+<td>Get window handle of <em>video</em> handle created by videocreate(). Note: This window is invisible until you make it visible with videoenablepreviewwindow().</td>
+</tr>
+<tr>
+<td><strong>videogeterror</strong> (handle <em>video</em>)</td>
+<td>array</td>
+<td>Return an array with last error information for <em>video</em> handle created with videocreate(). On success an array ("error_id"=&gt;&lt;id&gt;, "error_text"=&gt;"&lt;text&gt;") is returned.</td>
+</tr>
+<tr>
+<td><strong>videodestroy</strong> (handle <em>video</em>)</td>
+<td>bool</td>
+<td>Disconnect and destroy a <em>video</em> handle created with videocreate(). On success true is returned.</td>
+</tr>
 </tbody>
 </table>
 <p><a href="index.html">back to Home</a></p>
 	</div>
 	<footer>
-		<p>V1 Version 0.96 - Documentation generated Tue, 05 Sep 2023 11:27</p>
+		<p>V1 Version 0.96 - Documentation generated Tue, 12 Sep 2023 11:20</p>
 	</footer>
 	</body>
 	</html>
