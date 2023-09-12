@@ -140,6 +140,36 @@ public:
         }
     }
 
+  	bool create (void* buf, unsigned int size, WCSTR ext="jpg") {
+  		if (strcmp (ext, "jpg")==0 || strcmp (ext, "jpeg")==0)
+  			m_img = gdImageCreateFromJpegPtr (size, buf);
+  		else
+  		if (strcmp (ext, "png")==0)
+  			m_img = gdImageCreateFromPngPtr (size, buf);
+  		else
+  		if (strcmp (ext, "gif")==0)
+  			m_img = gdImageCreateFromGifPtr (size, buf);
+  		else
+  		if (strcmp (ext, "wbmp")==0)
+  			m_img = gdImageCreateFromWBMPPtr (size, buf);
+  		else
+  		if (strcmp (ext, "webp")==0)
+  			m_img = gdImageCreateFromWebpPtr (size, buf);
+  		else
+  		if (strcmp (ext, "tif")==0 || strcmp (ext, "tiff")==0)
+  			m_img = gdImageCreateFromTiffPtr (size, buf);
+  		else
+  		if (strcmp (ext, "bmp")==0)
+  			m_img = gdImageCreateFromBmpPtr (size, buf);
+  		else
+  			throw WException (WFormattedString ("Image file extension %s not supported", ext), -1);
+
+  		if (!m_img) {
+  			throw WException (WFormattedString ("Cannot open %s image from string buffer", ext), -1);
+  		}
+  		return true;
+  	}
+
     void close ()
     {
         if (m_img) {
@@ -259,6 +289,40 @@ int func_imagecreatefromfile (vector<DataValue*>& argvalues, DataValue& ret, Int
     return 0;
 }
 
+int func_imagecreatefromstring (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (PARAM1_NOSTR) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
+	}
+	if (argvalues.size ()<2 || argvalues[1]->datatype>DataValue::DATATYPE_STR) {		
+		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_STR_REQUIRED;		
+	}	
+
+	argvalues[0]->toString ();
+	Handle* h = new Handle;
+
+	try {
+		h->handle = (void*) new GDImg ();
+		((GDImg*) h->handle)->create ((void*) argvalues[0]->value.c_str (), argvalues[0]->value.length (), argvalues[1]->value.c_str ());
+
+		// Register handle
+		h->handletype = g_handletype_GDImg;
+		h->freeFunction = freeGDHandles;
+		ret = ctx.handleHT.put ((void*) h, h)->m_value;
+
+	}
+	catch (WException& e) {
+
+		if (h->handle) {
+			delete (GDImg*) h->handle;
+			h->handle = NULL;
+		}
+		delete h;
+		h = NULL;
+        ctx._warnInterprete (e, ctx);
+		ret = false;
+	}
+	return 0;
+}
 
 int func_imagedestroy (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx)
 {
@@ -398,7 +462,7 @@ int func_imagetruecolorattachbuffer (vector<DataValue*>& argvalues, DataValue& r
     return 0;
 }
 
-
+/*
 int func_imagedetachbuffer (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx)
 {
     if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
@@ -412,7 +476,7 @@ int func_imagedetachbuffer (vector<DataValue*>& argvalues, DataValue& ret, Inter
             gdImagePtr img = *(GDImg*) h->handle;
             free(img->tpixels);
             free(img);
-
+    		    ret = true;
         }
         else {
             throw WException ("No valid image handle", -1);
@@ -424,8 +488,7 @@ int func_imagedetachbuffer (vector<DataValue*>& argvalues, DataValue& ret, Inter
     }
     return 0;
 }
-
-
+*/
 
 int func_imageresolution (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx)
 {
@@ -889,6 +952,76 @@ int func_imagefile (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
     return 0;
 }
 
+
+int func_imagetostring (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_HANDLE_REQUIRED;
+	}
+	if (argvalues.size ()<2 && argvalues[1]->datatype>DataValue::DATATYPE_STR) {
+		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_STR_REQUIRED;
+	}
+	argvalues[1]->toString ();
+
+	int param = -1;
+	if (argvalues.size ()>2) {		
+		if (argvalues[2]->datatype>DataValue::DATATYPE_STR)
+			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_NUM_REQUIRED;		
+		param = (int) argvalues[2]->numvalue;
+	}	
+
+	Handle* h = (Handle*) *argvalues[0];
+	try {
+		if (h && ctx.handleHT.isKey (h) && h->handletype==g_handletype_GDImg) {			
+			const char* type = argvalues[1]->value.c_str ();
+			int size = 0;
+			void* imgPnt = NULL;
+			if (!strcmp (type, "jpg") || !strcmp (type, "jpeg")) {
+				imgPnt = gdImageJpegPtr (*(GDImg*) h->handle, &size, param);
+			}
+			else
+			if (!strcmp (type, "gif")) {
+				imgPnt = gdImageGifPtr (*(GDImg*) h->handle, &size);
+			}
+			else
+			if (!strcmp (type, "png")) {
+				imgPnt = gdImagePngPtr (*(GDImg*) h->handle, &size);
+			}
+			else
+			if (!strcmp (type, "webp")) {
+				imgPnt = gdImageWebpPtr (*(GDImg*) h->handle, &size);
+			}
+			else
+			if (!strcmp (type, "wbmp")) {
+				imgPnt = gdImageWBMPPtr (*(GDImg*) h->handle, &size, param==-1 ? 0 : param);
+			}
+			else
+			if (!strcmp (type, "tif") || !strcmp (type, "tiff")) {
+				imgPnt = gdImageTiffPtr (*(GDImg*) h->handle, &size);
+			}
+			else
+			if (!strcmp (type, "bmb")) {
+				imgPnt = gdImageBmpPtr (*(GDImg*) h->handle, &size, param==-1 ? 0 : param);
+			}			
+			if (!imgPnt) {
+				throw WException (WFormattedString ("Cannot create string from %s image", type), -1);
+			}
+
+			ret.datatype = DataValue::DATATYPE_STR;
+			ret.value.reserve (size);
+			ret.value.assign ((char*) imgPnt, size);
+		}
+		else
+		{
+			throw WException ("No valid image handle", -1);
+		}
+	}
+	catch (WException& e) {
+		ctx._warnInterprete (e, ctx);
+		ret = false;
+	}
+	return 0;
+}
+
 int func_imageoutput_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx, WCSTR type)
 {
     if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
@@ -1056,7 +1189,7 @@ int func_imagettftext (vector<DataValue*>& argvalues, DataValue& ret, Interprete
 
 bool fLog = false;
 
-#ifndef __USE_DYNCALL
+#ifdef _WITH_DYNCALL
 #include <dyncall.h>
 
 int func_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx, void* func, const int* paramDef, unsigned int paramCnt=1, int retDef=0)
@@ -2115,7 +2248,9 @@ WScriptFuncDef g_funcDefList[] = {
     { "imagecreate",  func_imagecreate },
     { "imagecreatetruecolor",  func_imagecreatetruecolor },
     { "imagecreatefromfile",  func_imagecreatefromfile },
+	  { "imagecreatefromstring",  func_imagecreatefromstring },
     { "imagefile",  func_imagefile },
+  	{ "imagetostring",  func_imagetostring },	
     { "imagedestroy",  func_imagedestroy },
     { "imagejpeg",  func_imagejpeg },
     { "imagegif",  func_imagegif },
@@ -2211,9 +2346,9 @@ WScriptFuncDef g_funcDefList[] = {
     { "imagecompare",  func_imagecompare }, // gdImageCompare
 //  { "imagesquaretocircle", func_imagesquaretocircle }, // gdImageSquareToCircle
 
-    // Special functions for windows
+    // Special functions
     { "imagetruecolorattachbuffer",  func_imagetruecolorattachbuffer },
-    { "imagedetachbuffer",  func_imagedetachbuffer },
+//  { "imagedetachbuffer",  func_imagedetachbuffer },
 
 };
 
