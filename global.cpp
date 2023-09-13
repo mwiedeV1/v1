@@ -501,11 +501,11 @@ int InterpreterContext::execute(WCSTR filename, int fRequireOnce)
 		yylex_init(&scanner);
 		ret = yyparse(scanner, &ast);
 		yylex_destroy(scanner);
-
+    /*
 		memset (yyInputBuf, 0, yyReadMax);
 		WMemory::freeMemory (yyInputBuf);
 		yyInputBuf=NULL;
-
+    */
 		if (!ret && !fOnlySyntaxCheck) {
 
 			// Now interprete
