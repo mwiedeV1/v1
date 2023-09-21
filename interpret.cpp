@@ -7274,6 +7274,8 @@ void assignVariables(ExpressionList &arguments, DataValue &retvalue, Interpreter
 			v->refPnt = v; // Set correct reference			
 		}
 	}
+	if (retvalue.datatype>=DataValue::DATATYPE_ARRAY)
+		retvalue.arrayList.reset ();
 }
 ///////////////////////
 // QUICK FUNCTIONS
