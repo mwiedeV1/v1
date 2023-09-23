@@ -1,0 +1,652 @@
+<?v1
+dl ("ssl"); 
+
+require_once ("utils.inc.v1");
+
+const FTP_RECV_TIMEOUT = 1000;
+
+// Helper functions
+function ftp_read (client, fVerbose=false)  
+{
+  line = "";
+  if (freadln (client, line)) {
+    if (fVerbose)
+      print ("[".date ("%H:%i:%s")."] ", line);
+     return array_merge (explode (" ", line), array ("line"=>line));
+  }
+  return false;
+}
+
+function ftp_write (client, line, fVerbose=false) 
+{
+  if (fVerbose) {
+    line2 = line;
+    if (strpos (line2, "PASS")===0)
+      line2 = "PASS ***";
+    print ("[".date ("%H:%i:%s")."] ", line2);
+  }
+  fwrite (client, line."\r\n");
+}
+
+
+/*
+ Open FTP account with optional authentication and TLS.
+
+ @param host FTP server
+ @param user Username
+ @param pass Password
+ @param port FTP port, if port is 21
+ @param fTLS true if SSL connection is established (FTPS)
+ Note: FileZilla Server does not accept OpenSSL 1.1.0f in FTP passive mode and produce the error
+ 425 Unable to build data connection: TLS session of data connection not resumed. 
+ @param fVerbose true print return from server to stdout
+ @return connection data array. 
+ On error false or error text is returned.
+*/
+
+function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose=false)
+{
+  conn = null;  
+  
+  socket = fsockopen (host, port, FTP_RECV_TIMEOUT, 1);
+  if (!socket) {
+      conn = "Connection to FTP-Server ".host.":".port." failed.";
+      return conn;
+  }
+  else
+  {
+    sslCTX = null;
+    client = socket;
+    fClose = false;
+    fProtP = false;
+    welcomeMsg = "";
+    mode = 0; 
+    while  (ret = ftp_read (client, fVerbose)) {
+
+      code = ret[0];
+      if (mode==0) {
+        if (!empty (welcomeMsg))
+          welcomeMsg.="\r\n";
+        welcomeMsg.=ret["line"];
+      }
+      if (strlen (code)!=3) {
+        continue;   
+      }
+      
+      if (mode==0) {
+        if (fTLS) {
+          ftp_write (client, "AUTH TLS", fVerbose); 
+          mode++;
+        }
+        else {
+          ftp_write (client, "USER ".user, fVerbose); 
+          mode+=2;  
+        }
+      }
+      else
+      if (mode==1) {
+        if (code=="234") {
+        	sslCTX = SSL_CTX_new ();
+        	client = SSL_new (sslCTX);
+        	SSL_set_fd (client, socket);
+          if (!SSL_connect (client, host)) {
+            conn = "SSL connection problems.";
+            fClose = true;
+            break;
+          }
+
+          // Encrypt data connection        
+          ftp_write (client, "PROT P", fVerbose);
+          while  (ret = ftp_read (client)) {
+            if (strlen (ret[0])!=3) {
+              continue;     
+            }
+            code = ret[0];
+            if (code==200)
+              fProtP=true;
+            break;         
+          } 
+          
+        }
+        else {
+          conn = "TLS/SSL not supported. ".ret["line"];
+          fClose = true;
+          break;
+        }
+        ftp_write (client, "USER ".user); 
+        mode++;
+      }
+      else 
+      if (mode==2)
+      {
+        if (code=="331") {
+          ftp_write (client, "PASS ".pass, fVerbose);      
+          mode++;     
+        }
+        else 
+        if (code=="230") {
+          break;  
+        }
+        else {
+          fClose = true;
+          conn = "Login failed. ".ret["line"];
+          break;
+        }
+      }
+      else {
+        if (code=="230") {
+          break;
+        }
+        else {
+          conn = "Login failed. ".ret["line"];
+          fClose = true;
+          break;
+        }
+      }
+    }
+    if (ret===false) {
+       conn = "Login failed.";   
+       fClose = true;
+    }
+    
+    if (fClose) {
+      if (sslCTX) {
+      	SSL_free (client);
+      	SSL_CTX_free (sslCTX);
+      }
+      fclose (socket);    
+    }
+    else  {   
+      conn = [client, socket, sslCTX, null, null, fVerbose, "", 0, fProtP, "welcome_msg" => welcomeMsg];      
+    }
+  }
+  return conn;
+}
+
+/*
+ Create passive data connection
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @return array(ip,port), on error error text or false is returned.
+*/
+function ftp_pasv (&conn) 
+{
+  assign (client, socket, sslCTX) = conn;  
+  ftp_write (client, "PASV", conn[5]);
+  while  (ret = ftp_read (client,  conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;     
+    }
+    code = ret[0];
+    if (code!=227) {
+      return ret["line"];
+    }
+    p = strpos (ret["line"], "(");
+    if (p!==false) {
+      str = trim (substr (ret["line"], p, strlen (ret["line"])-p), "()");     
+      ipData = array (0,0,0,0);
+      portData = array (0,0);      
+      if (6==sscanf (str, "%u,%u,%u,%u,%u,%u", ipData[0], ipData[1], ipData[2], ipData[3], portData[1], portData[0])) {
+        ip = ipData[0].".".ipData[1].".".ipData[2].".".ipData[3];
+        port = portData[1]<<8 |  portData[0];
+        // Connect to data connection
+        socket2 = fsockopen (ip, port, FTP_RECV_TIMEOUT);
+        client2 = socket2;        
+        conn[3]=client2;
+        conn[4]=socket2;
+        conn[6]=ip;
+        conn[7]=port;
+        return [ip, port];        
+      }
+    }
+    return ret["line"];
+    break;
+  }
+  return false;
+}
+
+/*
+ Open TLS data connection
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @return true, on error error text or false is returned.
+*/
+function ftpDataConnTLSOpen (&conn) {
+  client2 = conn[3];    
+  socket2 = conn[4];
+  if (conn[2]) {  
+    
+  	client2 = SSL_new (conn[2]);
+    // SSL_set_session (client2, SSL_get_session (conn[0]));
+    SSL_copy_session_id (client2, conn[0]);    
+    SSL_set_fd (client2, socket2);    
+
+    if (!SSL_connect (client2)) { 
+      if (client2) {
+      	SSL_free (client2);
+      }
+      fclose (socket2);
+      conn[3]=conn4[4]=0;
+      return "FTP data connection SSL problems.";
+    }
+    conn[3]=client2;    
+  }
+  return true; 
+}
+
+/*
+ Close TLS data connection
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @return true
+*/
+function ftpDataConnTLSClose (&conn) {
+  if (conn[2] && conn[3]) {
+    SSL_free (conn[3]);       
+    fclose (conn[4]);
+    conn[3]=conn[4]=0;
+  }
+  return true;      
+}
+
+/*
+ List current directory
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param dirList reference to array which is filled with directory entries
+ @param fMLSD true MLSD instead of LIST command is used
+ @return array with directory, on error error text or false is returned.
+ 
+ Format of MLSD file list: 
+ type=dir;sizd=4096;modify=20230309112617;UNIX.mode=0755;UNIX.uid=1001;UNIX.gid=1000;unique=902ge00431;name
+
+*/
+function ftp_list (&conn, &dirList, fMLSD=false) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ret = ftp_pasv (conn);
+  if (!is_array (ret))
+    return ret;
+
+  ftp_write (client, fMLSD ? "MLSD" : "LIST", conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+    if (ret[0]==150) {
+      ret2=ftpDataConnTLSOpen (conn);
+      if (ret2!==true) {
+        return ret2;
+      }
+
+      while  (ret2 = ftp_read (conn[3], conn[5])) {
+        array_push (dirList, ret2["line"]);
+      }
+      ftpDataConnTLSClose (conn);  
+      continue;    
+    }
+    else
+    if (ret[0]==226) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+/*
+ Retrieve a file
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param filename to retrieve
+ @param fh filehandle to save the retrieved file
+ @return true, on error error text or false is returned.
+*/
+function ftp_retr (&conn, filename, fh) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ret = ftp_pasv (conn);
+  if (!is_array (ret))
+    return ret;
+
+  ftp_write (client, "RETR ".filename, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+    if (ret[0]==150) {
+
+      ret2=ftpDataConnTLSOpen (conn);
+      if (ret2!==true) {
+        return ret2;
+      }
+    
+      block = "";
+      bytesReadTotal = 0;
+      while (bytesRead=fread (conn[3], block)) {
+        fwrite (fh, block, bytesRead);        
+        bytesReadTotal+=bytesRead;
+      }
+      if (conn[5]) {
+        print ("[".date ("%H:%i:%s")."] ", formatKBText (bytesReadTotal)." retrieved");
+      }
+      ftpDataConnTLSClose (conn);  
+      continue;    
+    }
+    else
+    if (ret[0]==226) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+
+/*
+ Store a file
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param filename to store
+ @param fh filehandle to read file data
+ @return true, on error error text or false is returned.
+*/
+function ftp_stor (&conn, filename, fh) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ret = ftp_pasv (conn);
+  if (!is_array (ret))
+    return ret;
+
+  ftp_write (client, "STOR ".filename, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+    if (ret[0]==150) {
+
+      ret2=ftpDataConnTLSOpen (conn);
+      if (ret2!==true) {
+        return ret2;
+      }
+    
+      block = "";
+      bytesWroteTotal = 0;
+      while (bytesRead=fread (fh, block)) {
+        bytesWrote = fwrite (conn[3], block, bytesRead);        
+        bytesWroteTotal+=bytesWrote;
+      }
+      if (conn[5]) {
+        print ("[".date ("%H:%i:%s")."] ", formatKBText (bytesWroteTotal)." sent");
+      }
+      ftpDataConnTLSClose (conn);  
+      continue;    
+    }
+    else
+    if (ret[0]==226) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+/*
+ Change current directory
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param dir directory
+ @return true, on error error text or false is returned.
+*/
+function ftp_cwd (&conn, dir) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ftp_write (client, "CWD ".dir, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+
+    if (ret[0]==250) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+/*
+ Set type of data
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param type of data, I = binary A= ascii
+ @return true, on error error text or false is returned.
+*/
+function ftp_type (&conn, type) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ftp_write (client, "TYPE ".type, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+
+    if (ret[0]==200) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+/*
+ Delete a file
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param filename to delete
+ @return true, on error error text or false is returned.
+*/
+function ftp_dele (&conn, filename) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ftp_write (client, "DELE ".filename, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+
+    if (ret[0]==250) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+/*
+ Create a directory
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param directory to create
+ @return true, on error error text or false is returned.
+*/
+function ftp_mkd (&conn, directory) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ftp_write (client, "MKD ".directory, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+
+    if (ret[0]==257) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+/*
+ Remove a directory
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param directory to remove
+ @return true, on error error text or false is returned.
+*/
+function ftp_rmd (&conn, directory) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ftp_write (client, "RMD ".directory, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+
+    if (ret[0]==250) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+/*
+ Set filename of directory to rename
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param filename or directory to rename
+ @return true, on error error text or false is returned.
+*/
+function ftp_rnfr (&conn, filename) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ftp_write (client, "RNFR ".filename, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+
+    if (ret[0]==350) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+/*
+ Rename filename or directory selected by ftp_rnfr ()
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param newFilename new filename of the source selected by ftp_rnfr ()
+ @return true, on error error text or false is returned.
+*/
+function ftp_rnto (&conn, newFilename) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ftp_write (client, "RNTO ".newFilename, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+
+    if (ret[0]==250) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
+
+
+/*
+ Close FTP connection
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @return always true
+*/
+function ftp_quit (&conn) 
+{
+  assign (client, socket, sslCTX, client2, socket2) = conn;  
+  ftp_write (client, "QUIT", conn[5]);
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+    break;
+  }
+
+  // Close data connection
+  if (socket2)
+    fclose (socket2);    
+
+  // Close control connection
+  if (sslCTX) {
+  	SSL_free (client);
+  	SSL_CTX_free (sslCTX);
+  }
+  fclose (socket);    
+  return true;
+}
+
+?>
