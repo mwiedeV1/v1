@@ -1,0 +1,234 @@
+<?v1
+dl ("ssl"); 
+
+// Helper functions
+function pop3_read (client)  
+{
+  line = "";
+  if (freadln (client, line)) {
+     return array_merge (explode (" ", line), array ("line"=>line));
+  }
+  return false;
+}
+
+function pop3_write (client, line) 
+{
+  fwrite (client, line."\r\n");
+}
+
+
+/*
+ Open POP3 account with optional authentication and TLS.
+
+ @param user Username/E-Mail-Address
+ @param pass Password
+ @param host POP3 server
+ @param port POP3 port, if port is 110 and fTLS is true, then the port will automatically changed to 995
+ @param fTLS true if SSL connection is established for port 995
+ @param fVerbose true print return from server to stdout
+ @return connection data array. 
+ On error false or error text is returned.
+*/
+
+function pop3_open (user, pass="", host="localhost", port=110, fTLS=true, fVerbose=false)
+{
+  conn = null;  
+  if (fTLS && port==110)
+    port = 995;
+  
+  socket = fsockopen (host, port);
+  if (!socket) {
+      conn = "Connection to POP3-Server ".host.":".port." failed.";
+      return conn;
+  }
+  else
+  {
+    sslCTX = null;
+    client = socket;
+
+    if (fTLS) {
+    	sslCTX = SSL_CTX_new ();
+    	client = SSL_new (sslCTX);
+    	SSL_set_fd (client, socket);
+      if (!SSL_connect (client, host)) {    
+        conn = "SSL connection problems.";
+        fclose (socket);   
+        return conn;
+      }
+    }
+
+    mode = 0; 
+    while  (ret = pop3_read (client)) {
+      code = ret[0];
+      if (fVerbose)
+        print (ret["line"]);
+      if (code!="+OK") {
+        conn = ret["line"];
+        break;        
+      }
+      
+      if (mode==0) {
+        pop3_write (client, "USER ".user); 
+        mode++;
+      }
+      else
+      if (mode==1) {
+        pop3_write (client, "PASS ".pass); 
+        mode++;
+      }
+      else {
+        conn = [client, socket, sslCTX];
+        break;
+      }
+    }
+      
+  }
+  return conn;
+}
+
+
+/*
+ POP3 STAT command
+ 
+ @param conn POP3 connection data returned form pop3_open ()
+ @return statistic array. stat[0]=mails available, stat[1]=size of mails in bytes.
+ On error false or error text is returned.
+*/
+
+function pop3_stat (&conn) 
+{
+  stat = false;
+  assign (client, socket, sslCTX) = conn;  
+  pop3_write (client, "STAT");
+  
+  if  (ret = pop3_read (client)) {
+    if (ret[0]!="+OK") {
+      stat = ret["line"];;
+    }
+    else {
+      stat = [ret[1], ret[2]];
+    }
+  }
+  return stat;
+}
+
+
+/*
+ POP3 LIST command
+ 
+ @param conn POP3 connection data returned form pop3_open ()
+ @return on success list array. list[id]=size of mail with id in bytes. 
+ On error false or error text is returned.
+*/
+function pop3_list (&conn) 
+{
+  list = false;
+  assign (client, socket, sslCTX) = conn;  
+  pop3_write (client, "LIST");
+  
+  if  (ret = pop3_read (client)) {
+    if (ret[0]!="+OK") {
+      list = ret["line"];
+    }
+    else {
+      while  ((ret = pop3_read (client)) && ret["line"]!=".") {
+        if (!is_array (list))
+          list = array ();
+        list[ret[0]]=ret[1];
+      }    
+    }
+  }
+  return list;
+}
+
+/*
+ POP3 RETR command
+ 
+ @param conn POP3 connection data returned form pop3_open ()
+ @param id ID of mail to retrieve.
+ @param saveToFile optional filename to save mail. Otherwith mail text is returned.
+ @return on success mail text or true.
+ On error false or error text is returned.
+*/
+function pop3_retr (&conn, id, saveToFile="") 
+{
+  mailText = false;
+  assign (client, socket, sslCTX) = conn;  
+  pop3_write (client, "RETR ".id);
+  
+  if  (ret = pop3_read (client)) {
+    if (ret[0]!="+OK") {
+      mailText = false;
+    }
+    else {
+      fh = null;
+      if (!empty (saveToFile))
+        fh = fopen (saveToFile, "w+");
+        
+      line = "";
+      while (freadln (client, line)) {
+        if (line==".")
+          break;
+        if (fh) {
+          fwrite (fh, line);
+          fwrite (fh, "\r\n");      
+        }
+        else {
+          mailText.=line;
+        }
+      }
+      if (fh) {
+        mailText = true;
+        fclose (fh);
+      }            
+    }
+  }
+  return mailText;
+}
+
+/*
+ POP3 DELE command
+ 
+ @param conn POP3 connection data returned form pop3_open ()
+ @param id ID of mail to delete.
+ @return on success true.
+ On error false is returned.
+*/
+function pop3_dele (&conn, id) 
+{
+  fOK = false;
+  assign (client, socket, sslCTX) = conn;  
+  pop3_write (client, "DELE ".id);
+  
+  if  (ret = pop3_read (client)) {
+    if (ret[0]=="+OK") {
+      fOK = true;
+    }
+  }
+  return fOK;
+}
+
+/*
+ Close POP3 connection
+ 
+ @param conn POP3 connection data returned form pop3_open ()
+ @return always true
+*/
+function pop3_close (&conn) 
+{
+  assign (client, socket, sslCTX) = conn;  
+  pop3_write (client, "QUIT");
+
+  if (sslCTX) {
+      // Free SSL
+  	SSL_free (client);
+  	// Free SSL Context
+  	SSL_CTX_free (sslCTX);
+  }
+  
+  // Close connection
+  fclose (socket);    
+  return true;
+}
+
+?>
