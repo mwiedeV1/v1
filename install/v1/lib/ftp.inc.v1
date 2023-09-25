@@ -5,14 +5,22 @@ require_once ("utils.inc.v1");
 
 const FTP_RECV_TIMEOUT = 1000;
 
+const FTP_STATUS_PROT_WRITE = 1;
+const FTP_STATUS_PROT_READ = 2;
+const FTP_STATUS_TRANSFER_PROGRESS = 3;
+const FTP_STATUS_TRANSFER_FINISHED = 4;
+
 // Helper functions
 function ftp_read (client, fVerbose=false)  
 {
   line = "";
   if (freadln (client, line)) {
-    if (fVerbose)
+    if (gettype  (fVerbose)=="string")
+      call_user_func (fVerbose, FTP_STATUS_PROT_READ, line);
+    else
+    if (fVerbose===true)
       print ("[".date ("%H:%i:%s")."] ", line);
-     return array_merge (explode (" ", line), array ("line"=>line));
+    return array_merge (explode (" ", line), array ("line"=>line));
   }
   return false;
 }
@@ -23,7 +31,10 @@ function ftp_write (client, line, fVerbose=false)
     line2 = line;
     if (strpos (line2, "PASS")===0)
       line2 = "PASS ***";
-    print ("[".date ("%H:%i:%s")."] ", line2);
+    if (gettype  (fVerbose)=="string")
+      call_user_func (fVerbose, FTP_STATUS_PROT_WRITE, line2);
+    else
+      print ("[".date ("%H:%i:%s")."] ", line2);
   }
   fwrite (client, line."\r\n");
 }
@@ -36,10 +47,12 @@ function ftp_write (client, line, fVerbose=false)
  @param user Username
  @param pass Password
  @param port FTP port, if port is 21
- @param fTLS true if SSL connection is established (FTPS)
+ @param fTLS true or 1 if SSL connection is established (FTPS explicit), if fTLS is 2 then a implicit 
+ TLS connection will be established. If fTSL is false or 0, then a pure FTP connection will be established.
  Note: FileZilla Server does not accept OpenSSL 1.1.0f in FTP passive mode and produce the error
  425 Unable to build data connection: TLS session of data connection not resumed. 
- @param fVerbose true print return from server to stdout
+ @param fVerbose true print return from server to stdout, if fVerbose is a string the callback
+ function myname (status, param) will be called, param can be a text or array with status information. 
  @return connection data array. 
  On error false or error text is returned.
 */
@@ -48,10 +61,10 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
 {
   conn = null;  
   
-  socket = fsockopen (host, port, FTP_RECV_TIMEOUT, 1);
+  socket = fsockopen (host, port, FTP_RECV_TIMEOUT);
   if (!socket) {
-      conn = "Connection to FTP-Server ".host.":".port." failed.";
-      return conn;
+    conn = "Connection to FTP Server ".host.":".port." failed.";
+    return conn;
   }
   else
   {
@@ -61,6 +74,21 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
     fProtP = false;
     welcomeMsg = "";
     mode = 0; 
+  
+    if (fTLS==2) {
+      sslCTX = SSL_CTX_new ();
+    	client = SSL_new (sslCTX);
+    	SSL_set_fd (client, socket);
+      if (!SSL_connect (client, host)) {
+        if (sslCTX) {
+        	SSL_free (client);
+        	SSL_CTX_free (sslCTX);
+        }
+        fclose (socket); 
+        return "SSL connection problems. Implicit TLS does not work. Check security method.";
+      }
+    }
+   
     while  (ret = ftp_read (client, fVerbose)) {
 
       code = ret[0];
@@ -74,11 +102,14 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
       }
       
       if (mode==0) {
-        if (fTLS) {
+        if (fTLS==1) {
           ftp_write (client, "AUTH TLS", fVerbose); 
           mode++;
-        }
-        else {
+        }        
+        else
+        {
+          if (fTLS==2)
+            fProtP = ftpProtP (client, fVerbose);
           ftp_write (client, "USER ".user, fVerbose); 
           mode+=2;  
         }
@@ -90,26 +121,16 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
         	client = SSL_new (sslCTX);
         	SSL_set_fd (client, socket);
           if (!SSL_connect (client, host)) {
-            conn = "SSL connection problems.";
+            conn = "SSL connection problems. Explicit TLS does not work. Check security method.";
             fClose = true;
             break;
           }
 
-          // Encrypt data connection        
-          ftp_write (client, "PROT P", fVerbose);
-          while  (ret = ftp_read (client)) {
-            if (strlen (ret[0])!=3) {
-              continue;     
-            }
-            code = ret[0];
-            if (code==200)
-              fProtP=true;
-            break;         
-          } 
-          
+          // Encrypt data connection     
+          ftpProtP (client, fVerbose); 
         }
         else {
-          conn = "TLS/SSL not supported. ".ret["line"];
+          conn = "TLS/SSL is not supported. ".ret["line"];
           fClose = true;
           break;
         }
@@ -130,6 +151,9 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
         else {
           fClose = true;
           conn = "Login failed. ".ret["line"];
+          if (strpos (ret["line"], "AUTH first")!==false) {
+            conn.=" (Check security method)";
+          }
           break;
         }
       }
@@ -145,7 +169,7 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
       }
     }
     if (ret===false) {
-       conn = "Login failed.";   
+       conn = "Login failed. The server closed the connection.";   
        fClose = true;
     }
     
@@ -156,11 +180,27 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
       }
       fclose (socket);    
     }
-    else  {   
-      conn = [client, socket, sslCTX, null, null, fVerbose, "", 0, fProtP, "welcome_msg" => welcomeMsg];      
+    else  {
+      conn = [client, socket, sslCTX, null, null, fVerbose, "", 0, fProtP, "welcome_msg" => welcomeMsg];
     }
   }
   return conn;
+}
+
+// Helper function 
+function ftpProtP (client, fVerbose) {
+  fProtP = false;
+  ftp_write (client, "PROT P", fVerbose);
+  while  (ret = ftp_read (client)) {
+    if (strlen (ret[0])!=3) {
+      continue;     
+    }
+    code = ret[0];
+    if (code==200)
+      fProtP=true;
+    break;
+  }     
+  return fProtP;
 }
 
 /*
@@ -172,31 +212,58 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
 function ftp_pasv (&conn) 
 {
   assign (client, socket, sslCTX) = conn;  
-  ftp_write (client, "PASV", conn[5]);
+  if (fsockipv6 (socket))
+    ftp_write (client, "EPSV", conn[5]);  
+  else
+    ftp_write (client, "PASV", conn[5]);
   while  (ret = ftp_read (client,  conn[5])) {
     if (strlen (ret[0])!=3) {
       continue;     
     }
     code = ret[0];
-    if (code!=227) {
+    if (code!=227 && code!=229) {
       return ret["line"];
     }
     p = strpos (ret["line"], "(");
     if (p!==false) {
       str = trim (substr (ret["line"], p, strlen (ret["line"])-p), "()");     
-      ipData = array (0,0,0,0);
-      portData = array (0,0);      
-      if (6==sscanf (str, "%u,%u,%u,%u,%u,%u", ipData[0], ipData[1], ipData[2], ipData[3], portData[1], portData[0])) {
-        ip = ipData[0].".".ipData[1].".".ipData[2].".".ipData[3];
-        port = portData[1]<<8 |  portData[0];
-        // Connect to data connection
-        socket2 = fsockopen (ip, port, FTP_RECV_TIMEOUT);
-        client2 = socket2;        
-        conn[3]=client2;
-        conn[4]=socket2;
-        conn[6]=ip;
-        conn[7]=port;
-        return [ip, port];        
+      
+      if (code==227) {
+        // IPV4
+        ipData = array (0,0,0,0);
+        portData = array (0,0);      
+        if (6==sscanf (str, "%u,%u,%u,%u,%u,%u", ipData[0], ipData[1], ipData[2], ipData[3], portData[1], portData[0])) {
+          ip = ipData[0].".".ipData[1].".".ipData[2].".".ipData[3];
+          port = portData[1]<<8 |  portData[0];
+          // Connect to data connection
+          socket2 = fsockopen (ip, port, FTP_RECV_TIMEOUT);
+          if (socket2) {
+            client2 = socket2;        
+            conn[3]=client2;
+            conn[4]=socket2;
+            conn[6]=ip;
+            conn[7]=port;
+            return [ip, port];        
+          }
+        }
+      }
+      else {
+        // IPV6
+        list = explode ("|", str);
+        if (isset (list[3])) {
+          port = list[3];
+          
+          ip = fsockip (socket);       
+          socket2 = fsockopen (ip, port, FTP_RECV_TIMEOUT);
+          if (socket2) {
+            client2 = socket2;        
+            conn[3]=client2;
+            conn[4]=socket2;
+            conn[6]=ip;
+            conn[7]=port;
+            return [ip, port];                          
+          }
+        }
       }
     }
     return ret["line"];
@@ -281,7 +348,7 @@ function ftp_list (&conn, &dirList, fMLSD=false)
         return ret2;
       }
 
-      while  (ret2 = ftp_read (conn[3], conn[5])) {
+      while  (ret2 = ftp_read (conn[3])) {
         array_push (dirList, ret2["line"]);
       }
       ftpDataConnTLSClose (conn);  
@@ -323,23 +390,43 @@ function ftp_retr (&conn, filename, fh)
       continue;
     }
     if (ret[0]==150) {
+    
+      bytesToReadTotal = ret[1] * 1024;
 
       ret2=ftpDataConnTLSOpen (conn);
       if (ret2!==true) {
         return ret2;
       }
-    
+
       block = "";
       bytesReadTotal = 0;
+      fCB = gettype  (conn[5])=="string";
+      fAborted = false;
       while (bytesRead=fread (conn[3], block)) {
         fwrite (fh, block, bytesRead);        
         bytesReadTotal+=bytesRead;
+        if (fCB) {
+          if (!call_user_func (conn[5], FTP_STATUS_TRANSFER_PROGRESS, [filename, bytesReadTotal, bytesToReadTotal, false])) {
+            fAborted = true;
+            break;
+          }
+        }
       }
+                  
+      if (fCB) {
+        if (!fAborted)
+          call_user_func (conn[5], FTP_STATUS_TRANSFER_FINISHED, [filename, bytesReadTotal, bytesToReadTotal, false]);
+      }
+      else
       if (conn[5]) {
         print ("[".date ("%H:%i:%s")."] ", formatKBText (bytesReadTotal)." retrieved");
       }
       ftpDataConnTLSClose (conn);  
-      continue;    
+      if (fAborted) {
+        ftp_quit (conn);
+        break;
+      }
+      continue; 
     }
     else
     if (ret[0]==226) { 
@@ -378,6 +465,8 @@ function ftp_stor (&conn, filename, fh)
       continue;
     }
     if (ret[0]==150) {
+    
+      bytesToWriteTotal = filesize (fh);
 
       ret2=ftpDataConnTLSOpen (conn);
       if (ret2!==true) {
@@ -386,14 +475,31 @@ function ftp_stor (&conn, filename, fh)
     
       block = "";
       bytesWroteTotal = 0;
+      fCB = gettype  (conn[5])=="string";
+      fAborted = false;
       while (bytesRead=fread (fh, block)) {
         bytesWrote = fwrite (conn[3], block, bytesRead);        
         bytesWroteTotal+=bytesWrote;
+        if (fCB) {
+          if (!call_user_func (conn[5], FTP_STATUS_TRANSFER_PROGRESS, [filename, bytesWroteTotal, bytesToWriteTotal, true])) {
+            fAborted = true;
+            break;
+          }
+        }
       }
+      if (fCB) {
+        if (!fAborted)
+          call_user_func (conn[5], FTP_STATUS_TRANSFER_FINISHED, [filename, bytesWroteTotal, bytesToWriteTotal, true]);
+      }
+      else
       if (conn[5]) {
         print ("[".date ("%H:%i:%s")."] ", formatKBText (bytesWroteTotal)." sent");
       }
-      ftpDataConnTLSClose (conn);  
+      ftpDataConnTLSClose (conn);
+      if (fAborted) {
+        ftp_quit (conn);
+        break;
+      }
       continue;    
     }
     else
@@ -438,6 +544,51 @@ function ftp_cwd (&conn, dir)
   return false;
 }
 
+/*
+ Get current directory
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param directory to store the current working directory
+ @return true, on error error text or false is returned.
+*/
+function ftp_pwd (&conn, &directory) 
+{
+  assign (client, socket, sslCTX) = conn;  
+
+  ftp_write (client, "PWD", conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+    if (ret[0]==257) {
+      line = ret["line"];
+      p = strpos (line, '"');
+      if (p!==false) {
+        p3 = p;
+        while ((p2 = strpos (line, '"', p3+1)) !==false) {
+          p3 = p2;
+        }
+        if (p3>p) {
+          directory = substr (line, p+1, p3-p-1);
+        }
+        else {
+          p = false;
+        }
+      }
+      if (p===false) {
+        directory = ret[1]; // Directory seems not enquoted
+      }
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
 
 /*
  Set type of data
@@ -468,6 +619,31 @@ function ftp_type (&conn, type)
   return false;
 }
 
+/*
+ Force UTF8 charset for filenames
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param on is true, then UTF8 will be enabled 
+ @return true if UTF8 is supported, on error error text or false is returned.
+*/
+function ftp_opts_utf8 (&conn, on) 
+{
+  assign (client, socket, sslCTX) = conn;  
+  ftp_write (client, "OPTS UTF8 ".(on ? "ON" : "OFF"), conn[5]);
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+    if (ret[0]>=200 && ret[0]<299) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
 
 /*
  Delete a file
@@ -486,8 +662,7 @@ function ftp_dele (&conn, filename)
     if (strlen (ret[0])!=3) {
       continue;
     }
-
-    if (ret[0]==250) { 
+    if (ret[0]==250) {
       return true;
     }
     else {
