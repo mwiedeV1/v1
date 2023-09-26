@@ -243,7 +243,10 @@ function ftp_pasv (&conn)
             conn[4]=socket2;
             conn[6]=ip;
             conn[7]=port;
-            return [ip, port];        
+            return [ip, port];
+          }
+          else {
+            return false;
           }
         }
       }
@@ -262,6 +265,9 @@ function ftp_pasv (&conn)
             conn[6]=ip;
             conn[7]=port;
             return [ip, port];                          
+          }
+          else {
+            return false;
           }
         }
       }
@@ -594,7 +600,7 @@ function ftp_pwd (&conn, &directory)
  Set type of data
  
  @param conn ftp connection data returned form ftp_open ()
- @param type of data, I = binary A= ascii
+ @param type of data, I for binary, A for ascii
  @return true, on error error text or false is returned.
 */
 function ftp_type (&conn, type) 
@@ -644,6 +650,35 @@ function ftp_opts_utf8 (&conn, on)
   }
   return false;
 }
+
+/*
+ Change mode of filename or directory
+ 
+ @param conn ftp connection data returned form ftp_open ()
+ @param mode, octal mode as string .e.g. "666"
+ @param path is the filename or directory 
+ @return true, on error error text or false is returned.
+*/
+function ftp_chmod (&conn, mode, path) 
+{
+  assign (client, socket, sslCTX) = conn;  
+  ftp_write (client, "SITE CHMOD ".mode." ".path, conn[5]);
+  
+  while  (ret = ftp_read (client, conn[5])) {
+    if (strlen (ret[0])!=3) {
+      continue;
+    }
+    if (ret[0]==200) { 
+      return true;
+    }
+    else {
+      return ret["line"];
+    }
+    break;
+  }
+  return false;
+}
+
 
 /*
  Delete a file
