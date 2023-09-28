@@ -53,7 +53,7 @@ LIBWEBP             =
 
 # DynCall dependencies
 DYNCALL_DIR         = dep/dyncall-1.2/dyncall
-DYNCALL_OBJECTS     = dyncall_api.o dyncall_callvm.o dyncall_vector.o dyncall_callf.o dyncall_struct.o dyncall_callvm_base.o
+DYNCALL_OBJECTS     = dyncall_api.o dyncall_callvm.o dyncall_vector.o dyncall_callf.o dyncall_callvm_base.o
 
 # Main definitions
 INST_DIR            = install
@@ -77,6 +77,10 @@ DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_arm32_arm_armhf.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (armv6l,$(ARCH))
 DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_arm32_arm_armhf.o
+EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
+else ifeq (aarch64,$(ARCH))
+EXTRA_FLAGS         = -mpreferred-stack-boundary=4
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_arm64.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL
@@ -150,6 +154,8 @@ dyncall_callf.o: $(DYNCALL_DIR)/dyncall_callf.c
 dyncall_struct.o: $(DYNCALL_DIR)/dyncall_struct.c
 	$(CC) -c $(C_FLAGS) $<
 dyncall_call_arm32_arm_armhf.o: $(DYNCALL_DIR)/dyncall_call_arm32_arm_armhf.S
+	$(CC) -c $(C_FLAGS) $<
+dyncall_call_arm64.o: $(DYNCALL_DIR)/dyncall_call_arm64.S
 	$(CC) -c $(C_FLAGS) $<
 dyncall_call_x64.o: $(DYNCALL_DIR)/dyncall_call_x64.S
 	$(CC) -c $(C_FLAGS) $<

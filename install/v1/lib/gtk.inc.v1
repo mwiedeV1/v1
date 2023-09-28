@@ -70,7 +70,7 @@ else
 function gtkMessageBox (window, msg)
 {
 	global hDLLGTK;
-	markup =  call (hDLLGTK, 'gtk_message_dialog_new_with_markup', [['p', 'i', 'i', 'i', 's'], 'i'], window, 1, 0, 1, msg);
+	markup =  call (hDLLGTK, 'gtk_message_dialog_new_with_markup', [['p', 'i', 'i', 'i', 's'], 'p'], window, 1, 0, 1, msg);
 	call (hDLLGTK, 'gtk_dialog_run', [['p'], 'i'], markup);
 	call (hDLLGTK, 'gtk_widget_destroy', [['p'], 'i'], markup);
 }
@@ -143,28 +143,28 @@ function g_signal_connect_data (instance, name, handler, data=null, destroy_data
 		handler = dlsym (null, "callbackA2");
 		data = id;
 	}
-	return call (hDLLGTK, GTK_SIGNAL_CONNECT_FUNC, [['p','s','p','p','p','i'],'i'], instance, name, handler, data, destroy_data, connect_flags);
+	return call (hDLLGTK, GTK_SIGNAL_CONNECT_FUNC, [['p','s','p','p','p','p'],'i'], instance, name, handler, data, destroy_data, connect_flags);
 }
 
 function gtk_container_add (container, child)
 {
 	global hDLLGTK;
-	call (hDLLGTK, 'gtk_container_add', [['p', 'p'],'i'], container, child);
+	call (hDLLGTK, 'gtk_container_add', [['p', 'p'],'p'], container, child);
 }
 
 function gtk_container_remove (container, child)
 {
 	global hDLLGTK;
-	call (hDLLGTK, 'gtk_container_remove ', [['p', 'p'],'i'], container, child);
+	call (hDLLGTK, 'gtk_container_remove ', [['p', 'p'],'p'], container, child);
 }
 
 function gtk_container_child_get (container, child, first_prop_name, &value)
 {
 	global hDLLGTK;
 	v = binformat (0);
-	call (hDLLGTK, 'gtk_container_child_get', [['p', 'p', 's', 'r', 'p'],'i'], container, child, first_prop_name, v, null);
+	call (hDLLGTK, 'gtk_container_child_get', [['p', 'p', 's', 'r', 'p'],'p'], container, child, first_prop_name, v, null);
 	if (gettype (value)=="number") {
-		value = binparse (v, 7, 0, 1);
+		value = binparse (v, 3, 0, 1); // 32 Bit
 	}
 	else if (gettype (value)=="string")
 		value = memat (binparse (v));
@@ -175,7 +175,7 @@ function gtk_container_child_get (container, child, first_prop_name, &value)
 function gtk_window_new (type)
 {
 	global hDLLGTK;
-	return  call (hDLLGTK, "gtk_window_new", [['i'],'i'], type);
+	return  call (hDLLGTK, "gtk_window_new", [['i'],'p'], type);
 }
 
 function gtk_window_set_title (window, title)
@@ -219,49 +219,49 @@ function gtk_widget_set_size_request (window, width, height)
 function gtk_hbutton_box_new  ()
 {
 	global hDLLGTK;
-	return call (hDLLGTK, "gtk_hbutton_box_new", [[],'i']);
+	return call (hDLLGTK, "gtk_hbutton_box_new", [[],'p']);
 }
 
 function gtk_vbutton_box_new   ()
 {
 	global hDLLGTK;
-	return call (hDLLGTK, "gtk_vbutton_box_new", [[],'i']);
+	return call (hDLLGTK, "gtk_vbutton_box_new", [[],'p']);
 }
 
 function gtk_hpaned_new ()
 {
 	global hDLLGTK;
-	return call (hDLLGTK, "gtk_hpaned_new", [['i'],'i'], direction);
+	return call (hDLLGTK, "gtk_hpaned_new", [['i'],'p'], direction);
 }
 
 function gtk_vpaned_new ()
 {
 	global hDLLGTK;
-	return call (hDLLGTK, "gtk_vpaned_new", [['i'],'i'], direction);
+	return call (hDLLGTK, "gtk_vpaned_new", [['i'],'p'], direction);
 }
 
 function gtk_paned_new (direction)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, direction==0 ? "gtk_hpaned_new" : "gtk_vpaned_new", [['i'],'i'], direction);
+	return call (hDLLGTK, direction==0 ? "gtk_hpaned_new" : "gtk_vpaned_new", [['i'],'p'], direction);
 }
 
 function gtk_paned_add1  (paned, widget)
 {
 	global hDLLGTK;
-	call (hDLLGTK, "gtk_paned_add1", [['p', 'p'],'i'], paned, widget);
+	call (hDLLGTK, "gtk_paned_add1", [['p', 'p'],'p'], paned, widget);
 }
 
 function gtk_paned_add2  (paned, widget)
 {
 	global hDLLGTK;
-	call (hDLLGTK, "gtk_paned_add2", [['p', 'p'],'i'], paned, widget);
+	call (hDLLGTK, "gtk_paned_add2", [['p', 'p'],'p'], paned, widget);
 }
 
 function gtk_table_new  (rows, columns, homogeneous)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, "gtk_table_new", [['i', 'i', 'i'],'i'], rows, columns, homogeneous);
+	return call (hDLLGTK, "gtk_table_new", [['i', 'i', 'i'],'p'], rows, columns, homogeneous);
 }
 
 function gtk_table_set_homogeneous  (table, homogeneous)
@@ -291,13 +291,13 @@ function gtk_layout_new (hadjustment, vadjustment)
 function gtk_layout_put (layout, child_widget, x, y)
 {
 	global hDLLGTK;
-	call (hDLLGTK, 'gtk_layout_put', [['p', 'p', 'i', 'i'],'i'], layout, child_widget, x, y);
+	call (hDLLGTK, 'gtk_layout_put', [['p', 'p', 'i', 'i'],'p'], layout, child_widget, x, y);
 }
 
 function gtk_layout_move (layout, child_widget, x, y)
 {
 	global hDLLGTK;
-	call (hDLLGTK, 'gtk_layout_move', [['p', 'p', 'i', 'i'],'i'], layout, child_widget, x, y);
+	call (hDLLGTK, 'gtk_layout_move', [['p', 'p', 'i', 'i'],'p'], layout, child_widget, x, y);
 }
 
 function gtk_vbox_new (homogeneous, spacing)
@@ -315,7 +315,7 @@ function gtk_hbox_new (homogeneous, spacing)
 function gtk_box_pack_start (box, child, expand, fill, padding)
 {
 	global hDLLGTK;
-	call (hDLLGTK, 'gtk_box_pack_start', [['p', 'p', 'b', 'b', 'p'], 'i'], box, child, expand, fill, padding);
+	call (hDLLGTK, 'gtk_box_pack_start', [['p', 'p', 'b', 'b', 'p'], 'p'], box, child, expand, fill, padding);
 }
 
 /* Widgets */
@@ -452,13 +452,13 @@ function gtk_widget_grab_default (widget)
 function gtk_entry_new ()
 {
 	global hDLLGTK;
-	return call (hDLLGTK, "gtk_entry_new", [[],'i']);
+	return call (hDLLGTK, "gtk_entry_new", [[],'p']);
 }
 
 function gtk_entry_new_with_buffer (buffer)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, "gtk_entry_new", [['p'],'i'], buffer);
+	return call (hDLLGTK, "gtk_entry_new", [['p'],'p'], buffer);
 }
 
 function gtk_entry_buffer_new (text, size)
@@ -482,7 +482,7 @@ function gtk_entry_get_text (entry)
 function gtk_button_new_with_label (str)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, 'gtk_button_new_with_label', [['s'],'i'], str);
+	return call (hDLLGTK, 'gtk_button_new_with_label', [['s'],'p'], str);
 }
 
 function gtk_label_new (str)
@@ -512,7 +512,7 @@ function gtk_drawing_area_new ()
 function gtk_drawing_area_size  (widget, width, height)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, 'gtk_drawing_area_size ', [['p','i','i'], 'i'], widget, width, height);
+	return call (hDLLGTK, 'gtk_drawing_area_size ', [['p','i','i'], 'p'], widget, width, height);
 }
 
 /* Menu */
@@ -537,13 +537,13 @@ function gtk_separator_menu_item_new ()
 function gtk_menu_shell_append (menu, menuitem)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, 'gtk_menu_shell_append', [['p', 'p'],'i'], menu, menuitem);
+	return call (hDLLGTK, 'gtk_menu_shell_append', [['p', 'p'],'p'], menu, menuitem);
 }
 
 function gtk_menu_item_set_submenu (rootmenu, submenu)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, 'gtk_menu_item_set_submenu', [['p', 'p'],'i'], rootmenu, submenu);
+	return call (hDLLGTK, 'gtk_menu_item_set_submenu', [['p', 'p'],'p'], rootmenu, submenu);
 }
 
 function gtk_menu_bar_new  ()

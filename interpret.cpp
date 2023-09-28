@@ -65,7 +65,7 @@ int freeHandle(void *handle, int handletype)
 
 // Check GCC
 #if __GNUC__
-#if __x86_64__ || __ppc64__
+#if __x86_64__ || __ppc64__ || __aarch64__
 #define ENVIRONMENT64
 #else
 #define ENVIRONMENT32
@@ -1504,7 +1504,7 @@ int func_binparse(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCon
 	if (argvalues.size() > 2) {
 		if (argvalues[2]->datatype > DataValue::DATATYPE_STR)
 			return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_NUM_REQUIRED;
-		pos = (unsigned int)argvalues[2]->numvalue;
+		pos = (SYS_UINT)argvalues[2]->numvalue;
 	}
 	bool fSigned = false;
 	if (argvalues.size() > 3) {
@@ -1512,11 +1512,11 @@ int func_binparse(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCon
 			return WSCRIPT_RET_PARAM3 | WSCRIPT_RET_BOOL_REQUIRED;
 		fSigned = (bool)*argvalues[3];
 	}
-	unsigned int nbo = 0;
+	SYS_UINT nbo = 0;
 	if (argvalues.size() > 4) {
 		if (argvalues[4]->datatype > DataValue::DATATYPE_STR)
 			return WSCRIPT_RET_PARAM4 | WSCRIPT_RET_NUM_REQUIRED;
-		nbo = (unsigned int)argvalues[4]->numvalue;
+		nbo = (SYS_UINT)argvalues[4]->numvalue;
 	}
 
 	argvalues[0]->toString();
@@ -1595,15 +1595,15 @@ int func_binparse(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCon
 
 		case 7:
 			// Pointer / System default
-			if (argvalues[0]->value.length() >= (sizeof(unsigned int) + pos)) {
+			if (argvalues[0]->value.length() >= (sizeof(SYS_UINT) + pos)) {
 				if (fSigned)
-					ret.numvalue = (double)*((int *)(argvalues[0]->value.c_str() + pos));
+					ret.numvalue = (double)*((SYS_INT*)(argvalues[0]->value.c_str() + pos));
 				else
-					ret.numvalue = (double)*((unsigned int *)(argvalues[0]->value.c_str() + pos));
+					ret.numvalue = (double)*((SYS_UINT*)(argvalues[0]->value.c_str() + pos));
 				ret.datatype = DataValue::DATATYPE_NUM;
 			}
 			else {
-				warnLen = sizeof(unsigned int);
+				warnLen = sizeof(SYS_UINT);
 			}
 			break;
 
@@ -1640,11 +1640,11 @@ int func_binformat(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCo
 		type = (int)argvalues[1]->numvalue;
 	}
 
-	unsigned int nbo = 0;
+	SYS_UINT nbo = 0;
 	if (argvalues.size() > 2) {
 		if (argvalues[2]->datatype > DataValue::DATATYPE_STR)
 			return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_NUM_REQUIRED;
-		nbo = (unsigned int)argvalues[2]->numvalue;
+		nbo = (SYS_UINT)argvalues[2]->numvalue;
 	}
 
 	ret.datatype = DataValue::DATATYPE_STR;
@@ -1699,7 +1699,7 @@ int func_binformat(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCo
 		case 7: {
 			// Pointer / System default
 			unsigned int bin = (double)argvalues[0]->numvalue;
-			ret.value.assign((const char *)&bin, sizeof(unsigned int));
+			ret.value.assign((const char *)&bin, sizeof(SYS_UINT));
 		}
 		break;
 
@@ -5741,7 +5741,7 @@ int func_universal_call(vector<DataValue *> &argvalues, DataValue &ret, Interpre
 			v = (void *)(uint64_t)argvalues[x + 3]->numvalue;
 			voidList[x2++] = v;
 #else
-			dcArgPointer(vm, (DCpointer)(unsigned int)argvalues[x + 3]->numvalue);
+			dcArgPointer(vm, (DCpointer)(SYS_UINT)argvalues[x + 3]->numvalue);
 #endif
 		}
 		else if (type == CALL_TYPE_INT) {
@@ -5991,7 +5991,7 @@ int func_dlsym(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 		// Internal callback proc
 		for (int i = 0; i < sizeof(g_callbackList) / sizeof(SCallbackProc); i++) {
 			if (argvalues[1]->value == g_callbackList[i].name) {
-				ret = (double)*(SYS_UINT *)&g_callbackList[i].procPtr;
+				ret = (double) (SYS_UINT) g_callbackList[i].procPtr;
 				break;
 			}
 		}
@@ -6002,7 +6002,7 @@ int func_dlsym(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 
 	void *procAddr = dlsym(hDLL, argvalues[1]->value.c_str());
 	if (procAddr)
-		ret = (double)*(SYS_UINT *)&procAddr;
+		ret = (double)*(SYS_UINT*)&procAddr;
 	else
 		ctx.warnInterprete(WFormattedString("%s not found.", argvalues[1]->value.c_str()));
 	return 0;
@@ -6015,7 +6015,7 @@ int func_call(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext
 		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_NUM_REQUIRED;
 	}
 
-	HMODULE hDLL = (void *)(unsigned int)argvalues[0]->numvalue;
+	HMODULE hDLL = (void*) (SYS_UINT) argvalues[0]->numvalue;
 	if (argvalues.size() < 2 || argvalues[1]->datatype > DataValue::DATATYPE_STR) {
 		return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_STR_REQUIRED;
 	}
@@ -6023,7 +6023,7 @@ int func_call(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext
 	ret = false;
 	void *procAddr;
 	if (argvalues[1]->datatype == 2) {
-		procAddr = (void *)(unsigned int)argvalues[1]->numvalue;
+		procAddr = (void*) (SYS_UINT) argvalues[1]->numvalue;
 		argvalues[1]->toString();
 	}
 	else {
@@ -6339,8 +6339,6 @@ int func_memat(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 		size = argvalues[1]->numvalue;
 	}
 	void *memory = (void *)(SYS_UINT)argvalues[0]->numvalue;
-	// memcpy (&memory,  &argvalues[0]->numvalue, sizeof (memory));
-	// memory = (void*) *((unsigned int*) &argvalues[0]->numvalue);
 	if (size) {
 		ret.value.resize(size);
 		memcpy((void *)ret.value.c_str(), (void *)memory, size);
@@ -6381,7 +6379,7 @@ int func_memset(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 		pos = argvalues[2]->numvalue;
 	}
 
-	char *memPnt = (char *)(unsigned int)argvalues[0]->numvalue + pos;
+	char *memPnt = (char *)(SYS_UINT)argvalues[0]->numvalue + pos;
 
 	memcpy(memPnt, argvalues[1]->value.c_str(), argvalues[1]->value.size());
 	ret = (int)argvalues[1]->value.size();

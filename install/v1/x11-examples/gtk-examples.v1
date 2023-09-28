@@ -126,6 +126,7 @@ function move_button (button, layout)
 	y = 0;
 	gtk_container_child_get (layout, button, "y", y, null);
 	x = x % 100 + 10;
+
 	gtk_layout_move (layout, button, x, y);
 }
 
@@ -322,7 +323,7 @@ function example_cairo2 (window, mainLayout)
 }
 
 
-function example_cauro3_timer (param)
+function example_cairo3_timer (param)
 {
 	global cairoDrawArea, cairoAngle;
 	w = gtk_widget_get_allocated_width (cairoDrawArea);
@@ -373,7 +374,7 @@ function example_cairo3 (window, mainLayout)
 		g_source_remove (cairoTimer);
 		cairoTimer = null;
 	}
-	cairoTimer = g_timeout_add (80, "example_cauro3_timer");
+	cairoTimer = g_timeout_add (80, "example_cairo3_timer");
 	return cairoDrawArea;
 }
 
@@ -444,6 +445,10 @@ function menu_item_pressed (instance, id)
 
 // Create main window
 window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+if (!window) {
+	print ("Cannot create GTK window.");
+	exit (1);
+}
 gtk_window_set_resizable (window, true);
 gtk_widget_set_size_request (window, WINDOW_WIDTH, WINDOW_HEIGHT);
 if (version(1)!='Windows')
