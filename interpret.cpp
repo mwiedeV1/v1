@@ -3891,7 +3891,7 @@ int func_print_r(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCont
 		ctx.printHeaders();
 		cout << str.c_str();
 		if (ctx.fAutoNL)
-			printf("\r\n");
+			printf("\n");
 		else if (ctx.programMode != InterpreterContext::PROGRAM_MODE_WEB)
 			fflush(stdout);
 		ret = true;
@@ -5480,7 +5480,8 @@ int func_nl2br(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 		if (*c == '\n') {
 			ret.value.append("<br>");
 		}
-		else {
+		else
+		if (*c != '\r') {
 			ret.value.append(c, 1);
 		}
 		c++;
@@ -7699,7 +7700,7 @@ DataValue *Expression::calc(InterpreterContext &ctx, DataValue &retvalue, unsign
 										retvalue = *arrayValue;
 								}
 							}
-						}
+ÿ 		翜}
 					}
 					arrayValue->refPnt = arrayValue;
 					return arrayValue;
