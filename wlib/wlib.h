@@ -11,7 +11,7 @@ Licence: GPL V3
 
 #if defined(__CYGWIN__)
 #include <alloca.h>     // alloca
-#else //__CYGWIN__
+#endif //__CYGWIN__
 
 #include "WSystem.h"
 #include "WFile.h"
