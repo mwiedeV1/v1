@@ -5545,7 +5545,7 @@ int callUserFunc(const string &operation, vector<DataValue *> &argvalues, DataVa
 					// Copy only reference
 					DataValue datavalue;
 					DataValue *newDataValue = &ctx.symbols[ctx.funcDeep + 1]->put(key, datavalue)->m_value;
-					newDataValue->refPnt = argValue->refPnt;
+					newDataValue->refPnt = argValue->refPnt ? argValue->refPnt : argValue;
 					newDataValue->datatype = argValue->datatype;
 					newDataValue->flags = argValue->flags | DataValue::FLAGS_USEREF;
 				}
