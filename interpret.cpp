@@ -2479,7 +2479,7 @@ int func_fileno (vector<DataValue*>& argvalues, DataValue& ret, InterpreterConte
 	Handle* h = (Handle*) *argvalues[0];
 	if (h && ctx.handleHT.isKey (h)) {
 		if (h->handletype==1)
-			ret = (int) _fileno ((FILE*) *((WFile*) h->handle));
+			ret = (int) fileno ((FILE*) *((WFile*) h->handle));
 		else
 		if (h->handletype==2) 
 			ret = (int) (SOCKET) *((WSocket*) h->handle);
