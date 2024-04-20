@@ -1,0 +1,122 @@
+<?v1
+/* 
+  Extract TAR archive with optional GZ/BZ2 decompression.
+  
+  Usage: v1 untar.v1 [OPTIONS] <filename.tar[.gz|.bz2]>
+  
+  Options:
+  
+  -C directory to extract, if not specified local directory will be used.
+  -f overwrite existing files.
+  -v verbose, print information about every extracted entry.
+*/
+
+error_reporting (0); // 1 to show all warnings
+require_once ("../lib/tar.inc.v1");
+
+const ROOT_PATH = getcwd  ();
+
+fVerbose = true;
+options = array ("dstPath"=>".");
+argIdx = 2;
+arg = "";
+
+while (isset (argv[argIdx])) {
+
+  arg = argv[argIdx];
+
+  if (arg=="-C") {
+    if (isset (argv[argIdx+1])) {
+      options["dstPath"] = argv[argIdx+1];
+      argIdx++;
+    }
+    else {
+      print ("Directory required.");
+      exit (1);
+    }
+  }
+	else
+  if (arg=="-v") {
+    options["verbose"]=true;
+  }
+  else
+  if (arg=="-f") {
+    options["overwrite"]=true;
+  }
+  else 
+  if (argIdx<(count (argv)-1))
+  {
+    print ("Unknown option ".arg);
+    exit (1);
+  }
+  
+  argIdx++;
+}
+
+if (!empty (arg) && arg!="--help") {
+  filename = arg;
+  if (!is_file (filename)) { 
+    print ("File not found.");
+    exit (2);
+  }
+  
+  pi = pathinfo (filename);
+  t = microtime (true);
+  
+  if (pi["extension"]=="gz") {
+    require_once ("../lib/zlib.inc.v1");
+    dstFilename = pi["dirname"]."/".pi["filename"];
+    if (is_file (dstFilename) && empty (options["overwrite"])) {
+      print (dstFilename." just exists.\nDo you want to overwrite? y/n");
+      if (getch ()!='y') {
+        exit (1);
+      }
+    }
+    ret = gz_decompress_file (filename, dstFilename, true);
+    if (ret<0) {
+      print ("Cannot decompress, gunzip error ".ret);
+      exit (3);
+    }
+    unlink (filename);
+    filename = dstFilename;
+  }
+  else
+  if (pi["extension"]=="bz2") {
+    require_once ("../lib/bzip2.inc.v1");
+    dstFilename = pi["dirname"]."/".pi["filename"];
+    if (is_file (dstFilename) && empty (options["overwrite"])) {
+      print (dstFilename." just exists.\nDo you want to overwrite? y/n");
+      if (getch ()!='y') {
+        exit (1);
+      }
+    }
+    ret = bz_decompress_file (filename, dstFilename, true);
+    if (ret<0) {
+      print ("Cannot decompress, bzip2 error ".ret);
+      exit (3);
+    }
+    // unlink (filename);
+    filename = dstFilename;
+  }
+  print ("Extracting  ".filename." ... please wait ...");
+  ret = tar_extract (filename, options["dstPath"], ["verbose"=>options["verbose"]]);
+  if (!empty (ret["errText"])) {
+    print (ret["errText"]);
+    exit (4);
+  }
+  print (ret["fileCnt"]." files (".formatKBText (ret["size"]).") and ".ret["dirCnt"]." directories extracted to ".options["dstPath"]." within ".(microtime (true)-t)." seconds.");
+  exit (0);
+}
+else {
+  print (
+    "Usage: v1 untar.v1 [OPTIONS] <filename.tar[.gz|.bz2]>\r\n\r\n".
+    "Options:\r\n".    
+    " -C directory to extract, if not specified local directory will be used.\r\n".
+    " -f overwrite existing files.\r\n".
+    " -v verbose, print information about every extracted entry.\r\n"
+    );
+    
+  exit (1);
+}
+
+?>

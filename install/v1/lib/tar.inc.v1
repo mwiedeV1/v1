@@ -1,239 +1,280 @@
 <?v1
 
+require_once ("posix.inc.v1");
 require_once ("utils.inc.v1");
 
-function tar_truncate_name (&str)
-{
-	for (i=0; i<strlen (str); i++) {
-		if (0==binparse (str, 1, i))
-			break;
-	}
-	resize (str,  i);
+function tar_truncate_name (&str) {
+  for (i=0;i<strlen (str);i++) {
+    if (0==binparse (str, 1, i))
+      break;
+  }
+  resize (str,  i);
 }
 
-function tar_checksum (&str, size)
-{
-	checksum = 0;
-	for (i=0; i<size; i++) {
-		checksum += (0xFF & binparse (str, 1, i));
-	}
-	return checksum;
+function tar_checksum (&str, size) {
+  checksum = 0;
+  for (i=0;i<size;i++) {  
+    checksum += binparse (str, 1, i);
+  }
+  return checksum;
 }
 
-function tar_read_header (fh)
+function tar_read_header (fh) 
 {
-	header = array (
-	             "name"    => 100,
-	             "mode"    => 8,
-	             "uid"     => 8,
-	             "gid"     => 8,
-	             "size"    => 12,
-	             "mtime"   => 12,
-	             "chksum"  => 8,
-	             "linkflag"=> 1,
-	             "linkname"=> 100,
-	             "magic"   => 8,
-	             "uname"   => 32,
-	             "gname"   => 32,
-	             "devmajor"=> 8,
-	             "devminor"=> 8,
-	             "rest"    => 167
-	         );
-	dataPos = ftell (fh)+512;
+  header = array (
+    "name"    => 100,
+    "mode"    => 8,
+    "uid"     => 8,
+    "gid"     => 8,
+    "size"    => 12,
+    "mtime"   => 12,
+    "chksum"  => 8,
+    "linkflag"=> 1,
+    "linkname"=> 100,
+    "magic"   => 8,
+    "uname"   => 32,
+    "gname"   => 32,
+    "devmajor"=> 8,
+    "devminor"=> 8,
+    "rest"    => 167
+  );
+  dataPos = ftell (fh)+512;
+  
+  if (dataPos>filesize (fh)) {
+    return -1;
+  }
 
-	if (dataPos>filesize (fh)) {
-		return -1;
-	}
+  checksum = 0;
+  foreach (header as key => len) {
+    read = fread (fh, header[key], len);
+    if (read<len) 
+      return -1;
+    if (key=="chksum")
+      checksum+=256;
+    else
+      checksum+=tar_checksum (header[key], len);
+  }
+  
+  tar_truncate_name (header["chksum"]);
+  if (empty (header["chksum"])) {
+    return false; // Last TAR header
+  }
 
-	checksum = 0;
-	foreach (header as key => len) {
-		read = fread (fh, header[key], len);
-		if (read<len)
-			return -1;
-		if (key=="chksum")
-			checksum+=tar_checksum ("        ", 8);
-		else
-			checksum+=tar_checksum (header[key], len);
-	}
+  // Checksum
+  chksumDec = 0;
+  sscanf (header["chksum"], "%06o", chksumDec);
+   
+  if (header["chksum"]!=sprintf ("%06o", checksum)) {
+    // printf ("Wrong checksum ".header["chksum"]." (".chksumDec.") != ".sprintf ("%06o", checksum)." (".checksum.")");
+    return -1;
+  }
+  
+  // Parse form octal to decimal
+  if (sscanf (header["size"], "%o", header["size"])!=1)
+    return false;
+    
+  if (sscanf (header["mtime"], "%o", header["mtime"])!=1)
+    return false;
+    
+  // Truncate names
+  tar_truncate_name (header["name"]);
+  tar_truncate_name (header["linkname"]);
+  tar_truncate_name (header["uname"]);
+  tar_truncate_name (header["gname"]);
+  
+  fseek (fh, dataPos);
 
-	tar_truncate_name (header["chksum"]);
-	if (empty (header["chksum"])) {
-		return false; // Last TAR header
-	}
+  if (header["linkflag"]=="L" && header["name"]=="././@LongLink") {
+    // Read long filename
+    longFilename = "";
+    fread (fh, longFilename, header["size"]);
+    if (strlen (longFilename)!=header["size"])
+      return -1;
 
-	// Checksum
-	if (header["chksum"]!=sprintf ("%.6o  ", checksum)) {
-		return -1;
-	}
+    // Skip 512 Byte block
+    size=(512-(header["size"] % 512));
+    fseek (fh, ftell (fh)+size);
 
-	// Parse form octal to decimal
-	if (sscanf (header["size"], "%o", header["size"])!=1)
-		return false;
-	if (sscanf (header["mtime"], "%o", header["mtime"])!=1)
-		return false;
-	// Truncate names
-	tar_truncate_name (header["name"]);
-	tar_truncate_name (header["linkname"]);
-	tar_truncate_name (header["uname"]);
-	tar_truncate_name (header["gname"]);
-
-	fseek (fh, dataPos);
-
-	return header;
+    // Now comes the real block
+    header = tar_read_header (fh);
+    if (!is_array (header)) {
+      return -1;
+    }
+    else {
+      header["name"]=trim (longFilename);
+    }
+  }
+  // Remove relative paths for security
+  header["name"] = str_replace (["../", "..\\"], ["./", "./"], header["name"]);
+  
+  return header;
 }
 
-function tar_extract (tarFilename, dstPath=".", options=array ())
-{
+function tar_extract (tarFilename, dstPath=".", options=array ()) {
 
-	ret = array (
-	          "fileCnt" => 0,
-	          "dirCnt" => 0,
-	          "size" => 0,
-	          "log" => "",
-	          "errText" => ""
-	      );
+  ret = array (
+    "fileCnt" => 0,
+    "dirCnt" => 0,
+    "size" => 0,
+    "log" => "",
+    "errText" => ""
+  );
+	
+	fVerbose = !empty (options["verbose"]);
+  
+  fh = fopen (tarFilename);
+  if (!fh) {
+    ret["errText"] = "Cannot open TAR file: ".tarFilename;
+    ret["log"].=ret["errText"]."\n";
+    return ret;
+  }
+  
+  while (!feof (fh)) {
+    header = tar_read_header (fh);
+    if (!is_array (header)) {
+      if (header==-1) {
+        ret["errText"] = "TAR header corrupt";
+        ret["log"].=ret["errText"]."\n";
+      }
+      break;
+    }
+    else {
+      if (header["linkflag"]==0) {
+        log = dstPath."/".header["name"].", ".formatKBText (header["size"]);
+        if (fVerbose) {
+          print (log);
+          ret["log"].=log."\n";
+        }
+        // Read file
+        dstFilename = dstPath."/".header["name"];
+        fh2 = fopen (dstFilename, "w+");
+        if (!fh2) {
+          ret["errText"] = "Cannot create file: ".dstFilename;
+          ret["log"].=ret["errText"]."\n";
+          break;
+        }
+        else {
+          size = header["size"];
+          buf = "";
+          while (size>0) {
+            bufSize = 0xFFFF;
+            if (size<bufSize)
+              bufSize=size;
+            read=fread (fh, buf, bufSize);
+            if (read<=0)
+              break;
+            fwrite (fh2, buf);
+            size-=read;
+          }
+          fclose (fh2);
+          
+          // Set file time
+          touch (dstFilename, header["mtime"], header["mtime"]);
+          
+          // Set mode          
+          if (sscanf (header["mode"], "%o", header["mode"])==1)
+            chmod (dstFilename, header["mode"]);
 
-	fh = fopen (tarFilename);
-	if (!fh) {
-		ret["errText"] = "Cannot open TAR file: ".tarFilename;
-		ret["log"].=ret["errText"]."\r\n";
-		return ret;
-	}
-
-	while (!feof (fh)) {
-		header = tar_read_header (fh);
-		if (!is_array (header)) {
-			if (header==-1) {
-				ret["errText"] = "TAR header corrupt";
-				ret["log"].=ret["errText"]."\r\n";
-			}
-			break;
-		}
-		else {
-			if (header["linkflag"]==0) {
-				ret["log"].=header["name"].", ".formatKBText (header["size"])."\r\n";
-
-				// Read file
-				dstFilename = dstPath."/".header["name"];
-				fh2 = fopen (dstFilename, "w+");
-				if (!fh2) {
-					ret["errText"] = "Cannot create file: ".dstFilename;
-					ret["log"].=ret["errText"]."\r\n";
-					break;
-				}
-				else {
-					size = header["size"];
-					buf = "";
-					while (size>0) {
-						bufSize = 0xFFFF;
-						if (size<bufSize)
-							bufSize=size;
-						read=fread (fh, buf, bufSize);
-						if (read<=0)
-							break;
-						fwrite (fh2, buf);
-						size-=read;
-					}
-					fclose (fh2);
-
-					// Set file time
-					touch (dstFilename, header["mtime"], header["mtime"]);
-					if (size>0) {
-						ret["errText"] = "Filesize incorrect: ".dstFilename;
-						ret["log"].=ret["errText"]."\r\n";
-						break;
-					}
-				}
-				// Skip 512 Byte block
-				if (header["size"]<512)
-					rest = 512-header["size"];
-				else
-					rest = 512- (header["size"] % 512);
-				fseek (fh, ftell (fh)+rest);
-				ret["fileCnt"]++;
-				ret["size"]+=header["size"];
-
-			}
-			else if (header["linkflag"]==5) {
-				if (!is_dir (dstPath."/".header["name"])) {
-					if (!mkdir (dstPath."/".header["name"])) {
-						ret["errText"] = "Cannot create directory: ".dstPath."/".header["name"];
-						ret["log"].=ret["errText"]."\r\n";
-						break;
-					}
-				}
-				ret["dirCnt"]++;
-
-				// Set directory time
-				touch (dstPath."/".header["name"], header["mtime"], header["mtime"]);
-			}
-			else {
-				// Unknown linkflag
-				// Ignore header but skip size
-				if (header["size"]>0) {
-					size = header["size"];
-					// Skip 512 Byte block
-					if (header["size"]<512)
-						size+=(512-header["size"]);
-					else
-						size+=(512-(header["size"] % 512));
-					fseek (fh, ftell (fh)+size);
-				}
-			}
-		}
-	}
-	fclose (fh);
-	return ret;
+          if (size>0) {
+            ret["errText"] = "Filesize incorrect: ".dstFilename;
+            ret["log"].=ret["errText"]."\n";
+            break;
+          }
+        }
+        // Skip 512 Byte block
+        if ((header["size"] % 512)!=0) {
+          rest = 512-(header["size"] % 512);
+          fseek (fh, ftell (fh)+rest);
+        }
+        ret["fileCnt"]++;
+        ret["size"]+=header["size"];
+      }
+      else 
+      if (header["linkflag"]==5) 
+      {
+        log = dstPath."/".header["name"];
+        if (fVerbose) {
+          print (log);
+          ret["log"].=log."\n";
+        }
+        if (!is_dir (dstPath."/".header["name"])) {
+          if (!mkdir (dstPath."/".header["name"])) {
+            ret["errText"] = "Cannot create directory: ".log;
+            ret["log"].=ret["errText"]."\n";
+            break;
+          }
+        }
+        ret["dirCnt"]++;
+        // Set directory time
+        touch (dstPath."/".header["name"], header["mtime"], header["mtime"]);
+      }
+      else {
+        // Unknown linkflag
+        // Ignore header but skip size
+        if (header["size"]>0) {
+          size = header["size"];
+          // Skip 512 Byte block
+          if (header["size"]<512)
+            size=512;
+          else
+            size+=(512-(header["size"] % 512));
+          fseek (fh, ftell (fh)+size);
+        }
+      }
+    }
+  }
+  fclose (fh);
+  return ret;
 }
 
-function tar_info (tarFilename)
-{
+function tar_info (tarFilename) {
 
-	ret = array (
-	          "fileCnt" => 0,
-	          "dirCnt" => 0,
-	          "size" => 0,
-	          "headers" => array (),
-	          "errText" => ""
-	      );
+  ret = array (
+    "fileCnt" => 0,
+    "dirCnt" => 0,
+    "size" => 0,
+    "headers" => array (),
+    "errText" => ""
+  );
 
-	fh = fopen (tarFilename);
-	if (!fh) {
-		ret["errText"] = "Cannot open TAR file: ".tarFilename;
-		return ret;
-	}
+  fh = fopen (tarFilename);
+  if (!fh) {
+    ret["errText"] = "Cannot open TAR file: ".tarFilename;  
+    return ret;
+  }
 
-	while (!feof (fh)) {
-		header = tar_read_header (fh);
-		if (!is_array (header)) {
-			if (header==-1) {
-				ret["errText"] = "TAR header corrupt";
-			}
-			break;
-		}
-		else {
-			unset (header["rest"]);
-			array_push (ret["headers"], header);
-			if (header["linkflag"]==0) {
-				ret["fileCnt"]++;
-				ret["size"]+=header["size"];
-			}
-			else if (header["linkflag"]==5) {
-				ret["dirCnt"]++;
-			}
-			if (header["size"]>0) {
-				size = header["size"];
-				// Skip 512 Byte block
-				if (header["size"]<512)
-					size+= (512-header["size"]);
-				else
-					size+=  (512-(header["size"] % 512));
-				fseek (fh, ftell (fh)+size);
-			}
-		}
-	}
-	fclose (fh);
-	return ret;
+  while (!feof (fh)) {
+    header = tar_read_header (fh);    
+    if (!is_array (header)) {
+      if (header==-1) {
+        ret["errText"] = "TAR header corrupt";
+      }
+      break;
+    }
+    else {
+      unset (header["rest"]);
+      array_push (ret["headers"], header);
+      if (header["linkflag"]==0) {
+        ret["fileCnt"]++;
+        ret["size"]+=header["size"];
+      }
+      else 
+      if (header["linkflag"]==5) {
+        ret["dirCnt"]++;
+      }
+      if (header["size"]>0) {
+        size = header["size"];
+        // Skip 512 Byte block
+        if (header["size"]<512)
+          size=512;
+        else
+          size+=(512-(header["size"] % 512));
+        fseek (fh, ftell (fh)+size);
+      }
+    }
+  }
+  fclose (fh);
+  return ret;
 }
 
 ?>

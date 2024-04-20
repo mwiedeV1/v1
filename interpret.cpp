@@ -2471,6 +2471,28 @@ int func_readdir(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCont
 	return 0;
 }
 
+int func_fileno (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+
+	if (argvalues[0]->datatype!=DataValue::DATATYPE_HANDLE) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_HANDLE_REQUIRED;
+	}
+	Handle* h = (Handle*) *argvalues[0];
+	if (h && ctx.handleHT.isKey (h)) {
+		if (h->handletype==1)
+			ret = (int) _fileno ((FILE*) *((WFile*) h->handle));
+		else
+		if (h->handletype==2) 
+			ret = (int) (SOCKET) *((WSocket*) h->handle);
+		else
+			ret = (int) 0;
+	}
+	else {
+		ctx._warnInterprete (WException ("No valid handle", -1), ctx);
+		ret = false;
+	}
+	return 0;
+}
+
 int func_fopen(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
 {
 	if (PARAM1_NOSTR) {
@@ -5542,10 +5564,14 @@ int callUserFunc(const string &operation, vector<DataValue *> &argvalues, DataVa
 			else {
 				DataValue *argValue = argvalues[count + argOffs];
 				if (e->datatype == DataValue::DATATYPE_REFERENCE && !(argValue->flags & (DataValue::FLAGS_NOWRITE | DataValue::FLAGS_DUPARG))) {
+					if (!argValue->refPnt) {
+						ctx.abortInterprete (WFormattedString ("%s() expects parameter %u as reference variable in %s (%u)", operation.c_str (), i+1, ctx.getFilenameByIdx(WSCRIPT_FILE(line)), WSCRIPT_LINE(line)));
+						return -1;
+					}
 					// Copy only reference
 					DataValue datavalue;
 					DataValue *newDataValue = &ctx.symbols[ctx.funcDeep + 1]->put(key, datavalue)->m_value;
-					newDataValue->refPnt = argValue->refPnt ? argValue->refPnt : argValue;
+					newDataValue->refPnt = argValue->refPnt;
 					newDataValue->datatype = argValue->datatype;
 					newDataValue->flags = argValue->flags | DataValue::FLAGS_USEREF;
 				}
@@ -7148,6 +7174,8 @@ void wScriptInitFunctions(InterpreterContext &ctx)
 		{"gethostbyaddr", func_gethostbyaddr},
 		{"gethostbyname", func_gethostbyname},
 
+		// Get file number (int) of sockets and file handles 
+		{ "fileno",  func_fileno},
 	};
 
 	for (unsigned int i = 0; i < sizeof(funcDefList) / sizeof(WScriptFuncDef); i++)

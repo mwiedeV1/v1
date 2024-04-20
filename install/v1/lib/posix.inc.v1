@@ -1,0 +1,99 @@
+<?v1
+// Posix functions for linux systems
+
+if (version(1)!='Windows')
+{
+  function cStruct2Array (def, p) {
+    foreach (def as k => v) {
+      if (v=="s") {
+        def[k] = memat (binparse (memat (p,_ALIGN)));
+        p+=_ALIGN;
+      }
+      else {
+        if (v==1) s = 1; else if (v==2) s = 2; else if (v==3) s = 4; else if (v==4) s = 8; else s = _ALIGN;
+        def[k] = binparse (memat (p,s), v);
+        p+=s;
+      }
+    }
+    return def;    
+  }
+
+  function perror (s) {
+    call (0, "perror", "s:i", s);
+  }
+
+  function chmod (path, mode) {
+    return call (0, "chmod", "si:i", path, mode);
+  }
+
+  function chown (path, owner, group) {
+    return call (0, "chown", "sii:i", path, owner, group);
+  }
+  
+  function getpwnam (username) {
+    passwd = call (0, "getpwnam", "s:p", username);
+    return passwd ? cStruct2Array (["pw_name" => "s", "pw_passwd" => "s", "pw_uid" => 3, "pw_gid" => 3, "pw_gecos" => "s", "pw_dir" => "s"], passwd) : false;
+  }
+
+  function getpwuid (uid) {
+    passwd = call (0, "getpwuid", "i:p", uid);
+    return passwd ? cStruct2Array (["pw_name" => "s", "pw_passwd" => "s", "pw_uid" => 3, "pw_gid" => 3, "pw_gecos" => "s", "pw_dir" => "s"], passwd) : false;
+  }
+
+  function stat (path) {
+    struct = "";
+    resize (struct, 256);
+    if ((ret = call (0, "__lxstat", "isr:i", 1, path, struct))===0) {
+      return cStruct2Array (
+      [
+        "st_dev" => 7,         
+        "st_ino" => 7,
+        "st_mode" => 7,
+        "st_nlink" => 7,
+        "st_uid" => 3,
+        "st_gid" => 3, 
+        "st_rdev" => 7,
+        "st_size" => 7,  
+        "st_blksize" => 7,
+        "st_blocks" => 7,
+        "st_atim.tv_sec" => 4,
+        "st_atim.tv_nsec" => 4,
+        "st_mtim.tv_sec" => 4,
+        "st_mtim.tv_nsec" => 4,
+        "st_ctim.tv_sec" => 4,
+        "st_ctim.tv_nsec" => 4,
+        ], memref (struct)
+      );
+    }
+    return false;
+  }
+    
+}
+else {
+
+  function perror (s) {
+  }
+  
+  function chmod (path, mode) {
+    return true;
+  }
+
+  function chown (path, owner, group) {
+    return true;
+  }
+  
+  function getpwnam (username) {
+    return false;
+  }
+
+  function getpwuid (uid) {
+    return false;
+  }
+
+  function stat (path) {
+    return false;
+  }
+
+}
+
+?>
