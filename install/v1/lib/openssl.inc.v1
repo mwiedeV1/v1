@@ -1,30 +1,18 @@
 <?v1
-// Replace with correct path of OpenSSL libCrypro library (libcryptoMD.dll or libcrypto.so)
-if (!isset (libcryptoLibName))
-  libcryptoLibName =  'libcrypto';
-
-hDLLCrypto = dl (libcryptoLibName, true);
-hDLLSSL = null; //  dl ("libssl", true); // We dont use libSSL native because we have V1 module ssl.
-
-if (!hDLLCrypto) {
-  // Search for libraries
-  libList = explode ("\n", system ('/usr/bin/find /usr -name "libcrypto*.so*"'));
-  if (!empty (libList[0])) {
-      hDLLCrypto = dl (libcryptoLibName = libList[0], true);
-  }
-}
-
-if (!hDLLCrypto) {
-    print ("OpenSSL library not found.\r\nSet libcryptoLibName in ".__FILE__." to libcrypto.so or libcryptoMD.dll");
-    exit (1);
-}
-
+require_once ("libconf.inc.v1");
+assign (hDLLCrypto, cryptoLibName) = libOpen ("libcrypto", "libcryptoMD.dll", "libcrypto.so"); 
 
 // OpenSSL functions
 // https://github.com/openssl/openssl/blob/master/include/openssl/rsa.h
 // https://github.com/openssl/openssl/blob/master/include/openssl/pem.h
 // https://github.com/openssl/openssl/blob/master/include/openssl/bio.h
 // https://github.com/openssl/openssl/blob/master/include/openssl/evp.h
+
+
+// Set in initialization, see below
+openSSLVersionStr  = ""; 
+openSSLVersionNumber = 0;
+openSSLVersionDate  = "";
 
 const RSA_F4 = 65537;
 const MBSTRING_ASC = 4097;    
@@ -124,6 +112,11 @@ function BIO_new (type) {
     return call (hDLLCrypto, "BIO_new", "p:p", type);
 }
 
+function BIO_free (bio) {
+    global hDLLCrypto;
+    return call (hDLLCrypto, "BIO_free", "p:i", bio);
+}
+
 function BIO_s_mem () {
     global hDLLCrypto;
     return call (hDLLCrypto, "BIO_s_mem", [[], "p"]);
@@ -137,6 +130,16 @@ function BIO_new_file (filename, mode) {
 function BIO_new_mem_buf (buf, len) {
     global hDLLCrypto;
     return call (hDLLCrypto, "BIO_new_mem_buf", "si:p", buf, len);
+}
+
+function BIO_read (bio, &str, len) {
+    global hDLLCrypto;
+    return call (hDLLCrypto, "BIO_read", "pri:p", bio, str, len);
+}
+
+function BIO_number_written (bio) {
+    global hDLLCrypto;
+    return call (hDLLCrypto, "BIO_number_written", "p:i", bio);
 }
 
 function BIO_puts (mem, buf) {
@@ -153,7 +156,11 @@ function PEM_read_bio_PrivateKey (bp, &x, cb, u) {
 
 function PEM_write_bio_X509_REQ (bio, x509_req) {
     global hDLLCrypto;
-    ret = call (hDLLCrypto, "PEM_write_bio_X509_REQ", [['p','p'], "i"], bio, x509_req);
+    return call (hDLLCrypto, "PEM_write_bio_X509_REQ", [['p','p'], "i"], bio, x509_req);
+}
+function PEM_write_bio_X509 (bio, x509) {
+    global hDLLCrypto;
+    return call (hDLLCrypto, "PEM_write_bio_X509", [['p','p'], "i"], bio, x509);
 }
 
 function PEM_write_bio_PrivateKey (bio, key, cipher, kstr, klen, cb, u) {      
@@ -298,6 +305,22 @@ function RAND_bytes (&buf, num) {
     return call (hDLLCrypto, "RAND_bytes", "ri:i", buf, num);
 }
 
+function d2i_X509 (x509, pBinCert, len) {
+    global hDLLCrypto;
+		pBinCert = binformat (pBinCert);
+    return call (hDLLCrypto, "d2i_X509", "pri:p", x509, pBinCert, len);
+}
+
+function X509_STORE_add_cert (store, x509) {
+    global hDLLCrypto;
+    return call (hDLLCrypto, "X509_STORE_add_cert", "pp:i", store, x509);
+}
+
+function X509_free (x509) {
+    global hDLLCrypto;
+    return call (hDLLCrypto, "X509_free", "p:i", x509);
+}
+
 if (!function_exists ("ERR_get_error")) {
     function ERR_get_error () {
       global hDLLCrypto;
@@ -312,17 +335,19 @@ if (!function_exists ("ERR_lib_error_string")) {
     }
 }
 
-OPENSSL_config ();
+// OpenSSL startup
+error_reporting (0);
+assign (tmp, openSSLVersionStr, openSSLVersionDate) = explode (' ', OpenSSL_version ());
+openSSLVersionNumber = str_replace (".", "", substr (openSSLVersionStr, 0, 5)) +  0.1 * (substr (openSSLVersionStr, 5));
+error_reporting (1);
 
-/* Initialization for older Versions */
-/*
-if (hDLLSSL) {
-	call (hDLLSSL, "SSL_library_init", [[], "i"]);
-	call (hDLLSSL, "SSL_load_error_strings", [[], "i"]);
+if (openSSLVersionNumber<111) 
+  OPENSSL_config ();
+
+if (openSSLVersionNumber<110) {
+  ERR_load_crypto_strings (); 
+  OpenSSL_add_all_ciphers ();
+  OpenSSL_add_all_digests ();
 }
-ERR_load_crypto_strings (); 
-OpenSSL_add_all_ciphers ();
-OpenSSL_add_all_digests ();
-*/
 
 ?>

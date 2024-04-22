@@ -1698,7 +1698,7 @@ int func_binformat(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCo
 		break;
 		case 7: {
 			// Pointer / System default
-			unsigned int bin = (double)argvalues[0]->numvalue;
+			SYS_UINT bin = (SYS_UINT) argvalues[0]->numvalue;
 			ret.value.assign((const char *)&bin, sizeof(SYS_UINT));
 		}
 		break;

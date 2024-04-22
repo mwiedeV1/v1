@@ -1,20 +1,6 @@
 <?v1
-// Replace with correct path of bzip2 library (libbz2.dll or libbz2.so)
-bzip2LibName =  'libbz2';
-
-hDLLBZip2 = dl (bzip2LibName, true);
-if (!hDLLBZip2) {
-  // Search for libraries
-  libList = explode ("\n", system ('/usr/bin/find /usr -name "libbz2*.so*"'));
-  if (!empty (libList[0])) {
-    hDLLBZip2 = dl (bzip2LibName = libList[0], true);
-  }
-}
-
-if (!hDLLBZip2) {
-  print ("bzip2 library not found.\r\nSet bzip2LibName in ".__FILE__." to libbz2.so or libbz2.dll");
-  exit (1);
-}
+require_once ("libconf.inc.v1");
+assign (hDLLBZip2, bzip2LibName) = libOpen ("libbz2", "libbz2.dll", "libbz2.so"); 
 
 // BZip functions
 // ftp://sources.redhat.com/pub/bzip2/docs/manual_toc.html
@@ -55,7 +41,7 @@ function bz_streamCreate () {
        "state"=> 0,
        "bzalloc"=> 0,
        "bzfree"=> 0,
-       "opaque"=> 0
+       "opaque"=> 0,
      ),
      "", // Binary representation, filled by bz_streamFormat
     
@@ -146,7 +132,7 @@ function BZ2_bzCompressEnd (&bz_stream) {
 function BZ2_bzDecompressInit  (&bz_stream, verbosity=0, small=0) {
   global hDLLBZip2;
   size = bz_streamFormat (bz_stream);
-  ret = call (hDLLBZip2, "BZ2_bzDecompressInit", [["r", "i", "i"], "i"], bz_stream[1], verbosity, small);
+  ret = call (hDLLBZip2, "BZ2_bzDecompressInit", [["r", "i", "i"], "i"], bz_stream[1], verbosity, small);  
   bz_streamParse (bz_stream);
   return ret;
 }
@@ -208,10 +194,10 @@ function bz_compress_file (srcFilename, dstFilename, fVerbose=false)
       print ("Cannot create file: ", dstFilename);
     return BZ_IO_ERROR;
   }
-
-  bz_stream = bz_streamCreate ();  
+  bz_stream = bz_streamCreate ();
   blockSize = 9;
   ret =BZ2_bzCompressInit (bz_stream, blockSize);
+
   if (ret<0) {
     if (fVerbose)
       print ("BZ2_bzCompressInit() failed: ", ret);
@@ -263,7 +249,7 @@ function bz_decompress_file (srcFilename, dstFilename, fVerbose=false)
   }
   bz_stream = bz_streamCreate ();  
   ret = BZ2_bzDecompressInit (bz_stream);  
-  
+
   if (ret<0) {
     if (fVerbose)
       print ("BZ2_bzDecompressInit() failed: ", ret);

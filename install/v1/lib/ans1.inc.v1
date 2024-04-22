@@ -9,7 +9,11 @@ function base64url_decode(data) {
   return base64_decode(str_replace (['-','_'], ['+','/'], data));
 }
 
-function pem2bin (filename) {
+function pem2bin (pem) {
+	return base64_decode (str_replace (["-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", "\n", "\r"], ["", "", "", ""], pem));	
+}
+
+function pemFile2bin (filename) {
   fh = fopen (filename, "r");
   if (fh) {
     line = "";
@@ -48,18 +52,15 @@ const ASN1_DATA_VALUE       = 5;
 Usage:
 
 store = array ();
-bin = pem2bin ("cert.pem");
-parseANS1Start ();
-parseASN1 (memref (bin), strlen (bin), store); 
-print_r (store);
+bin = pemFile2bin ("cert.pem");
+ans1Vars = parseANS1Start ();
+parseASN1 (memref (bin), strlen (bin), store, ans1Vars); 
+print (dumpANS1 (store, ans1Vars));
 
 */
 
-ans1Vars = array ();
-
 function parseANS1Start () {
-  global ans1Vars;
-  ans1Vars = array (
+  return array (
     'flag' => 0,
     'dt' => 0,
     'df' => 0,
@@ -75,8 +76,9 @@ function parseASNLen (&pnt, end) {
   if (l & 0x80) {
     n = l & 0x7F;
     if (pnt+1+n<=end) {
-      if (n==1) 
+      if (n<=1) {
         l = binparse (memat (pnt+1, n), 1, 0, 0, 1); 
+      }
       else
       if (n==2) {
         l = binparse (memat (pnt+1, n), 2, 0, 0, 1);
@@ -85,13 +87,12 @@ function parseASNLen (&pnt, end) {
         l = 0;
         n = 0;
       }
-        
       pnt+=n;
     }
     else {
       // Length is longer than buffer
       // Should abort interprete
-      printf ("length ".n." (byte %02x) longer than buffer", l, l);
+      // printf ("length ".n." (byte %02x) longer than buffer", l, l);
       l = 0;
     }    
   }
@@ -99,23 +100,22 @@ function parseASNLen (&pnt, end) {
   return l;
 }
 
-function parseASN1 (&pnt, l, &store, fSub=false) 
+
+function parseASN1 (&pnt, l, &store, &ans1Vars, fSub=false) 
 {
-  global ans1Vars;
+
   end = pnt + l;
   while (pnt<end) 
   {
     if (ans1Vars['flag']==ASN1_DATA_VALUE) {
-			
       ans1Vars['dv']=memat (pnt, ans1Vars['dl']);      
       if (ans1Vars['dl']==0) // Infinite length should be not allowed!
         ans1Vars['dl'] = strlen (ans1Vars['dv']);
-        
-      pnt+=ans1Vars['dl'];
-      
+      pnt+=ans1Vars['dl'];      
       // Set the data
       array_push (store, array ("VALUE", ans1Vars['dt'], ans1Vars['dv']));      
-      ans1Vars['flag'] = ASN1_START;      
+      ans1Vars['flag'] = ASN1_START;
+        
       continue;
     }
     else
@@ -135,7 +135,7 @@ function parseASN1 (&pnt, l, &store, fSub=false)
 						}
           }
         }
-        else
+        else        
         if (ans1Vars['dt']==3) {
           // Bit String can contain sequences
           ans1Vars['dl']--;
@@ -153,7 +153,7 @@ function parseASN1 (&pnt, l, &store, fSub=false)
             store[i-1]=["VALUE", ans1Vars['dt'], ["SEQUENCE", 0, []]];
             ans1Vars['flag'] = ASN1_START;
             l2 = parseASNLen (pnt, end);
-            parseASN1 (pnt, l2, store[i-1][2][2], fSub);
+            parseASN1 (pnt, l2, store[i-1][2][2], ans1Vars, fSub);
             continue;
           }
         }
@@ -169,10 +169,10 @@ function parseASN1 (&pnt, l, &store, fSub=false)
     else
     if (ans1Vars['flag']==ASN1_ELEMENT_LENGTH) {
       ans1Vars['flag'] = ASN1_DATA_TYPE;
-      ans1Vars['dl'] = parseASNLen (pnt, end);          
+      ans1Vars['dl'] = parseASNLen (pnt, end);
       i = array_push (store, array ());   
       store[i-1]=["ELEMENT", 0, []];
-      parseASN1 (pnt, ans1Vars['dl'], store[i-1][2], fSub);
+      parseASN1 (pnt, ans1Vars['dl'], store[i-1][2], ans1Vars, fSub);
       ans1Vars['flag'] = ASN1_START;
     }
     else
@@ -181,47 +181,55 @@ function parseASN1 (&pnt, l, &store, fSub=false)
       i = array_push (store, array ());   
       store[i-1]=["SEQUENCE", 0, []];
       l2 = parseASNLen (pnt, end);
-      parseASN1 (pnt, l2, store[i-1][2], fSub);
+      parseASN1 (pnt, l2, store[i-1][2], ans1Vars, fSub);
       ans1Vars['flag'] = ASN1_START;
+      continue;
     }
     else
     {
-      s = binparse (memat (pnt, 1), 1);  
+      s = binparse (memat (pnt, 1), 1);
       if (s==0x00) {
         pnt++;
       }
       else
       if (s==0x30) {
-        ans1Vars['flag'] = ASN1_SEQUENCE_LENGTH;      
+        ans1Vars['flag'] = ASN1_SEQUENCE_LENGTH;
         // Reset class
         ans1Vars['fObj'] = ans1Vars['tc'] = ans1Vars['ei'] = 0;
       }
-      else  {
-        ans1Vars['dt'] = s;        
+      else  
+			{
+				
+        ans1Vars['dt'] = s;
         ans1Vars['dv'] = "";
         ans1Vars['df'] = ans1Vars['dt'] & 0x20; // Format
+
         if (ans1Vars['dt'] & 0x80) {
           
-          if (((s & 0x1F)==4 || (s & 0x1F)==3) && fSub) // Could make problems!
+          if (((s & 0x1F)==4 || (s & 0x1F)==3) && fSub) // Could make problems! 
           {
             ans1Vars['dt'] = 4;
             ans1Vars['flag']=ASN1_DATA_VALUE;
             continue;
           }
-          
           ans1Vars['flag'] = ASN1_ELEMENT_LENGTH;
           ans1Vars['ei'] = (ans1Vars['dt'] & 0x1F); // Element index
           ans1Vars['tc'] = (ans1Vars['dt'] & 0xC0); // Tag class 
+          
+          if (ans1Vars['dt']== 0x80) {
+            continue;
+          }
         }
         else  {
           
-          if (s>0x31) {
+          if (s>0x31 || (fSub && ans1Vars['flag'] == ASN1_DATA_TYPE)) {   
             ans1Vars['dt'] = 4;
             ans1Vars['flag']=ASN1_DATA_VALUE;
             continue;
           }
 
           ans1Vars['flag'] = ASN1_DATA_LENGTH;    
+          
           if (ans1Vars['dt']==0x31) {
             // Set will be ignored
             pnt++;
@@ -230,7 +238,7 @@ function parseASN1 (&pnt, l, &store, fSub=false)
             continue;
           }
           else {
-            ans1Vars['dt'] = ans1Vars['dt'] & 0x1F;
+          	ans1Vars['dt'] &= 0x1F;
           }
         }
       }
@@ -239,22 +247,20 @@ function parseASN1 (&pnt, l, &store, fSub=false)
   }
 }
 
-function dumpANS1 (store, tab="", index="", fSub=false) {
+function dumpANS1 (store, &ans1Vars, tab="", index="", fSub=false) {
+	dumpStr = "";
   indexBase = index;
   foreach (store as idx => data) {
-
     index=indexBase."[".idx."]";
-
-
-    print (tab.data[0]);
+    dumpStr.=tab.data[0]."\n";
 
     if (is_array (data[2])) {
       if (data[2][0]==="SEQUENCE")
       {
-        dumpANS1 (data[2][2], tab."   ", index, fSub);    
+        dumpStr.=dumpANS1 (data[2][2], ans1Vars, tab."   ", index, fSub);    
       }        
       else
-        dumpANS1 (data[2],  tab."   ", index, fSub);    
+        dumpStr.=dumpANS1 (data[2],  ans1Vars, tab."   ", index, fSub);    
     }
     else {
       datatype = data[1];
@@ -311,17 +317,28 @@ function dumpANS1 (store, tab="", index="", fSub=false) {
           break;
       }
     
-      if (!fPrint) {
+      if (!fPrint) {			
         if (data[1]==5)
-          print (tab."   NULL");
+          dumpStr.=tab."   NULL\n";
         else
-        if (strlen (data[2])>64)
-          print (tab."   ".datatype." => ", strlen (data[2])." bytes");          
-        else
-          print (tab."   ".datatype." => ", bin2hex (data[2]));                  
+	        dumpStr.=tab."   ".datatype." => ".bin2hex (data[2])."\n";				
       }
-      else
-        print (tab."   ".datatype." => ", data[2]);    
+      else {
+				p = memref (data[2]);
+				fReadable = true;
+				for (i=0;i<strlen (data[2]);i++) {
+					c = binparse (memat (p, 1), 1);
+					if (c<32 || c>126) {
+						fReadable = false;
+						break;
+					}
+					p++;
+				}
+				if (fReadable)
+					dumpStr.=tab."   ".datatype." => ".data[2]."\n";
+				else
+					dumpStr.=tab."   ".datatype." => ".bin2hex (data[2])."\n";
+			}
         
       /*
       if (!fSub)
@@ -332,12 +349,13 @@ function dumpANS1 (store, tab="", index="", fSub=false) {
       if (data[1]==4 && (binparse (data[2], 1)==0x30 || binparse (data[2], 1)==0x04)) {
         global store2;
         store2 = array ();
-        parseANS1Start ();
-        parseASN1 (memref (data[2]), strlen (data[2]), store2, true); 
-        dumpANS1 (store2, tab."       ", index, true);  
+        ans1Vars2 = parseANS1Start ();
+        parseASN1 (memref (data[2]), strlen (data[2]), store2, ans1Vars2, true); 
+        dumpStr.=dumpANS1 (store2, ans1Vars2, tab."       ", index, true);  
       }
     }
   }
+	return dumpStr;
 }
 
 ?>
