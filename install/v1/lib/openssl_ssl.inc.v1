@@ -1,0 +1,317 @@
+<?v1
+require_once ("openssl.inc.v1");
+
+assign (hDLLSSL, sslLibName) = libOpen ("libssl", "libsslMD.dll", "libssl.so"); 
+
+const SSL_OP_NO_SSLv3 = 0x02000000;
+
+function TLSv1_2_client_method () {
+    global hDLLSSL, openSSLVersionNumber;
+    return call (hDLLSSL, openSSLVersionNumber > 110 ? "TLS_client_method" : "TLSv1_2_client_method", ":p");
+}
+
+function SSL_CTX_new (method=null) {
+    global hDLLSSL;
+    if (!method)
+      method = TLSv1_2_client_method ();
+    return call (hDLLSSL, "SSL_CTX_new", "p:p", method);
+}
+
+function SSL_CTX_set_verify (ctx, mode, cb) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_CTX_set_verify", "pip:p", ctx, mode, cb);
+}
+
+function SSL_CTX_set_verify_depth (ctx, depth) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_CTX_set_verify_depth", "pi:p", ctx, depth);
+}
+
+function SSL_CTX_set_options (ctx, flag) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_CTX_set_options", "pi:p", ctx, flag);
+}
+
+function SSL_new (ctx) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_new", "p:p", ctx);
+}
+
+function SSL_set_verify (ssl, mode, cb) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_set_verify", "pip:p", ssl, mode, cb);
+}
+
+function SSL_set_cipher_list (ssl, ciphers) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_set_cipher_list", "ps:i", ssl, ciphers);
+}
+
+function SSL_set_verify_depth (ssl, depth) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_set_verify_depth", "pi:p", ssl, depth);
+}
+
+function SSL_set_fd (ssl, socket) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_set_fd", "pi:i", ssl, socket);
+}
+
+function SSL_free (ssl) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_free", "p:i", ssl);
+}
+
+function SSL_CTX_free (ctx) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_CTX_free", "p:i", ctx);
+}
+
+function SSL_set_tlsext_host_name (ssl, host) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_ctrl", "piis:i", ssl, 55, 0, host);
+}
+
+function SSL_get_verify_result (ssl) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_get_verify_result", "p:i", ssl);
+}
+
+function SSL_connect (ssl, host=null) {
+    global hDLLSSL;
+    if (host)
+      SSL_set_tlsext_host_name (ssl, host);
+    return call (hDLLSSL, "SSL_connect", "p:i", ssl);
+}
+
+function SSL_accept (ssl) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_accept", "p:i", ssl);
+}
+
+function SSL_write (ssl, str, len=0) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_write", "pri:i", ssl, str, (len==0 ? strlen (str) : len));
+}
+
+function SSL_read (ssl, &str, len) {
+    global hDLLSSL;
+    if (strlen (str)<len)
+      resize (str, len);
+    read = call (hDLLSSL, "SSL_read", "pri:i", ssl, str, len);
+    if (read<len)
+      resize (str, read);
+    return read;
+}
+
+function SSL_readln (ssl, &str) {
+  global hDLLSSL;
+  str = "";
+  buf = "";
+  resize (buf, 1);
+  while (call (hDLLSSL, "SSL_read", "pri:i", ssl, buf, 1)==1) {
+    bin = binparse (buf, 1);
+    if (bin==0x0D)
+      continue;
+    if (bin==0x0A)
+      break;
+    else
+      str.=buf;
+  }
+}
+
+function SSL_get_cipher_list (ssl) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_get_cipher_list", "pi:s", ssl, 0);
+}
+
+function SSL_get_peer_certificate (ssl) {
+    global hDLLSSL, openSSLVersionNumber;
+    return call (hDLLSSL, openSSLVersionNumber>=300 ? "SSL_get1_peer_certificate" : "SSL_get_peer_certificate", "p:p", ssl);
+}
+
+function SSL_get_error (ssl, err) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_get_error", "pi:i", ssl, err);
+}
+
+function SSL_CTX_get_cert_store (ctx) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_CTX_get_cert_store", "p:p", ctx);
+}
+
+function SSL_CTX_set_default_verify_paths (ctx) {
+    global hDLLSSL;
+    if (version(1)=='Windows')
+      return SSL_CTX_add_windows_ca_certs (ctx);
+    return call (hDLLSSL, "SSL_CTX_set_default_verify_paths", "p:p", ctx);
+}
+
+// Certificat heper functions
+
+/*
+  openSSLParseCert () return array with readable certificate information.
+  
+  @cert certificate from function SSL_get_peer_certificate()
+	@flags Bitwise flags can be combined:
+	0 = Return basic certificate information as array
+	1 = Return certificate in PEM format with array key CERT_PEM
+	2 = Return certificate as readable formatted ANS.1 with array key CERT_ANS1_FORMATTED
+	3 = Return certificate as ANS.1 array with array key CERT_ANS1_ARRAY
+  
+  On error false is returned.
+*/
+function openSSLParseCert (cert, flags=0) 
+{
+    global openSSLVersionNumber;
+    bio = BIO_new(BIO_s_mem());
+    if (!bio)
+    	return false;
+    if (0 == PEM_write_bio_X509 (bio, cert)) {
+      BIO_free(bio);
+      return false;
+    }
+
+    pem = "";
+    len = BIO_number_written (bio);
+    resize (pem, len);
+    
+    BIO_read(bio, pem, len);
+    BIO_free(bio);
+			
+    // Parse ANS 1
+    require_once ("ans1.inc.v1");
+    ans1Store = array ();
+    ans1Bin = pem2bin (pem);
+    ans1Vars = parseANS1Start ();
+    parseASN1 (memref (ans1Bin), strlen (ans1Bin), ans1Store, ans1Vars);
+		
+		// Build return
+    ret = "";
+		node0 = ans1Store[0][2][0][2];
+		if (is_array (node0)) {
+			i=0;
+			
+			// Parse Version
+			node = node0[i++];
+			if (node[0]=="VALUE") 
+				ret["VERSION"]=binparse (node[2], 1); 
+			else 
+			if (node[0]=="ELEMENT")
+				ret["VERSION"]=binparse (node[2][0][2], 1);
+
+			// Parse Serial
+			node = node0[i++];
+			if (node[0]=="VALUE") {
+				ret["SERIAL"]=bin2hex (node[2]);
+				node = node0[i++];
+			}
+			
+			// Parse Sigtype
+			if (node[0]=="SEQUENCE" && node[2][0][1]==6) {
+				ret["SIGTYPE"]=bin2hex (node[2][0][2]);
+			}
+
+			// Parse Issuer
+			node = node0[i++];
+			oidList = array ("\x55\x04\x06"=>"C", "\x55\x04\x0a"=>"O", "\x55\x04\x03"=>"CN");
+			if (node[0]=="SEQUENCE") {
+				foreach (node[2] as node2) {
+					oid = node2[2][0][2];
+					if (isset (oidList[oid]))
+						ret["ISSUER"][oidList[oid]]=node2[2][1][2];		
+				}
+			}
+
+			// Parse valid from/to
+			node = node0[i];
+			if (node[2][0][1]==23) {
+				ret["VALID"]["FROM"]=node[2][0][2];					
+				if (node[2][1][1]==23)
+					ret["VALID"]["TO"]=node[2][1][2];
+				i++;
+			}
+			
+			// Parse subject names
+			node = node0[i++];
+			if (node[0]=="SEQUENCE") {
+				foreach (node[2] as node2) {
+					oid = node2[2][0][2];
+					if (isset (oidList[oid]))
+						ret["SUBJECT"][oidList[oid]]=node2[2][1][2];
+				}
+			}
+			node = node0[i];				
+			// Other elements not implemented
+			// print_r (node);				
+		}
+    if (flags & 1)
+  		ret["CERT_PEM"]=pem;
+    if (flags & 2)
+  		ret["CERT_ANS1_FORMATTED"]=dumpANS1 (ans1Store, ans1Vars);
+    if (flags & 4) {
+  		ret["CERT_ANS1_ARRAY"]=ans1Store;
+    }
+    return ret;
+}
+
+// Windows functions
+if (version(1)=='Windows')
+{
+  hDLLCrypt32 = dl ("Crypt32.dll", true);
+  if (!hDLLCrypt32) {
+  	print ("Crypt32.dll not found.");
+  	exit (1);
+  }
+
+
+  function CertOpenSystemStore (hProv, szSubsystemProtocol) {
+      global hDLLCrypt32;
+      return call (hDLLCrypt32, "CertOpenSystemStoreA", "ps:p", hProv, szSubsystemProtocol);
+  }
+
+  function CertCloseStore (hCertStore, dwFlags) {
+      global hDLLCrypt32;
+      return call (hDLLCrypt32, "CertCloseStore", "ps:i", hCertStore, dwFlags);
+  }
+
+  function CertEnumCertificatesInStore (hCertStore, pPrevCertContext) {
+      global hDLLCrypt32;
+      return call (hDLLCrypt32, "CertEnumCertificatesInStore", "pp:p", hCertStore, pPrevCertContext);
+  }
+
+  // Add Windows CA certs to OpenSSL context for verification (SSL_set_verify (ssl, 1, null))
+  // On Linux SSL_CTX_set_default_verify_paths (ctx) is used instead  
+  function SSL_CTX_add_windows_ca_certs (ctx) {
+  	cnt = 0;
+  	store = SSL_CTX_get_cert_store (ctx);
+    cs = CertOpenSystemStore (0, "ROOT");
+    if (store && cs) {
+        csCtx = null;     
+        while ((csCtx = CertEnumCertificatesInStore(cs, csCtx))) {
+            len = binparse (memat (csCtx+_ALIGN*2, _ALIGN));
+            pBinCert = binparse (memat (csCtx+_ALIGN, _ALIGN));
+            binCert = memat (pBinCert, len);
+
+            x509 = d2i_X509 (null, pBinCert, len);
+            if (x509) {
+                if (!X509_STORE_add_cert(store,  x509)) {
+        			print ("Failed to add ca_cert to OpenSSL certificate store");
+        		}
+        		X509_free(x509);
+                cnt++;
+            }
+        }
+        CertCloseStore (cs, null);
+    }  
+  	return cnt;  
+  }
+}
+// OpenSSL startup
+if (openSSLVersionNumber<110) {
+	call (hDLLSSL, "SSL_library_init", [[], "i"]);
+	call (hDLLSSL, "SSL_load_error_strings", [[], "i"]);
+}
+
+
+?>
