@@ -1,0 +1,109 @@
+<?v1 require_once ("helpers/start.v1"); ?>
+<h3>SSL-Test with Native function calling (NFC)</h3>
+<p>In this example the OpenSSL library which must be installed on the system is used  with native function calling (NFC), implemented in lib/openssl.inc.v1 and lib/openssl_ssl.inc.v1. With NFC you have more options and can enhance the library functions for the newest versions of OpenSSL. But its slower than the compiled Module 'ssl' which is preferred for server applications.</p>
+<?v1
+
+require_once ("../../../lib/openssl_ssl.inc.v1");
+
+print ("OpenSSL-Version: ", openSSLVersionStr, "<br>");
+print ("OpenSSL-Version Number: ", openSSLVersionNumber, "<br>");
+
+// Create classic socket
+host = "mwiede.de";
+print ("<p>Host: ".host."</p>"); 
+
+
+socket = fsockopen (host, 443);
+if (socket) {
+
+	// Create SSL Context
+	ctx = SSL_CTX_new ();
+    if (!ctx) {
+        print ("OpenSSL: SSL_CTX_new () failed");exit ();
+    }
+
+	// Create SSL
+	ssl = SSL_new (ctx);
+    if (!ssl) {
+        print ("OpenSSL: SSL_new () failed");exit ();
+    }
+    
+    SSL_CTX_set_default_verify_paths (ctx);
+
+	SSL_set_verify (ssl, 0, null);
+
+	// Set socket
+	SSL_set_fd (ssl, socket);
+
+	// Connect SSL
+	if (SSL_connect (ssl, host)) {
+
+	    verifyRes = SSL_get_verify_result (ssl);
+	    if (verifyRes!=0) {
+	        
+	        print ("<h4 style=\"color:red\">Certificate is not trusted. Verify result: ".verifyRes."</h4>");
+	    }
+	    else {
+            print ("<h4 style=\"color:green\">Certificate is trusted</h4>"); 
+	    }
+	    
+	    // Print certificate information
+        print ("<h4>Certificate information</h4>"); 
+   		cert = SSL_get_peer_certificate (ssl);
+   		
+   		// Bitwise flags (parameter 2) can be combined
+   		// 0 = Return basic certificate information as array
+   		// 1 = Return certificate in PEM format with array key CERT_PEM
+   		// 2 = Return certificate as readable formatted ANS.1 with array key CERT_ANS1_FORMATTED
+   		// 3 = Return certificate as ANS.1 array with array key CERT_ANS1_ARRAY
+   		
+        certArray = openSSLParseCert (cert, 7);
+        if (certArray) {
+       		foreach (certArray as key => data) {
+       		    if (key=="CERT_ANS1_ARRAY") {
+       		        continue;
+       		    }
+       		    if (key=="CERT_PEM" || key=="CERT_ANS1_FORMATTED") {
+        		    print ("<p>".key."</p>");
+        		    print ('<textarea style="height:300px;width:100%;">'.data.'</textarea>');
+       		    }
+                else {
+                    if (!is_array (data))
+                       print (key." = ".data."<br />");
+                    else {
+                       foreach (data as key2 => value2) {
+                           print (key.":".key2." = ".value2."<br />");
+                       }
+                    }
+                }
+       		}
+        }
+   	    
+   		// Print ciphers
+        print ("<h4>Ciphers</h4>"); 	    
+	    print ("<p>".SSL_get_cipher_list (ssl)."</p>");
+    
+		// Write HTTP header
+		ret = SSL_write (ssl, "GET / HTTP/1.1\r\nHost: ".host."\r\nConnection: close\r\n\r\n");
+
+		// Read HTTP header
+		print ("<h4>HTTP-Header</h4>"); 
+		str = "";
+		while (SSL_readln (ssl, str)) {
+		    print (str."<br >");
+		    if (str=="")
+		        break;
+		}
+	}
+	
+	// Free SSL
+	SSL_free (ssl);
+	
+	// Free SSL Context
+	SSL_CTX_free (ctx);
+	
+	// Close original socket
+	fclose (socket);
+}
+?>
+<?v1 require_once ("helpers/end.v1"); ?>
