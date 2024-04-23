@@ -109,7 +109,7 @@ function SSL_readln (ssl, &str) {
   str = "";
   buf = "";
   resize (buf, 1);
-  while (call (hDLLSSL, "SSL_read", "pri:i", ssl, buf, 1)==1) {
+  while (ret=call (hDLLSSL, "SSL_read", "pri:i", ssl, buf, 1)==1) {
     bin = binparse (buf, 1);
     if (bin==0x0D)
       continue;
@@ -118,6 +118,7 @@ function SSL_readln (ssl, &str) {
     else
       str.=buf;
   }
+  return ret;
 }
 
 function SSL_get_cipher_list (ssl) {

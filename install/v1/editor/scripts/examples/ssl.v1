@@ -15,12 +15,12 @@ if (socket) {
 	// Create SSL Context
 	ctx = SSL_CTX_new ();
 	
-	// SSL_CTX_set_options (ctx, SSL_OP_NO_SSLv3);
+	SSL_CTX_set_options (ctx, SSL_FLAG ("SSL_OP_NO_SSLv3"));
 
 	// Create SSL
 	ssl = SSL_new (ctx);
-    SSL_set_cipher_list (ssl, "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");
-    // SSL_CTX_add_windows_ca_certs (ctx); 
+  SSL_set_cipher_list (ssl, "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");
+
 
 	// Set socket
 	SSL_set_fd (ssl, socket);
