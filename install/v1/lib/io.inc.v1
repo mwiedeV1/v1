@@ -1,0 +1,47 @@
+<?v1
+const MOD_SSL = true;
+if (MOD_SSL)
+  dl ("ssl");
+else
+  require_once ("openssl_ssl.inc.v1");
+  
+
+// I/O functions
+function io_fwrite (fh, str, size=0) {
+  return fwrite (fh, str, size); 
+}
+
+function io_fread (fh, &str, size) {
+  return fread (fh, str, size); 
+}
+
+function io_freadln (fh, &str) {
+  return freadln (fh, str); 
+}
+
+// Universal SSL connection function, return array with SSL objects and certificate verification code
+function io_sslconnect (socket, hostname, fVerify=true) {
+	ctx = SSL_CTX_new ();
+	ssl = SSL_new (ctx);
+  verifyStatus = 0;
+  if (fVerify && !MOD_SSL) {
+    SSL_CTX_set_default_verify_paths (ctx);
+    SSL_set_verify (ssl, 0, null);
+  }
+	SSL_set_fd (ssl, socket);
+	if (ret = SSL_connect (ssl, hostname)) {
+    if (fVerify && !MOD_SSL) {
+      verifyStatus = SSL_get_verify_result (ssl);
+    }
+  }
+  return [ctx, ssl, ret, verifyStatus];
+}
+
+// Return the basic IO functions to the application which use call_user_func()
+function io_get_functions (fSSL=false) {
+  if (!fSSL || MOD_SSL)
+    return [ "io_fwrite", "io_fread", "io_freadln", "io_sslconnect"];
+  return [ "SSL_write", "SSL_read", "SSL_readln", "io_sslconnect"];
+}
+
+?>
