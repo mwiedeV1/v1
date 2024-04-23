@@ -1,21 +1,21 @@
 <?v1
-/*
+/* 
   WGET Utility
   Supported schemes: http, https
-
+   
   Usage: v1 wget.v1 [OPTIONS] <url>
-
-  Options:
+  
+  Options:   
    -q,  --quiet                   quiet (no output).
    -v,  --verbose                 be verbose (this is the default).
-
+  
   Download:
    -O,  --output-document=FILE    write documents to FILE or DIRECTORY.
         --user=USER               set user to USER.
         --password=PASS           set password to PASS.
         --ask-password            prompt for passwords.
    -S,  --server-response         print server response.
-
+  
   HTTP options:
         --http-user=USER          set http user to USER.
         --http-password=PASS      set http password to PASS.
@@ -23,6 +23,10 @@
         --header=STRING           insert STRING among the headers.
         --post-data=STRING        use the POST method; send STRING as the data.
         --post-file=FILE          use the POST method; send contents of FILE.
+  
+  SSL options:
+        --no-check-certificate    SSL/TLS peer certificate will be not verified.
+        --print-certificate       Print the server SSL/TLS certiciate
 */
 
 error_reporting (0); // 1 to show all warnings
@@ -31,120 +35,151 @@ require_once ("../lib/wget.inc.v1");
 
 const ROOT_PATH = getcwd  ();
 
+
 fVerbose = true;
 saveTo = ROOT_PATH;
 options = array ();
 argIdx = 2;
 arg = "";
+while (isset (argv[argIdx])) {
 
-while (isset (argv[argIdx]))
-{
+  arg = argv[argIdx];
 
-	arg = argv[argIdx];
-
-	if (arg=="-O") {
-		if (isset (argv[argIdx+1])) {
-			saveTo = argv[argIdx+1];
-			argIdx++;
-		}
-		else {
-			print ("Output file required");
-			exit (1);
-		}
-	}
-	else 
-	if (strpos (arg, "--output-document=")===0) {
-		assign (tmp, saveTo) = explode ("=", arg);
-	}
-	else 
-	if (strpos (arg, "-q")===0 || strpos (arg, "--quiet")===0) {
-		fVerbose = false;
-	}
-	else 
-	if (strpos (arg, "-v")===0 || strpos (arg, "--verbose")===0) {
-		fVerbose = true;
-	}
-	else 
-	if (strpos (arg, "--http-user=")===0) {
-		assign (tmp, options["user"]) = explode ("=", arg);
-	}
-	else 
-	if (strpos (arg, "--http-password=")===0) {
-		assign (tmp, options["password"]) = explode ("=", arg);
-	}
-	else 
-	if (strpos (arg, "--user=")===0) {
-		assign (tmp, options["user"]) = explode ("=", arg);
-	}
-	else 
-	if (strpos (arg, "--password=")===0) {
-		assign (tmp, options["password"]) = explode ("=", arg);
-	}
-	else 
-	if (strpos (arg, "--header=")===0) {
-		if (!isset (options["optHeaders"]))
-			options["optHeaders"]="";
-		optHeaders = substr (arg,  9, strlen(arg)-9);
-		options["optHeaders"].=optHeaders."\r\n";
-	}
-	else 
-	if (strpos (arg, "--post-data=")===0) {
-		if (!isset (options["postData"]))
-			options["postData"] = "";
-		options["postData"].=substr (arg, 12, strlen(arg)-12);
-	}
-	else 
-	if (strpos (arg, "--post-file=")===0) {
-		assign (tmp, options["postFilename"]) = explode ("=", arg);
-	}
-	else 
-	if (arg=="--save-headers") {
-		options["saveHeaders"]=true;
-	}
-	else 
-	if (arg=="-S" || arg=="--server-response") {
-		options["printServerResponse"]=true;
-	}
-	else 
-	if (arg=="--ask-password") {
-		options["askPassword"]=true;
-	}
-	else 
-	if (argIdx<(count (argv)-1)) {
-		print ("Unknown option ".arg);
-		exit (1);
-	}
-	argIdx++;
+  if (arg=="-O") {
+    if (isset (argv[argIdx+1])) {
+      saveTo = argv[argIdx+1];
+      argIdx++;
+    }
+    else {
+      print ("Output file required");
+      exit (1);
+    }
+  }
+  else
+  if (strpos (arg, "--output-document=")===0) {
+    assign (tmp, saveTo) = explode ("=", arg);
+  }
+  else
+  if (strpos (arg, "-q")===0 || strpos (arg, "--quiet")===0) {
+    fVerbose = false;
+  }
+  else
+  if (strpos (arg, "-v")===0 || strpos (arg, "--verbose")===0) {
+    fVerbose = true;
+  }
+  if (strpos (arg, "--no-check-certificate")===0) {
+    options["noCheckCert"] = true;
+  }
+  else
+  if (strpos (arg, "--print-certificate")===0) {
+    options["getCert"] = true;
+  }
+  else
+  if (strpos (arg, "--http-user=")===0) {
+    assign (tmp, options["user"]) = explode ("=", arg);
+  }
+  else
+  if (strpos (arg, "--http-password=")===0) {
+    assign (tmp, options["password"]) = explode ("=", arg);
+  }
+  else
+  if (strpos (arg, "--user=")===0) {
+    assign (tmp, options["user"]) = explode ("=", arg);
+  }
+  else
+  if (strpos (arg, "--password=")===0) {
+    assign (tmp, options["password"]) = explode ("=", arg);
+  }
+  else
+  if (strpos (arg, "--header=")===0) {
+    if (!isset (options["optHeaders"]))
+      options["optHeaders"]="";      
+    optHeaders = substr (arg,  9, strlen(arg)-9);
+    options["optHeaders"].=optHeaders."\r\n";
+  }
+  else
+  if (strpos (arg, "--post-data=")===0) {    
+    if (!isset (options["postData"]))
+      options["postData"] = "";
+    options["postData"].=substr (arg, 12, strlen(arg)-12);
+  }
+  else
+  if (strpos (arg, "--post-file=")===0) {
+    assign (tmp, options["postFilename"]) = explode ("=", arg);
+  }
+  else  
+  if (arg=="--save-headers") {
+    options["saveHeaders"]=true;
+  }
+  else  
+  if (arg=="-S" || arg=="--server-response") {
+    options["printServerResponse"]=true;
+  }
+  else
+  if (arg=="--ask-password") {
+    options["askPassword"]=true;
+  }
+  else 
+  if (argIdx<(count (argv)-1))
+  {
+    print ("Unknown option ".arg);
+    exit (1);
+  }
+  
+  argIdx++;
 }
 
-if (!empty (arg) && arg!="--help")
-{
-	ret = wget (arg, saveTo, false, fVerbose, options);
-	if (!empty (ret["errText"]))
-		exit (1);
-	exit (0);
+if (!empty (arg) && arg!="--help") {
+  ret = wget (arg, saveTo, false, fVerbose, options);
+  
+  if (!empty (options["getCert"])) {
+    print ("\r\nCERTIFICATE INFORMATION:\r\n");
+    foreach (ret["serverCert"] as key => data) {
+      if (key=="CERT_ANS1_ARRAY" || key=="CERT_ANS1_FORMATTED") {
+        continue;
+      }
+      if (key=="CERT_PEM") {
+        print ("");
+        print (data);
+      }
+      else {
+        if (!is_array (data))
+           print (key."\t\t".data);
+        else {
+           foreach (data as key2 => value2) {
+               print (key.":".key2."\t".value2);
+           }
+        }
+      }
+    }    
+  }
+  
+  if (!empty (ret["errText"]))
+    exit (1);
+  exit (0);
 }
-else
-{
-	print (
-		"Usage: v1 wget.v1 [OPTIONS] <url>\r\n\r\n".
-		"Options:\r\n".
-		" -q,  --quiet                   quiet (no output).\r\n".
-		" -v,  --verbose                 be verbose (this is the default).\r\n".
-		"\r\nDownload:\r\n".
-		" -O,  --output-document=FILE    write documents to FILE or DIRECTORY.\r\n".
-		" -S,  --server-response         print server response.\r\n".
-		"      --user=USER               set user to USER.\r\n".
-		"      --password=PASS           set password to PASS.\r\n".
-		"      --ask-password            prompt for passwords.\r\n".
-		"\r\nHTTP options:\r\n".
-		"      --http-user=USER          set http user to USER.\r\n".
-		"      --http-password=PASS      set http password to PASS.\r\n".
-		"      --save-headers            save the HTTP headers to output file.\r\n".
-		"      --header=STRING           insert STRING among the headers.\r\n".
-		"      --post-data=STRING        use the POST method; send STRING as the data.\r\n".
-		"      --post-file=FILE          use the POST method; send contents of FILE.\r\n"
-	);
-	exit (1);
+else {
+  print (
+    "Usage: v1 wget.v1 [OPTIONS] <url>\r\n\r\n".
+    "Options:\r\n".    
+    " -q,  --quiet                   quiet (no output).\r\n".
+    " -v,  --verbose                 be verbose (this is the default).\r\n".
+    "\r\nDownload:\r\n".
+    " -O,  --output-document=FILE    write documents to FILE or DIRECTORY.\r\n".
+    " -S,  --server-response         print server response.\r\n".   
+    "      --user=USER               set user to USER.\r\n".
+    "      --password=PASS           set password to PASS.\r\n".
+    "      --ask-password            prompt for passwords.\r\n".     
+    "\r\nHTTP options:\r\n".
+    "      --http-user=USER          set http user to USER.\r\n".
+    "      --http-password=PASS      set http password to PASS.\r\n".
+    "      --save-headers            save the HTTP headers to output file.\r\n".
+    "      --header=STRING           insert STRING among the headers.\r\n".
+    "      --post-data=STRING        use the POST method; send STRING as the data.\r\n".
+    "      --post-file=FILE          use the POST method; send contents of FILE.\r\n"
+    );
+    
+  exit (1);
 }
+
 ?>

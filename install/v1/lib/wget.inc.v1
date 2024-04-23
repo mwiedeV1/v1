@@ -1,8 +1,8 @@
 <?v1
-dl ("ssl");
 dl ('regex');
-
+require_once ("io.inc.v1");
 require_once ("utils.inc.v1");
+
 
 /**
  * Parses a URI into the components and fragment identifier as specified by RFC 3986.
@@ -75,6 +75,8 @@ function parse_url (url)
  * printClientRequest = true then print the client request headers
  * printServerResponse = true then print the server response headers
  * alwaysReadContent = true the response content is always read, otherwise only the content is read on http status 200 and 201
+ * noCheckCert = true then the peer SSL certificate will be not verified
+ * getCert = true then the peer SSL certificate will be returned
  *    
  * @return Array with response, following array keys will be set:
  * url = The requested url
@@ -93,6 +95,8 @@ function parse_url (url)
  
 function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=array ()) 
 {  
+  ioFunc = io_get_functions ();
+  
   redirectCnt = 0;
 
   do 
@@ -156,23 +160,28 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
     
     if (fSSL) 
     {
-    	// Create SSL Context
-    	ctx = SSL_CTX_new ();
-    	ssl = SSL_new (ctx);
-      
-    	// Set socket
-    	SSL_set_fd (ssl, socket);
+      ioFunc = io_get_functions (true);
+      assign (ctx, ssl, ret, verifyStatus) = call_user_func (ioFunc[3], socket, urlTokens["host"], empty (options["noCheckCert"]));
     	// Connect SSL
-    	if (SSL_connect (ssl, urlTokens["host"])) {
+    	if (ret && !verifyStatus) {
    	    res = ssl;
     	}
     	else {
   	    // SSL connection problems
-  	    errText = "SSL error";    	    
+        if (verifyStatus>0)
+    	    errText = "SSL peer certificate is not trusted (error ".verifyStatus."). Try option --no-check-certificate";
+        else
+    	    errText = "SSL connection error"; 
   	    if (fVerbose)
           print (errText);        
     	}
-	    serverCert = SSL_get_peer_certificate (ssl);
+      if (!empty (options["getCert"])) {
+        if (MOD_SSL)
+    	    serverCert = SSL_get_peer_certificate (ssl);	
+        else {
+          serverCert = openSSLParseCert (SSL_get_peer_certificate (ssl), 3);
+        }
+      }
     }
     else {
       res = socket;
@@ -253,8 +262,9 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
       if (fVerbose) {
         print ("Path: ".urlTokens["path"]);
       }
-  		fwrite (res, headers);
-            
+      
+  		call_user_func (ioFunc[0], res, headers);
+
       // Optional post data
       if (isset (options["postData"])) {
         fwrite (res, options["postData"]);
@@ -279,7 +289,8 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
         
   		// Read HTTP header
   		line = "", responseHeaders="", lineIdx = 0, contentLength = 0, statusCode = 0, statusText = "";
-  		while (freadln (res, line)) {
+  		while (call_user_func (ioFunc[2], res, line)) {
+
         if (lineIdx==0) {
           if ((p = strpos (line, ' '))!==false) {
             statusText = trim (substr (line, p, strlen(line)-p));
@@ -405,13 +416,13 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
     		if (!contentLength || fChunked) 
     		{
   		    // Read line by line
-  		    while (freadln (res, tmp)) {          		        
+  		    while (call_user_func (ioFunc[2], res, tmp)) {          		        
 		        if (fChunked) {
 	            size = 0;
 	            sscanf (tmp, "%X", size);                      
 	            // print ("Read chunked ".tmp."=".size." bytes<br>");
 	            while (size>0) {
-		            bytesRead = fread (res, tmp, size);
+		            bytesRead = call_user_func (ioFunc[1], res, tmp, size);
 		            bytesReadTotal+=bytesRead;                    
 		            size-=bytesRead;
 		            if (saveTo && fh) {  
@@ -441,7 +452,7 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
           bytesToRead = contentLength;
           bytesRead = 0;
           p = 0;
-          while (bytesToRead>0 &&  (bytesRead=fread (res, tmp, size))>0) {
+          while (bytesToRead>0 &&  (bytesRead=call_user_func (ioFunc[1], res, tmp, size))>0) {
             // print ("bytesRead=", bytesRead, ", contentLength=", contentLength, "<br>");
             bytesReadTotal+=bytesRead;
             if (fVerbose) {
@@ -566,6 +577,7 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
   }
   
   // Detailed array
+
   return array (
     "url"=>url, 
     "httpStatus"=>statusCode, 

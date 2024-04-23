@@ -915,7 +915,7 @@ int func_SSL_write (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
 		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_STR_REQUIRED;
 	}
 
-	int size = -1;	
+	int size = 0;	
 	if (argvalues.size ()>2) {
 		if (argvalues[2]->datatype>DataValue::DATATYPE_STR)
 			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_NUM_REQUIRED;
@@ -929,7 +929,7 @@ int func_SSL_write (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
 	try {
 		if (h && ctx.handleHT.isKey (h) && h->handletype==g_handletype_SSL) {			
 			_SSL* obj = (_SSL*) h->handle;							
-			if (size>=0)
+			if (size>0)
 				obj->write (argvalues[1]->value.c_str (), size);			
 			else
 				obj->write (argvalues[1]->value.c_str (), argvalues[1]->value.length ());				
@@ -1251,7 +1251,7 @@ int func_SSL_universal (WCSTR function, vector<DataValue*>& argvalues, DataValue
 					if (palg) {
 						tmp.datatype=DataValue::DATATYPE_STR;		
 						OBJ_obj2txt(buf, sizeof(buf)-1, palg->algorithm, 0);
-						ret.arrayList.put ("SIG_TYPE", tmp)->m_value=(WCSTR) buf;
+						ret.arrayList.put ("SIGTYPE", tmp)->m_value=(WCSTR) buf;
 					}
 #else
 					X509_ALGOR* palg = NULL;
@@ -1261,10 +1261,10 @@ int func_SSL_universal (WCSTR function, vector<DataValue*>& argvalues, DataValue
 					if (palg) {
 						tmp.datatype=DataValue::DATATYPE_STR;		
 						int sig_nid = OBJ_obj2nid (cert->sig_alg->algorithm);
-                        tmp.datatype =DataValue::DATATYPE_NUM;
-						ret.arrayList.put ("SIG_TYPE_ID", tmp)->m_value.numvalue=(double) sig_nid;
-                        tmp.datatype =DataValue::DATATYPE_STR;
-                        ret.arrayList.put ("SIG_TYPE", tmp)->m_value=OBJ_nid2ln(sig_nid); 
+            tmp.datatype =DataValue::DATATYPE_NUM;
+						ret.arrayList.put ("SIGTYPE_ID", tmp)->m_value.numvalue=(double) sig_nid;
+            tmp.datatype =DataValue::DATATYPE_STR;
+            ret.arrayList.put ("SIGTYPE", tmp)->m_value=OBJ_nid2ln(sig_nid); 
 					}
 #endif
 

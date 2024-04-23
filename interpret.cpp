@@ -2917,7 +2917,7 @@ int func_fwrite(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 		return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_STR_REQUIRED;
 	}
 
-	int size = -1;
+	int size = 0;
 	if (argvalues.size() > 2) {
 		if (argvalues[2]->datatype > DataValue::DATATYPE_STR)
 			return WSCRIPT_RET_PARAM3 | WSCRIPT_RET_NUM_REQUIRED;
@@ -2931,14 +2931,14 @@ int func_fwrite(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 				argvalues[1]->toString();
 			if (h->handletype == Handle::HANDLETYPE_FILE) {
 				WFile *file = (WFile *)h->handle;
-				if (size >= 0)
+				if (size > 0)
 					ret = file->write(argvalues[1]->value.c_str(), size);
 				else
 					ret = file->write(argvalues[1]->value.c_str(), argvalues[1]->value.length());
 			}
 			else if (h->handletype == Handle::HANDLETYPE_SOCKET) {
 				WSocket *socket = (WSocket *)h->handle;
-				if (size >= 0) {
+				if (size > 0) {
 					ret = socket->write(argvalues[1]->value.c_str(), size);
 				}
 				else
@@ -8519,7 +8519,7 @@ function:
 				else {
 					if (tmp->refPnt && (tmp->flags & DataValue::FLAGS_USEREF)) {
 						tmp = tmp->refPnt;
-						tmp->flags |= DataValue::FLAGS_USEREF;
+						// tmp->flags |= DataValue::FLAGS_USEREF;
 					}
 					tmp->refPnt = tmp;
 				}

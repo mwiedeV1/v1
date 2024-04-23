@@ -54,7 +54,7 @@ function SSL_set_verify_depth (ssl, depth) {
 
 function SSL_set_fd (ssl, socket) {
     global hDLLSSL;
-    return call (hDLLSSL, "SSL_set_fd", "pi:i", ssl, socket);
+    return call (hDLLSSL, "SSL_set_fd", "pi:i", ssl, fileno (socket));
 }
 
 function SSL_free (ssl) {
@@ -174,11 +174,15 @@ function openSSLParseCert (cert, flags=0)
 
     pem = "";
     len = BIO_number_written (bio);
-    resize (pem, len);
-    
+    resize (pem, len);    
     BIO_read(bio, pem, len);
+    
+    /*
+    global hDLLCrypto;
+    call (hDLLCrypto, "BIO_read", "pri:p", bio, pem, len);
+    */
     BIO_free(bio);
-			
+    
     // Parse ANS 1
     require_once ("ans1.inc.v1");
     ans1Store = array ();
@@ -245,13 +249,13 @@ function openSSLParseCert (cert, flags=0)
 			// Other elements not implemented
 			// print_r (node);				
 		}
+
     if (flags & 1)
   		ret["CERT_PEM"]=pem;
     if (flags & 2)
   		ret["CERT_ANS1_FORMATTED"]=dumpANS1 (ans1Store, ans1Vars);
-    if (flags & 4) {
+    if (flags & 4) 
   		ret["CERT_ANS1_ARRAY"]=ans1Store;
-    }
     return ret;
 }
 
