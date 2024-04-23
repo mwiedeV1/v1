@@ -26,7 +26,7 @@
   
   SSL options:
         --no-check-certificate    SSL/TLS peer certificate will be not verified.
-        --print-certificate       Print the server SSL/TLS certiciate
+        --print-certificate       Print the server SSL/TLS certificate.
 */
 
 error_reporting (0); // 1 to show all warnings
@@ -176,7 +176,10 @@ else {
     "      --save-headers            save the HTTP headers to output file.\r\n".
     "      --header=STRING           insert STRING among the headers.\r\n".
     "      --post-data=STRING        use the POST method; send STRING as the data.\r\n".
-    "      --post-file=FILE          use the POST method; send contents of FILE.\r\n"
+    "      --post-file=FILE          use the POST method; send contents of FILE.\r\n".
+    "\r\nSSL options:\r\n".
+    "      --no-check-certificate    SSL/TLS peer certificate will be not verified.\r\n".
+    "      --print-certificate       Print the server SSL/TLS certificate.\r\n"
     );
     
   exit (1);
