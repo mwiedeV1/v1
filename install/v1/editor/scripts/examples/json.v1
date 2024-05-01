@@ -3,7 +3,7 @@
 require_once ("../../../lib/wget.inc.v1");
 t = microtime (true);
 url = "https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo";
-res = wget (url, null, false, false, ["getCert"=>0]);    
+res = wget (url, null, false, false, ["noCheckCert" => true]);    
 
 if (res["errText"]!="") {
     print (res["errText"]);

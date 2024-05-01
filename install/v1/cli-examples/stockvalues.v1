@@ -16,7 +16,7 @@ patterns = [
 function getStockValues (url, &patterns) 
 {
   // Use WGet library to receive HTML website
-  website = wget (url, null, false);
+  website = wget (url, null, false, false, ["noCheckCert" => true]);
   if (website["errText"]!="") {
     return "Error: ".website["errText"];
   }
