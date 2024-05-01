@@ -359,8 +359,7 @@ function port443Thread (fh) {
   threadList = array ();
 
   // Create SSL Context
-  ctx = SSL_CTX_new ("SSLv23_method"); // TLSv1_2_server_method, SSLv23_method
-  // SSL_CTX_set_cipher_list (ctx, "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");    
+  ctx = SSL_CTX_new ("TLS_method");
 
   if (!is_file (CERT_DIR."/".SERVER_HOST.".crt")) {
    // Create self signed

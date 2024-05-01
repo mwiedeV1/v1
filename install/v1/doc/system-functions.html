@@ -117,7 +117,7 @@
 <tr>
 <td><strong>dlsym</strong>    (number <em>module</em>, string <em>symbol</em>)</td>
 <td>number</td>
-<td>Get pointer address of <em>symbol</em> in <em>module</em> loaded with dl() function. On success pointer address is returned. If symbol is not found false is returned. See also <a href="native-function-call.html">Native function calling</a>.</td>
+<td>Get pointer address of <em>symbol</em> in <em>module</em> loaded with dl() function. On Linux systems <em>module</em> can be 0 = RTLD_DEFAULT to search symbols in default order (e.g. libc symbols). On success pointer address is returned. If symbol is not found false is returned. See also <a href="native-function-call.html">Native function calling</a>.</td>
 </tr>
 <tr>
 <td><strong>call</strong>    (number <em>module</em>, mixed <em>function</em>, array <em>paramDef</em> [, mixed <em>arg1</em> ... ])</td>
@@ -187,7 +187,7 @@
 <p><a href="index.html">back to Home</a></p>
 	</div>
 	<footer>
-		<p>V1 Version 0.96 - Documentation generated Tue, 05 Sep 2023 11:27</p>
+		<p>V1 Version 0.96 - Documentation generated Wed, 01 May 2024 10:47</p>
 	</footer>
 	</body>
 	</html>

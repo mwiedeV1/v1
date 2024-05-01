@@ -915,7 +915,7 @@ int func_SSL_write (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
 		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_STR_REQUIRED;
 	}
 
-	int size = 0;	
+	int size = -1;	
 	if (argvalues.size ()>2) {
 		if (argvalues[2]->datatype>DataValue::DATATYPE_STR)
 			return WSCRIPT_RET_PARAM3|WSCRIPT_RET_NUM_REQUIRED;
@@ -929,7 +929,7 @@ int func_SSL_write (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
 	try {
 		if (h && ctx.handleHT.isKey (h) && h->handletype==g_handletype_SSL) {			
 			_SSL* obj = (_SSL*) h->handle;							
-			if (size>0)
+			if (size>=0)
 				obj->write (argvalues[1]->value.c_str (), size);			
 			else
 				obj->write (argvalues[1]->value.c_str (), argvalues[1]->value.length ());				

@@ -272,7 +272,8 @@ function bz_decompress_file (srcFilename, dstFilename, fVerbose=false)
           break;
         }      
         size = BZ_BUF_SIZE-bz_stream[0]["avail_out"];
-        fwrite (fh2, dst, size);
+        if (size>0)
+          fwrite (fh2, dst, size);
       } while (size==BZ_BUF_SIZE && ret!=BZ_STREAM_END); 
       if (ret==BZ_STREAM_END || ret<0)
         break;

@@ -2,49 +2,48 @@
 // Receive a HTML website and parse for values with regular expressions
 require_once ("../lib/wget.inc.v1");
 
-const WEBSITE_URL = "https://www.onvista.de";
+const WEBSITE_URL = "https://www.finanznachrichten.de";
 
 patterns = [
-	"Dow Jones" => '<span class="top-assets__price" data-push="15305651:last:1:1:Index"> (.*?) <\/span>',
-	"NASDAQ 100" => '<span data-push="13320014:last:1:0:Index">(.*?)<\/span>',
-	// "German DAX" => '<span class="top-assets__price" data-push="14207349:last:1:1:Index"> (.*?) <\/span>',
-	"German DAX" => '<span data-push="20735:last:2:0:Index">(.*?)<\/span>',
-	"DAX-Performance" => '<span class=".*" data-push="20735:performanceRelative:2:0:Index">(.*?)<\/span>',
-	"Oil (WTI)" => '<span class="top-assets__price" data-push="31117979:last:1:1:Commodity"> (.*?) <\/span>',
-	"USDEUR" => '<span data-push="1390634:last:2:0:Currency">(.*?)<\/span>',
-	"Gold" => '<span class="top-assets__price" data-push="31117890:last:1:1:Commodity">(.*?)<\/span>'
+  "Dow Jones" => 'data-item="AMAP_US2605661048.AII" data-field="Rate">(.*?)<\/div>',
+  "NASDAQ 100" => 'data-item="AMAP_US6311011026.AII" data-field="Rate">(.*?)<\/div>',
+  "German DAX" => 'data-item="AMAP_DE0008469008.AII" data-field="Rate">(.*?)<\/div>',  
+  "Oil (WTI)" => 'data-item="AMAP_XC0009677409.AIR" data-field="Rate">(.*?)<\/td>',
+  "USDEUR" => 'data-item="AMAP_EU0009652759.AID" data-field="Rate">(.*?)<\/td>',
+  "Gold" => 'data-item="AMAP_XC0009655157.AIR" data-field="Rate">(.*?)<\/td>'      
 ];
 
-function getStockValues (url, &patterns)
+function getStockValues (url, &patterns) 
 {
-	// Use WGet library to receive HTML website
-	website = wget (url, null, false);
-	if (website["errText"]!="") {
-		return "Error: ".website["errText"];
-	}
-	else {
-		// List of PCRE patterns
-		stockList = array ();
-		foreach (patterns as name => pattern) {
-			matches = array ();
-			// Check the pattern
-			ret  = preg_match_all (pattern, website["content"], matches);
-			if (ret) {
-				// Value found, remove . and replace , with .
-				stockList[name]=str_replace (array (".", ","), array ("", "."), matches[1][0]);
-			}
-			else {
-				stockList[name]="<not found, check pattern>";
-			}
-		}
-		return stockList;
-	}
-	return -1;
+  // Use WGet library to receive HTML website
+  website = wget (url, null, false);
+  if (website["errText"]!="") {
+    return "Error: ".website["errText"];
+  }
+  else {
+    // List of PCRE patterns
+    stockList = array ();
+    foreach (patterns as name => pattern) {
+      matches = array ();      
+      // Check the pattern
+      ret  = preg_match_all (pattern, website["content"], matches);
+      if (ret) {
+        // Value found, remove . and replace , with .
+        stockList[name]=str_replace (array (".", ","), array ("", "."), matches[1][0]);
+      }
+      else {
+        stockList[name]="<not found, check pattern>";
+      }
+    }
+    return stockList;
+  }
+  return -1; 
 }
 
 // Show values
 do {
-	print_r (getStockValues (WEBSITE_URL, patterns));
-	print ("Do you want repeat? (y/n)");
+  print_r (getStockValues (WEBSITE_URL, patterns));
+  print ("Do you want repeat? (y/n)");
 } while (getch ()=='y');
+
 ?>

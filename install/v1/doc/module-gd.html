@@ -222,7 +222,7 @@
 <tr>
 <td><strong>videosetcapturebuffer</strong> (number <em>address</em>, [bool <em>autoConvertRGB32</em>=true, number <em>notifyId</em>=0 ])</td>
 <td>bool</td>
-<td>Set a capture buffer to hold a camera image. Memory <em>address</em> is usually a string buffer. memref() function return the memory address of a string. Optional parameter <em>autoConvertRGB32</em> marks if the camera raw image should be converted automatically to RGB32, otherwise the raw data will be captured. Take care to allocate enough RGB32 buffer with resize() which is calculated by width x height x 4 bytes. Note: Not all image data formats will be converted automatically to RGB32. In time only RGB24 and YUY2 will be convered. All other formats are transferred as raw data. See also <em>compression</em> flag returned by videogetprops(). For more details of the available compression flags read the <a target="_blank" href="https://learn.microsoft.com/en-us/windows/win32/directshow/fourcc-codes">Microsoft FOURCC Codes</a>. If the optional parameter <em>notifyId</em> is not 0 than it holds a WM_COMMAND identifier to notify the preview window that a new frame was received, see also videoenablepreviewwindow(). On success true is returned.</td>
+<td>Set a capture buffer to hold a camera image. Memory <em>address</em> is usually a string buffer. memref() function return the memory address of a string. Optional parameter <em>autoConvertRGB32</em> marks if the camera raw image should be converted automatically to RGB32, otherwise the raw data will be captured. Take care to allocate enough RGB32 buffer with resize() which is calculated by width x height x 4 bytes. Note: Not all image data formats will be converted automatically to RGB32. In time only RGB24, YUY2, MJPEG will be convered. All other formats are transferred as raw data. See also <em>compression</em> flag returned by videogetprops(). For more details of the available compression flags read the <a target="_blank" href="https://learn.microsoft.com/en-us/windows/win32/directshow/fourcc-codes">Microsoft FOURCC Codes</a>. If the optional parameter <em>notifyId</em> is not 0 than it holds a WM_COMMAND identifier to notify the preview window that a new frame was received, see also videoenablepreviewwindow(). On success true is returned.</td>
 </tr>
 <tr>
 <td><strong>videoenablepreviewwindow</strong> (handle <em>video</em>, number <em>hWndParent</em>, number <em>x</em>, number <em>y</em>, number <em>width</em>, number <em>height</em>, [number <em>scale</em>=1, number <em>refreshRate</em>=30])</td>
@@ -264,7 +264,7 @@
 <p><a href="index.html">back to Home</a></p>
 	</div>
 	<footer>
-		<p>V1 Version 0.96 - Documentation generated Tue, 12 Sep 2023 11:20</p>
+		<p>V1 Version 0.96 - Documentation generated Wed, 01 May 2024 10:47</p>
 	</footer>
 	</body>
 	</html>

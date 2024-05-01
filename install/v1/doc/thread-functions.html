@@ -85,14 +85,14 @@
 <td>Resume the <em>thread</em>. On success true is returned.</td>
 </tr>
 <tr>
-<td><strong>thread_sync_enter</strong> (handle <em>thread</em>)</td>
+<td><strong>thread_sync_enter</strong> ()</td>
 <td>bool</td>
-<td>Enter a <em>thread</em> synchronized program part. All instructions between  thread_sync_enter() and thread_sync_leave() are exclusive executed  and not involved by any other thread which will wait until thread_sync_leave() was called. On success true is returned.</td>
+<td>Enter a synchronized program part. All instructions between  thread_sync_enter() and thread_sync_leave() are exclusive executed and not involved by any other thread which will wait until thread_sync_leave() was called. On success true is returned.</td>
 </tr>
 <tr>
-<td><strong>thread_sync_leave</strong> (handle <em>thread</em>)</td>
+<td><strong>thread_sync_leave</strong> ()</td>
 <td>bool</td>
-<td>Leave a <em>thread</em> synchronized program part. On success true is returned.</td>
+<td>Leave a synchronized program part. On success true is returned.</td>
 </tr>
 <tr>
 <td><strong>sleep</strong> (number <em>milliseconds</em>)</td>
@@ -104,7 +104,7 @@
 <p><a href="index.html">back to Home</a></p>
 	</div>
 	<footer>
-		<p>V1 Version 0.96 - Documentation generated Tue, 05 Sep 2023 11:27</p>
+		<p>V1 Version 0.96 - Documentation generated Wed, 01 May 2024 10:47</p>
 	</footer>
 	</body>
 	</html>
