@@ -118,7 +118,7 @@ public:
 		if (m_ctx)
 			return;
 		
-		const SSL_METHOD *methodPnt = TLSv1_2_client_method ();
+		const SSL_METHOD *methodPnt = TLSv1_2_method ();
 		
 		if (!strcmp (method, "SSLv23_method"))
 			methodPnt = SSLv23_method();

@@ -11,7 +11,7 @@ error_reporting (0); // 1 to show all warnings
 
 const SERVER_HOST = "localhost"; // Host or IP address
 const SERVER_PORT = 8080; // HTTP port
-const SERVER_SSL_PORT = 0; // 443 to use https:// or 0 not using SSL
+const SERVER_SSL_PORT = 4430; // 443 to use https:// or 0 not using SSL
 const CERT_DIR = "cert"; // Directory of SSL certificates (PEM format)
 const MAX_THREADS = 15; // Max. parallel requests
 const RECV_TIMEOUT = 30000; // Milliseconds a client should send data
@@ -234,7 +234,7 @@ function workerThread (client, ssl=null) {
       envStr.="\0";
       envStr.='REQUEST_URI='.uri;
       envStr.="\0";
-      envStr.='REMOTE_ADDR='.fsockip (client);      
+      envStr.='REMOTE_ADDR='.fsockip (client);
       envStr.="\0";
       // HTTP vars
       foreach (headerList as k => v) {
@@ -359,9 +359,9 @@ function port443Thread (fh) {
   threadList = array ();
 
   // Create SSL Context
-  ctx = SSL_CTX_new ("TLS_method");
+  ctx = SSL_CTX_new ("TLSv1_2_server_method");
 
-  if (!is_file (CERT_DIR."/".SERVER_HOST.".crt")) {
+  if (!is_file (CERT_DIR."/".SERVER_HOST.".crt")) {  
    // Create self signed
    if (!SSL_create_selfsigned_cert (CERT_DIR."/".SERVER_HOST.".crt", CERT_DIR."/".SERVER_HOST.".key" , SERVER_HOST, 315360000, "sha256", 2048)) {
       print ("Cannot create self signed certificate for ".SERVER_HOST);
@@ -415,7 +415,7 @@ function port443Thread (fh) {
 }
 
 // Create Port 80
-fh = fsockserver (SERVER_HOST, SERVER_PORT);
+fh = fsockserver (SERVER_HOST, SERVER_PORT, 0);
 if (!fh) {
   print ("Cannot create HTTP-Server on ",  SERVER_HOST, ":", SERVER_PORT);
   exit (1);
