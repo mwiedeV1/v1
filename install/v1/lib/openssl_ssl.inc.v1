@@ -89,9 +89,9 @@ function SSL_accept (ssl) {
     return call (hDLLSSL, "SSL_accept", "p:i", ssl);
 }
 
-function SSL_write (ssl, str, len=0) {
+function SSL_write (ssl, str, len=-1) {
     global hDLLSSL;
-    return call (hDLLSSL, "SSL_write", "pri:i", ssl, str, (len==0 ? strlen (str) : len));
+    return call (hDLLSSL, "SSL_write", "pri:i", ssl, str, (len==-1 ? strlen (str) : len));
 }
 
 function SSL_read (ssl, &str, len) {
@@ -107,8 +107,7 @@ function SSL_read (ssl, &str, len) {
 function SSL_readln (ssl, &str) {
   global hDLLSSL;
   str = "";
-  buf = "";
-  resize (buf, 1);
+  buf = "\x00"; // 1 Byte long
   while (ret=call (hDLLSSL, "SSL_read", "pri:i", ssl, buf, 1)==1) {
     bin = binparse (buf, 1);
     if (bin==0x0D)

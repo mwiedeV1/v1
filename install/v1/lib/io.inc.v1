@@ -1,5 +1,5 @@
 <?v1
-const MOD_SSL = true;
+const MOD_SSL = false;
 if (MOD_SSL)
   dl ("ssl");
 else
@@ -7,7 +7,7 @@ else
   
 
 // I/O functions
-function io_fwrite (fh, str, size=0) {
+function io_fwrite (fh, str, size=-1) {
   return fwrite (fh, str, size); 
 }
 
