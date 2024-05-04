@@ -1,0 +1,29 @@
+
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+		<title>V1 Script - TCP/IP sockets</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
+	</head>
+	
+	<body>
+	
+	<div class="logo"><a href="index.html"><img src="images/v1_logo.png" alt="V1 Script"/></a></div>
+	
+	<div class="page_wrap">
+	<h1>Example: Working with IPV4/6 stream sockets</h1>
+<p>The follwing <a href="socket-functions.html">socket functions</a> can be used.
+Complexer examples with TLS you will find under <a href="example-ssl-client.html">ssl-client</a> and <a href="example-webserver.html">webserver</a>.</p>
+<p>Example: Connect to a hostname/port and send/receive data.</p>
+<pre><code><span style="color: #000000"></span><span style="color: #0000BB;">&lt;?</span><span style="color: #000000">v1<br /><br />hostname&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #DD0000">"myhostname"</span><span style="color: #0000BB;">;<br /></span><span style="color: #000000">socket&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">fsockopen&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">hostname</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">1000</span><span style="color: #0000BB;">);<br /><br />if&nbsp;(</span><span style="color: #000000">socket</span><span style="color: #0000BB;">)&nbsp;{<br />&nbsp;&nbsp;print&nbsp;(</span><span style="color: #DD0000">"Connected&nbsp;to&nbsp;IP:&nbsp;"</span><span style="color: #0000BB;">.</span><span style="color: #000000">fsockip&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">socket</span><span style="color: #0000BB;">).</span><span style="color: #DD0000">"&nbsp;Port:&nbsp;"</span><span style="color: #0000BB;">.</span><span style="color: #000000">fsockport&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">socket</span><span style="color: #0000BB;">));<br /><br />&nbsp;&nbsp;</span><span style="color: #008000">//&nbsp;Send&nbsp;a&nbsp;string<br />&nbsp;&nbsp;</span><span style="color: #000000">fwrite&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">socket</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"TEST"</span><span style="color: #0000BB;">);<br /><br />&nbsp;&nbsp;</span><span style="color: #008000">//&nbsp;Try&nbsp;to&nbsp;read&nbsp;1000&nbsp;bytes<br />&nbsp;&nbsp;//&nbsp;To&nbsp;read&nbsp;line&nbsp;by&nbsp;line&nbsp;use:&nbsp;while&nbsp;(freadln&nbsp;(socket,&nbsp;data))&nbsp;{&nbsp;...&nbsp;}<br />&nbsp;&nbsp;</span><span style="color: #000000">data&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #DD0000">""</span><span style="color: #0000BB;">;<br />&nbsp;&nbsp;</span><span style="color: #000000">bytesRead&nbsp;</span><span style="color: #0000BB;">=&nbsp;</span><span style="color: #000000">fread&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">socket</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">data</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #000000">1000</span><span style="color: #0000BB;">);<br />&nbsp;&nbsp;if&nbsp;(</span><span style="color: #000000">bytesRead</span><span style="color: #0000BB;">!==</span><span style="color: #000000">false</span><span style="color: #0000BB;">)&nbsp;{<br />&nbsp;&nbsp;&nbsp;&nbsp;print&nbsp;(</span><span style="color: #000000">bytesRead</span><span style="color: #0000BB;">,&nbsp;</span><span style="color: #DD0000">"&nbsp;bytes&nbsp;received."</span><span style="color: #0000BB;">);<br />&nbsp;&nbsp;&nbsp;&nbsp;print&nbsp;(</span><span style="color: #000000">data</span><span style="color: #0000BB;">);<br />&nbsp;&nbsp;}<br />&nbsp;&nbsp;else&nbsp;{<br />&nbsp;&nbsp;&nbsp;&nbsp;print&nbsp;(</span><span style="color: #DD0000">"Connection&nbsp;closed&nbsp;or&nbsp;timeout."</span><span style="color: #0000BB;">);<br />&nbsp;&nbsp;}<br /><br />&nbsp;&nbsp;</span><span style="color: #008000">//&nbsp;Close&nbsp;socket<br />&nbsp;&nbsp;</span><span style="color: #000000">fclose&nbsp;</span><span style="color: #0000BB;">(</span><span style="color: #000000">socket</span><span style="color: #0000BB;">);<br />}&nbsp;&nbsp;&nbsp;<br /><br /></span><span style="color: #000000">?&gt;</span></code></pre>
+<p><a href="index.html">back to Home</a></p>
+	</div>
+	<footer>
+		<p>V1 Version 0.96 - Documentation generated Wed, 01 May 2024 10:47</p>
+	</footer>
+	</body>
+	</html>
+	
+	
