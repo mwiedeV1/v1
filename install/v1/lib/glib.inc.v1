@@ -41,11 +41,13 @@ glibCallbackList = array ();
 function callbackA1 (data)
 {
 	global glibCallbackList;
-
+	thread_sync_enter ();
+	ret = false;
 	if (isset (glibCallbackList[data])) {
-		return call_user_func (glibCallbackList[data]["name"], glibCallbackList[data]["data"]);
+		ret = call_user_func (glibCallbackList[data]["name"], glibCallbackList[data]["data"]);
 	}
-	return false;
+	thread_sync_leave ();
+	return ret;
 }
 
 function callbackA2 (app, data)
