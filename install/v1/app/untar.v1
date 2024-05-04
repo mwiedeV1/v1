@@ -95,7 +95,7 @@ if (!empty (arg) && arg!="--help") {
       print ("Cannot decompress, bzip2 error ".ret);
       exit (3);
     }
-    // unlink (filename);
+    unlink (filename);
     filename = dstFilename;
   }
   print ("Extracting  ".filename." ... please wait ...");
