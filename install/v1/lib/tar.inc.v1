@@ -84,7 +84,10 @@ function tar_read_header (fh)
   
   fseek (fh, dataPos);
 
-  if (header["linkflag"]=="L" && header["name"]=="././@LongLink") {
+  fPaxHeader = (header["linkflag"]=="x" && header["name"]=="././@PaxHeader");
+  fLongLink = (header["linkflag"]=="L" && header["name"]=="././@LongLink");
+  
+  if (fLongLink || fPaxHeader) {
     // Read long filename
     longFilename = "";
     fread (fh, longFilename, header["size"]);
@@ -100,13 +103,26 @@ function tar_read_header (fh)
     if (!is_array (header)) {
       return -1;
     }
-    else {
-      header["name"]=trim (longFilename);
+    if (fPaxHeader) {
+      len = intval (longFilename);
+      if (len) {
+        longFilename = substr (longFilename, 0, len);
+        if ((p=strpos (longFilename, "path="))!==false) {
+          longFilename = trim (substr (longFilename, p+5));
+        }
+        else {
+          longFilename = "";
+        }
+      }
+      else
+        return -1;                          
     }
+    if (!empty (longFilename))
+      header["name"]=trim (longFilename);
   }
+
   // Remove relative paths for security
-  header["name"] = str_replace (["../", "..\\"], ["./", "./"], header["name"]);
-  
+  header["name"] = str_replace (["../", "..\\"], ["./", "./"], header["name"]);  
   return header;
 }
 
@@ -145,6 +161,24 @@ function tar_extract (tarFilename, dstPath=".", options=array ()) {
           print (log);
           ret["log"].=log."\n";
         }
+
+        // Try to create sub directories
+        pathTokens = explode ("/", header["name"]);
+        subDir = "";
+        if (count (pathTokens)>1) {
+          unset (pathTokens[count(pathTokens)-1]);
+          foreach (pathTokens as pathToken) {
+            if (!empty (subDir))
+              subDir.="/";
+            subDir.=pathToken;
+            if (!is_dir (dstPath."/".subDir) && !mkdir (dstPath."/".subDir)) {
+              ret["errText"] = "Cannot create directory: ".dstPath."/".subDir;
+              ret["log"].=ret["errText"]."\r\n";
+              break;
+            }
+          }
+        }
+
         // Read file
         dstFilename = dstPath."/".header["name"];
         fh2 = fopen (dstFilename, "w+");
