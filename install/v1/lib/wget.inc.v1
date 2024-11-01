@@ -22,8 +22,8 @@ function parse_url (url)
   result = preg_match(r_URI, url, matches);
   if (!result) 
       return false; // *really* invalid URI
-  // seperate out parts
 
+  // seperate out parts
   scheme = !empty(matches[1]) ? matches[2] : null;
   authority = !empty(matches[3]) ? matches[4] : null;
   path = matches[5]; // always present, can be empty
@@ -267,7 +267,7 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
 
       // Optional post data
       if (isset (options["postData"])) {
-        fwrite (res, options["postData"]);
+				call_user_func (ioFunc[0], res, options["postData"]);
       }
       if (fh) {
          autonl (false);
@@ -277,7 +277,7 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
         }
         tmp = "";
         while (fread (fh, tmp)) {
-          fwrite (res, tmp);
+					call_user_func (ioFunc[0], res, tmp);
         }
         fclose (fh);
         fh = null;
@@ -416,7 +416,7 @@ function wget (url, saveTo=null, fSimpleReturn=true, fVerbose=false, options=arr
     		if (!contentLength || fChunked) 
     		{
   		    // Read line by line
-  		    while (call_user_func (ioFunc[2], res, tmp)) {          		        
+  		    while (call_user_func (ioFunc[2], res, tmp)) {        
 		        if (fChunked) {
 	            size = 0;
 	            sscanf (tmp, "%X", size);                      
