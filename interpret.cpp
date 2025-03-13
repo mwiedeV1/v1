@@ -7728,7 +7728,7 @@ DataValue *Expression::calc(InterpreterContext &ctx, DataValue &retvalue, unsign
 										retvalue = *arrayValue;
 								}
 							}
-ÿ 		翜}
+						}
 					}
 					arrayValue->refPnt = arrayValue;
 					return arrayValue;
