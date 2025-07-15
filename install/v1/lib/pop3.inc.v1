@@ -1,11 +1,14 @@
 <?v1
-dl ("ssl"); 
+require_once ("io.inc.v1");
 
 // Helper functions
+pop3IOFunc = io_get_functions ();
+
 function pop3_read (client)  
 {
+	global pop3IOFunc;
   line = "";
-  if (freadln (client, line)) {
+  if (call_user_func (pop3IOFunc[2], client, line)) {
      return array_merge (explode (" ", line), array ("line"=>line));
   }
   return false;
@@ -13,7 +16,8 @@ function pop3_read (client)
 
 function pop3_write (client, line) 
 {
-  fwrite (client, line."\r\n");
+	global pop3IOFunc;
+  call_user_func (pop3IOFunc[0], client, line."\r\n");
 }
 
 
@@ -32,6 +36,9 @@ function pop3_write (client, line)
 
 function pop3_open (user, pass="", host="localhost", port=110, fTLS=true, fVerbose=false)
 {
+	global pop3IOFunc;
+	pop3IOFunc = io_get_functions ();
+	
   conn = null;  
   if (fTLS && port==110)
     port = 995;
@@ -47,6 +54,7 @@ function pop3_open (user, pass="", host="localhost", port=110, fTLS=true, fVerbo
     client = socket;
 
     if (fTLS) {
+			pop3IOFunc = io_get_functions (true);
     	sslCTX = SSL_CTX_new ();
     	client = SSL_new (sslCTX);
     	SSL_set_fd (client, socket);
@@ -152,6 +160,7 @@ function pop3_list (&conn)
 */
 function pop3_retr (&conn, id, saveToFile="") 
 {
+	global pop3IOFunc;
   mailText = false;
   assign (client, socket, sslCTX) = conn;  
   pop3_write (client, "RETR ".id);
@@ -166,7 +175,7 @@ function pop3_retr (&conn, id, saveToFile="")
         fh = fopen (saveToFile, "w+");
         
       line = "";
-      while (freadln (client, line)) {
+      while (call_user_func (pop3IOFunc[2], client, line)) {
         if (line==".")
           break;
         if (fh) {
