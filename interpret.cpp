@@ -1976,8 +1976,10 @@ int func_str_replace(vector<DataValue *> &argvalues, DataValue &ret, Interpreter
 			replace = &argvalues[1]->value;
 		}
 		else {
-			if (argvalues[1]->arrayList.hasMoreElements())
+			if (argvalues[1]->arrayList.hasMoreElements()) {
+				argvalues[1]->arrayList.nextValuePnt()->toString ();
 				replace = &argvalues[1]->arrayList.nextValuePnt()->value;
+			}
 		}
 		std::string::size_type start_pos = 0;
 		std::string::size_type search_length = find->length();
