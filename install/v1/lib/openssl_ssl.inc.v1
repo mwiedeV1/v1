@@ -1,7 +1,9 @@
 <?v1
 require_once ("openssl.inc.v1");
-
-assign (hDLLSSL, sslLibName) = libOpen ("libssl", "libsslMD.dll", "libssl.so"); 
+if (isset (libsslbName))
+	assign (hDLLSSL, sslLibName) = libOpen ("libssl", libsslbName, libsslbName); 
+else
+	assign (hDLLSSL, sslLibName) = libOpen ("libssl", "libsslMD.dll", "libssl.so"); 
 
 const SSL_OP_NO_SSLv3 = 0x02000000;
 
@@ -57,8 +59,14 @@ function SSL_set_fd (ssl, socket) {
     return call (hDLLSSL, "SSL_set_fd", "pi:i", ssl, fileno (socket));
 }
 
-function SSL_free (ssl) {
+function SSL_free (ssl, fShutdown=true) {
     global hDLLSSL;
+		if (fShutdown) {
+			// For compatibility with module
+	    // call (hDLLSSL, "SSL_set_shutdown", "pi:i", ssl, 1);
+			call (hDLLSSL, "SSL_shutdown", "p:i", ssl, 1);
+			call (hDLLSSL, "SSL_clear", "p:i", ssl);
+		}
     return call (hDLLSSL, "SSL_free", "p:i", ssl);
 }
 
@@ -145,6 +153,11 @@ function SSL_CTX_set_default_verify_paths (ctx) {
     if (version(1)=='Windows')
       return SSL_CTX_add_windows_ca_certs (ctx);
     return call (hDLLSSL, "SSL_CTX_set_default_verify_paths", "p:p", ctx);
+}
+
+function SSL_copy_session_id (to, from) {
+    global hDLLSSL;
+    return call (hDLLSSL, "SSL_copy_session_id", "pp:i", to, from);
 }
 
 // Certificat heper functions

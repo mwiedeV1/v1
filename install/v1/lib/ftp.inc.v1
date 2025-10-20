@@ -1,6 +1,5 @@
 <?v1
-dl ("ssl"); 
-
+require_once ("io.inc.v1");
 require_once ("utils.inc.v1");
 
 const FTP_RECV_TIMEOUT = 1000;
@@ -11,10 +10,14 @@ const FTP_STATUS_TRANSFER_PROGRESS = 3;
 const FTP_STATUS_TRANSFER_FINISHED = 4;
 
 // Helper functions
+ftpIOFunc = io_get_functions ();
+
+// Helper functions
 function ftp_read (client, fVerbose=false)  
 {
+  global ftpIOFunc;
   line = "";
-  if (freadln (client, line)) {
+  if (call_user_func (ftpIOFunc[2], client, line)) {
     if (gettype  (fVerbose)=="string")
       call_user_func (fVerbose, FTP_STATUS_PROT_READ, line);
     else
@@ -27,6 +30,7 @@ function ftp_read (client, fVerbose=false)
 
 function ftp_write (client, line, fVerbose=false) 
 {
+	global ftpIOFunc;
   if (fVerbose) {
     line2 = line;
     if (strpos (line2, "PASS")===0)
@@ -36,7 +40,7 @@ function ftp_write (client, line, fVerbose=false)
     else
       print ("[".date ("%H:%i:%s")."] ", line2);
   }
-  fwrite (client, line."\r\n");
+  return call_user_func (ftpIOFunc[0], client, line."\r\n");	
 }
 
 
@@ -59,8 +63,10 @@ function ftp_write (client, line, fVerbose=false)
 
 function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose=false)
 {
-  conn = null;  
-  
+  global ftpIOFunc;
+  ftpIOFunc = io_get_functions ();
+	
+  conn = null;    
   socket = fsockopen (host, port, FTP_RECV_TIMEOUT);
   if (!socket) {
     conn = "Connection to FTP Server ".host.":".port." failed.";
@@ -75,7 +81,7 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
     welcomeMsg = "";
     mode = 0; 
   
-    if (fTLS==2) {
+    if (fTLS===2) {
       sslCTX = SSL_CTX_new ();
     	client = SSL_new (sslCTX);
     	SSL_set_fd (client, socket);
@@ -87,8 +93,9 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
         fclose (socket); 
         return "SSL connection problems. Implicit TLS does not work. Check security method.";
       }
+		  ftpIOFunc = io_get_functions (true);
     }
-   
+		
     while  (ret = ftp_read (client, fVerbose)) {
 
       code = ret[0];
@@ -125,7 +132,7 @@ function ftp_open (host="localhost", user, pass="", port=21, fTLS=true, fVerbose
             fClose = true;
             break;
           }
-
+					ftpIOFunc = io_get_functions (true);
           // Encrypt data connection     
           ftpProtP (client, fVerbose); 
         }
@@ -287,12 +294,11 @@ function ftp_pasv (&conn)
 function ftpDataConnTLSOpen (&conn) {
   client2 = conn[3];    
   socket2 = conn[4];
-  if (conn[2]) {  
-    
+  if (conn[2]) {
   	client2 = SSL_new (conn[2]);
     // SSL_set_session (client2, SSL_get_session (conn[0]));
-    SSL_copy_session_id (client2, conn[0]);    
-    SSL_set_fd (client2, socket2);    
+    SSL_copy_session_id (client2, conn[0]);
+    SSL_set_fd (client2, socket2);
 
     if (!SSL_connect (client2)) { 
       if (client2) {
@@ -315,7 +321,7 @@ function ftpDataConnTLSOpen (&conn) {
 */
 function ftpDataConnTLSClose (&conn) {
   if (conn[2] && conn[3]) {
-    SSL_free (conn[3]);       
+    SSL_free (conn[3]);
     fclose (conn[4]);
     conn[3]=conn[4]=0;
   }
@@ -353,11 +359,10 @@ function ftp_list (&conn, &dirList, fMLSD=false)
       if (ret2!==true) {
         return ret2;
       }
-
       while  (ret2 = ftp_read (conn[3])) {
         array_push (dirList, ret2["line"]);
       }
-      ftpDataConnTLSClose (conn);  
+      ftpDataConnTLSClose (conn);
       continue;    
     }
     else
@@ -383,6 +388,8 @@ function ftp_list (&conn, &dirList, fMLSD=false)
 */
 function ftp_retr (&conn, filename, fh) 
 {
+  global ftpIOFunc;
+
   assign (client, socket, sslCTX) = conn;  
 
   ret = ftp_pasv (conn);
@@ -408,8 +415,9 @@ function ftp_retr (&conn, filename, fh)
       bytesReadTotal = 0;
       fCB = gettype  (conn[5])=="string";
       fAborted = false;
-      while (bytesRead=fread (conn[3], block)) {
-        fwrite (fh, block, bytesRead);        
+			
+      while (bytesRead=call_user_func (ftpIOFunc[1], conn[3], block, 0xFFFF)) {
+				fwrite (fh, block);
         bytesReadTotal+=bytesRead;
         if (fCB) {
           if (!call_user_func (conn[5], FTP_STATUS_TRANSFER_PROGRESS, [filename, bytesReadTotal, bytesToReadTotal, false])) {
@@ -458,6 +466,7 @@ function ftp_retr (&conn, filename, fh)
 */
 function ftp_stor (&conn, filename, fh) 
 {
+	global ftpIOFunc;
   assign (client, socket, sslCTX) = conn;  
 
   ret = ftp_pasv (conn);
@@ -484,7 +493,7 @@ function ftp_stor (&conn, filename, fh)
       fCB = gettype  (conn[5])=="string";
       fAborted = false;
       while (bytesRead=fread (fh, block)) {
-        bytesWrote = fwrite (conn[3], block, bytesRead);        
+        bytesWrote = call_user_func (ftpIOFunc[0], conn[3], block, bytesRead);				
         bytesWroteTotal+=bytesWrote;
         if (fCB) {
           if (!call_user_func (conn[5], FTP_STATUS_TRANSFER_PROGRESS, [filename, bytesWroteTotal, bytesToWriteTotal, true])) {

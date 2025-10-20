@@ -646,11 +646,14 @@ bool WSocketUtils::readln (WSocketIO* socket, WString& str, bool fZeroTmp)
 				socket->read (pnt, 1);
 			}
 			catch (WSocketException& e) {
-				socket->close ();
-				if (e.getId ()==WSocketException::ERR_ID_CLOSED) {
-					return false;
-				}
-				throw e;
+        socket->close ();
+        if (e.getId ()==WSocketException::ERR_ID_CLOSED) {
+        	*pnt=0; str += buf;
+        	return idx>0;
+        }
+        if (str.length ())
+        	throw e;
+        return false;
 			}
 		}
 		while (*pnt==0x0D);

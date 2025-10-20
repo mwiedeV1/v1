@@ -61,4 +61,4 @@ You can test directly in install/v1 sub directory.
 
 See also: https://www.v1-script.net
 
-V1 is a project from Matthias Wiede 2016-2024.
+V1 is a project from Matthias Wiede 2016-2025.
