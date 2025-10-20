@@ -1749,6 +1749,10 @@ int func_substr(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 	argvalues[0]->toString();
 
 	int len = (int)argvalues[0]->value.size();
+	if (len==0) {
+		ret = "";
+		return 0;
+	}
 	int from = (int)*argvalues[1];
 	int to = len;
 	if (from < 0)
@@ -1959,6 +1963,9 @@ int func_str_replace(vector<DataValue *> &argvalues, DataValue &ret, Interpreter
 	if (argvalues[0]->datatype >= DataValue::DATATYPE_ARRAY) {
 		cnt = argvalues[0]->arrayList.size();
 		argvalues[0]->arrayList.reset();
+	}
+	if (argvalues[1]->datatype>=DataValue::DATATYPE_ARRAY) {
+		argvalues[1]->arrayList.reset ();
 	}
 	do {
 
@@ -4217,17 +4224,22 @@ void decodeJSONString (WCSTR src, int length, string& dst, bool fTrim=false)
 
 char *parseJSON(WCSTR jsonStr, ArrayHT &arrayList)
 {
-	char *c = (char *)jsonStr, *key = NULL, *value = NULL;
-	int keyLength = 0, valueLength = 0;
+	char* c = (char*) jsonStr, *key=NULL, *value = NULL;
+	int keyLength=0, valueLength = 0;
 	int flag = 0;
 
 	// Parse
+	while (*c != 0 && (*c==' ' || *c=='\t' || *c=='\n' || *c=='\r')) // Overread trash
+		c++;
+	char *cStart = c;
 	while (*c != 0) {
 
-		if (flag == 2 || flag == 5) {
-			// Overread strings
-			while (*c != '"' && *c != 0) {
-				if (*c == '\\' && *(c + 1) == '"') {
+		if (flag==2 || flag==5) {
+			// Overread and reformat strings
+			while (*c!='"' && *c!=0) {
+
+				// Enquoted
+				if (*c=='\\'  && *(c+1)=='"') {
 					c++;
 				}
 				c++;
@@ -4235,27 +4247,29 @@ char *parseJSON(WCSTR jsonStr, ArrayHT &arrayList)
 			if (!*c)
 				break;
 		}
-		else if (*c == ' ' || *c == '\n' || *c == '\t' || *c == '\r') {
+		else 
+		if (*c==' ' || *c=='\n' || *c=='\t' || *c=='\r') {
 			// Ignore default chars
 			c++;
 			continue;
 		}
 
-		if (*c == '{' || *c == '[') {
+		if (*c=='{' || *c=='[')  {
 			if (value) {
 				// Syntax error (value not closed)
 				return NULL;
 			}
-			else if (key && keyLength) {
-				if (flag == 3) {
+			else
+			if (key && keyLength) {
+				if (flag==3) {
 					// New inner array
 					string keyStr;
-					decodeJSONString(key, keyLength, keyStr, true);
+					decodeJSONString (key, keyLength, keyStr, true);
 					DataValue emptyArray;
 					emptyArray.datatype = DataValue::DATATYPE_ARRAY;
-					ArrayHT *newArrayPnt = &arrayList.put(keyStr.c_str(), emptyArray)->m_value.arrayList;
-					arrayList.setOwnKeys(true);
-					if (!(c = parseJSON(c, *newArrayPnt)))
+					ArrayHT* newArrayPnt = &arrayList.put (keyStr.c_str (), emptyArray)->m_value.arrayList; 
+					arrayList.setOwnKeys (true);
+					if (!(c=parseJSON (c, *newArrayPnt)))
 						return NULL;
 				}
 				else {
@@ -4263,111 +4277,142 @@ char *parseJSON(WCSTR jsonStr, ArrayHT &arrayList)
 					return NULL;
 				}
 			}
-			else if (c > jsonStr) {
+			else 
+			if (c>cStart) {
 				// Push new array without key
 				DataValue emptyArray;
 				emptyArray.datatype = DataValue::DATATYPE_ARRAY;
-				ArrayHT *newArrayPnt = &arrayList.push(emptyArray)->m_value.arrayList;
-				if (!(c = parseJSON(c, *newArrayPnt)))
-					return NULL;
+				ArrayHT* newArrayPnt = &arrayList.push (emptyArray)->m_value.arrayList; 
+				if (!(c=parseJSON (c, *newArrayPnt)))
+					return NULL;		
 			}
 			flag = 1;
 			key = value = NULL;
 		}
-		else if (*c == '}' || *c == ']' || *c == ',') {
-
-			if (flag == 6) {
-				valueLength = c - value;
+		else
+		if (*c=='}' || *c==']' || *c==',') {
+			
+			if (flag==3)
+				return NULL; // No value
+			if (flag==6) {
+				valueLength = c-value;
+				if (valueLength==0)
+					return NULL; // No value
 			}
-
-			if (value && valueLength) {
-
+			
+			if (value && (valueLength || flag==7)) {
+				
 				DataValue data;
-				decodeJSONString(value, valueLength, data.value, flag == 6);
-				data.datatype = DataValue::DATATYPE_STR;
-				if (flag == 6) {
-					if (data.value == "null")
-						data.datatype = DataValue::DATATYPE_NULL;
-					else
-						data.setAutoDataType();
+				decodeJSONString (value, valueLength, data.value, flag==6);
+				data.datatype = DataValue::DATATYPE_STR;		
+				if (flag==6) {
+					if (data.value=="null")
+						data.datatype=DataValue::DATATYPE_NULL;		
+					else		
+						data.setAutoDataType ();
+					if (data.datatype==DataValue::DATATYPE_STR)
+						return NULL; // Wrong format
 				}
 
 				if (key && keyLength) {
 					// Key => Value
 					string keyStr;
-					decodeJSONString(key, keyLength, keyStr, true);
-					arrayList.put(keyStr.c_str(), data);
-					arrayList.setOwnKeys(true);
+					decodeJSONString (key, keyLength, keyStr, true);
+					arrayList.put (keyStr.c_str (), data);
+					arrayList.setOwnKeys (true);
 				}
 				else {
 					// Value
-					arrayList.push(data);
+					arrayList.push (data);
 				}
 			}
-			else if (key && keyLength) {
+			else
+			if (key) {
+				if (!keyLength)
+					return NULL; // Wrong format
 				// Value
 				DataValue data;
-				data.datatype = DataValue::DATATYPE_STR;
-				decodeJSONString(key, keyLength, data.value, flag == 6);
-				if (flag == 6) {
-					if (data.value == "null")
-						data.datatype = DataValue::DATATYPE_NULL;
+				data.datatype = DataValue::DATATYPE_STR;	
+				decodeJSONString (key, keyLength, data.value, flag==6);
+				if (flag==6) {
+					if (data.value=="null")
+						data.datatype=DataValue::DATATYPE_NULL;					
 					else
-						data.setAutoDataType();
+						data.setAutoDataType ();
+					if (data.datatype==DataValue::DATATYPE_STR)
+						return NULL; // Wrong format
 				}
-				arrayList.push(data);
+				arrayList.push (data);
 			}
-			if (*c == ',') {
+			else
+			if (flag==4) {
+				return NULL; // Wrong format
+			}
+			if (*c==',') 
+			{
 				key = value = NULL;
 				keyLength = valueLength = 0;
 				flag = 4;
 			}
 			else {
 				// Finished
-				return c;
+				return c;	
 			}
 		}
-		else if (*c == ':') {
-			if (flag != 8) {
+		else
+		if (*c==':') {
+			if (flag!=8) {
 				// Syntaxt error (key not closed)
 				return NULL;
 			}
 			flag = 3;
 		}
-		else if (*c == '"') {
+		else
+		if (*c=='"') {
 
-			if (flag == 1 || flag == 4) {
+			if (flag==1 || flag==4) {
 				// Key start
-				key = c + 1;
-				flag = 2;
+				key = c+1;
+				flag=2;
 			}
-			else if (flag == 2) {
+			else 
+			if (flag==2)
+			{
 				// Key end
-				keyLength = c - key;
+				keyLength = c-key;
 				flag = 8;
 			}
-			else if (flag == 3) {
+			else 
+			if (flag==3)
+			{
 				// Value string start
-				value = c + 1;
-				flag = 5;
+				value=c+1;
+				flag=5;
 			}
-			else if (flag == 5) {
+			else
+			if (flag==5) {
 				// Value string end
-				valueLength = c - value;
+				valueLength = c-value;
 				flag = 7;
 			}
-			else {
+			else
+			{
 				// Syntaxt error (value without array)
 				return NULL;
 			}
 		}
-		else if (flag == 3 || flag == 4) {
+		else
+		if (flag==3 || flag==4) {
 			// Value start
-			value = c;
-			flag = 6;
+			value=c;
+			flag=6;
 		}
-		else if (flag == 6) {
+		else
+		if (flag==6) {
 			// In value
+		}
+		else {
+			return NULL; // Wrong format
 		}
 		c++;
 	}
