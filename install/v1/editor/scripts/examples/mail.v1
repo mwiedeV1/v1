@@ -1,8 +1,8 @@
 <?v1 require_once ("helpers/start.v1");?>
 <h3>Send email with attachments, optional authentication and TLS.</h3>
 <?v1
-error_reporting (0);
 require_once ("../../../lib/smtp.inc.v1");
+error_reporting (0);
 
 // Login / Authentication
 host = "localhost"; // SMTP-Server, if empty then sendmail on Linux will be used, you can set own sendmail path in lib/smtp.inc.v1
