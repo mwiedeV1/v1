@@ -1,0 +1,1204 @@
+<?v1
+dl ("regex");
+require_once ("iconv.inc.v1");
+require_once ("zlib.inc.v1");
+
+pdfFontWeights = array ();
+pdfAscii2Unicode = [0x80 =>	0x20AC,0x82 =>	0x201A,0x83 =>	0x0192,0x84 =>	0x201E,0x85 =>	0x2026,0x86 =>	0x2020,0x87 => 0x2021,0x88 =>	0x02C6,0x89 =>	0x2030,0x8A =>	0x0160,0x8B => 0x2039,0x8C =>	0x0152,0x8E =>	0x017D,0x91 =>	0x2018,0x92 =>	0x2019,0x93 =>	0x201C,0x94 =>	0x201D,0x95 =>	0x2022,0x96 =>	0x2013,0x97 =>	0x2014,0x98 =>	0x02DC,0x99 =>	0x2122,0x9A =>	0x0161,0x9B =>	0x203A,0x9C => 0x0153,0x9E => 0x017E,0x9F => 0x0178];
+pdfCP12522List = array ();
+
+function pdf_load_font_config () {
+  global pdfFontWeights, pdfCP12522List;
+  fh = fopen (dirname (__FILE__)."/conf/cp1252_to_unicode.txt");
+
+	cp12522List = array ();
+  if (fh) {
+	  line = "";
+	  idx = 0;
+	  while (freadln (fh, line)) {
+			list = explode ("\t", line);
+			sscanf (list[0], "%02x", list[0]);
+			sscanf (list[3], "%04x", list[3]);
+			if (empty (list[1])) {
+				list[1] = 0xA0;
+			}
+			if (list[0]!=0xAD) // soft hyphen
+				pdfCP12522List[list[1]]=list;
+		}
+		fclose (fh);
+	}
+
+  filenameList = ["font_weights_times.txt", "font_weights_helvetica.txt"];
+  foreach (filenameList as filename) {
+    fh = fopen (dirname (__FILE__)."/conf/".filename);
+    if (!fh)
+      continue;
+    line = "";
+    idx = 0;
+    while (freadln (fh, line)) {			
+			idx++;
+			if (empty (line))
+				continue;
+      list = explode ("\t", line);
+			
+			charInfo = pdfCP12522List[list[0]];
+			if (charInfo===null) {
+				cStr = utf8_decode (list[0]);
+	      c = binparse (cStr, 1);
+			}
+			else {
+				c = charInfo[0];
+			}
+			unset (list[0]);
+      if (isset (pdfFontWeights[c])) {
+        pdfFontWeights[c]=array_merge (pdfFontWeights[c], list);
+        pdfFontWeights[c][8] = 600; // Courier = 600%
+      }
+      else {
+        pdfFontWeights[c]=list;
+			}
+
+    }
+  }
+}
+
+function pdf_encode_text (text) {
+  return "(".str_replace (["\\", "(",")"], ["\\\\", "\\(","\\)"], text).")";
+}
+
+function pdf_create (title, author="", dimension=[595.32, 841.92, 0]) {
+  return [
+    "metadata" => [
+      "Title" => title,
+      "Author" => author,
+    ],  
+    "pages" => [
+      "fonts" => [ ],
+      "images" => [ ],
+			"dimension" => dimension,    
+			"auto_page_wrap" => null,
+      "content" => [
+      ]
+    ]
+  ];
+}
+
+function pdf_bt_auto (&def) {
+  return !def["status_vars"]["fBT"] ? "BT\n" : "";
+}
+
+function pdf_set_auto_page_wrap (&def, func, y) {
+	if (func===null)
+		def["pages"]["auto_page_wrap"] = null;
+	else
+		def["pages"]["auto_page_wrap"] = array (func, y);
+}
+
+function pdf_close_auto (&def, fWidthS=true) {
+  ret = "";
+  if (fWidthS && def["status_vars"]["fS"]) {
+    def["status_vars"]["fS"] = false;
+    ret.="S\n";
+  }
+  if (def["status_vars"]["fBT"]) {
+    def["status_vars"]["fBT"] = false;
+    ret.="ET\n";
+  }
+  return ret;
+}
+
+function pdf_calc_string_width (&def, str, fontSize=0, fontId=0) {
+  global pdfFontWeights;
+  w = 0;
+	if (!fontSize)
+  	fontSize = def["status_vars"]["font_size"];
+	if (!fontId)
+		fontId = def["status_vars"]["font_id"];
+  widthIdx = def["pages"]["fonts"][fontId-1][2];
+  len = strlen (str);
+  for (i=0;i<len;i++) {	
+    w+=(pdfFontWeights[binparse (str, 1, i)][widthIdx] / 1000) * fontSize; // mbsubstr
+  }
+  return w;
+}
+
+function pdf_calc_y (&def, idx, y) {
+  if (isset (def["pages"]["content"][idx]["dimension"]))
+    return def["pages"]["content"][idx]["dimension"][1] -  y;
+  return def["pages"]["dimension"][1] - y;
+}
+
+function pdf_add_font (&def, fontName, encoding="WinAnsiEncoding") {
+
+  widthIdx = [
+    "Times-Roman" => 0,
+    "Times-Italic" => 1,
+    "Times-Bold" => 2,
+    "Times-BoldItalic" => 3,
+    "Helvetica" => 4,
+    "Helvetica-Oblique" => 5,
+    "Helvetica-Bold" => 6,
+    "Helvetica-BoldOblique" => 7,
+    "Courier" => 8,
+    "Courier-Oblique" => 8,
+    "Courier-Bold" => 8,
+    "Courier-BoldOblique" => 8
+  ];
+  array_push (def["pages"]["fonts"], array (fontName, encoding, widthIdx[fontName]));
+}
+
+function pdf_add_ttf_font (&def, filename) {
+	global pdfAscii2Unicode, pdfFontWeights;
+	fh = fopen (filename, "r");
+	if (!fh)
+		return false;
+	ttfValues = ["filename"=>filename];
+	str = "";
+	if (fread (fh, str, 12)!=12)
+		return false;
+	signature = substr (str, 0, 4);
+	if (signature!="\00\01\00\00")
+		return "Wrong TTF signature";
+
+	blockCnt = binparse (str, 2, 4, 0, 1);
+	blockList = [];
+	requiredBlocks = ["name", "head", "OS/2", "post", "cmap", "hhea", "hmtx"];
+	for (blockIdx=0;blockIdx<blockCnt;blockIdx++) {
+		if (fread (fh, str, 16)!=16)
+			return false;
+		blockList[substr (str, 0, 4)] = array (binparse (str, 3, 8, 0, 1), binparse (str, 3, 12, 0, 1));
+	}
+	foreach (requiredBlocks as id) {
+		if (!isset (blockList[id]))
+			return "Incomatible TTF";
+	}
+	// name block, fontName, enconding
+	fseek (fh, blockPos = blockList["name"][0]);
+	if (fread (fh, str, 6)!=6)
+		return false;	
+	fontName = "";
+	strCnt = binparse (str, 2, 2, 0, 1);
+	strPos = binparse (str, 2, 4, 0, 1);
+	strList = [];
+	enc = "";
+	for (strIdx=0;strIdx<strCnt;strIdx++) {
+		if (fread (fh, str, 12)!=12)
+			return false;
+		platform = binparse (str, 2, 0, 0, 1);
+		enc = binparse (str, 2, 2, 0, 1);
+		lang = binparse (str, 2, 4, 0, 1);
+		type = binparse (str, 2, 6, 0, 1);
+		len = binparse (str, 2, 8, 0, 1);
+		pos = binparse (str, 2, 10, 0, 1);
+		if (platform==3) {
+
+			if (type==6 || (type==4 && lang==0x409)) {
+				fseek (fh, blockPos+strPos+pos);
+				if (fread (fh, fontName, len)!=len)
+					return false;	
+				fontName = str_replace (" ", "+", iconv ("UTF-8", "UTF-16", fontName));
+				break;
+			}
+		}
+	}
+	if (empty (fontName))
+		return "fontName not found";
+	ttfValues["fontName"] = fontName;
+	ttfValues["encoding"] = enc; // 1 = text font, 0 = symbolic font
+
+	// head block
+	fseek (fh, blockPos = blockList["head"][0]);
+	if (fread (fh, str, blockList["head"][1])!=blockList["head"][1])
+		return false;	
+		
+	ttfValues["scala"] = scala = binparse (str, 2, 18, 0, 1);
+	ttfValues["FontBBox"] = binparse (str, 2, 36, 1, 1)." ".binparse (str, 2, 38, 1, 1)." ".binparse (str, 2, 40, 1, 1)." ".binparse (str, 2, 42, 1, 1);
+
+	// OS/2 block
+	fseek (fh, blockPos = blockList["OS/2"][0]);
+	if (fread (fh, str, blockList["OS/2"][1])!=blockList["OS/2"][1])
+		return false;	
+
+	ttfValues["Ascent"] = ttfValues["CapHeight"] = binparse (str, 2, 68, 1, 1);
+	ttfValues["Descent"] = binparse (str, 2, 70, 1, 1);
+	if (binparse (str, 2, 0, 0, 1)>=2)
+		ttfValues["CapHeight"] = binparse (str, 2, 88, 1, 1);
+	
+	// post block
+	fseek (fh, blockPos = blockList["post"][0]);
+	if (fread (fh, str, blockList["post"][1])!=blockList["post"][1])
+		return false;	
+	ttfValues["Skew"] = (binparse (str, 2, 6, 0, 1)/65536) + binparse (str, 2, 4, 1, 1);
+	ttfValues["FixedWidthFont"] = binparse (str, 3, 12, 0, 1);
+
+	// cmap block
+	fseek (fh, blockPos = blockList["cmap"][0]);
+	if (fread (fh, str, blockList["cmap"][1])!=blockList["cmap"][1])
+		return false;	
+	subBlockCnt = binparse (str, 2, 2, 0, 1);
+	
+	fseek (fh, blockPos + 4);	
+	ascii2GIDList = gid2UnicodeList = array ();
+	
+	for (subBlockIdx=0;subBlockIdx<subBlockCnt;subBlockIdx++) {
+		if (fread (fh, str, 8)!=8)
+			return false;	
+		platform = binparse (str, 2, 0, 0, 1);
+		enc = binparse (str, 2, 2, 0, 1);
+		pos = binparse (str, 3, 4, 0, 1);
+		if (platform==3 && enc==ttfValues["encoding"]) {
+			subBlockPos = blockPos + pos;
+			fseek (fh, subBlockPos);
+			if (fread (fh, str, 4)!=4)
+				return false;	
+			format = binparse (str, 2, 0, 0, 1);
+			len = lenSubBlock = binparse (str, 2, 2, 0, 1);
+			if (format!=4) {
+				return "cmap format 4 required. ".format." available.";
+			}
+			if (fread (fh, str, 10)!=10)
+				return false;	
+			lang =  binparse (str, 2, 0, 0, 1);
+			listLen = binparse (str, 2, 2, 0, 1);
+
+			len = 2 + listLen * 4; // 16
+			if (fread (fh, str, len)!=len)
+				return false;
+			gidListStartPos = ftell (fh);
+
+			segmentCnt = listLen / 2;			
+			listEncodes = listStartcodes = listDelta = listOffset = [];
+			for (segmentIdx=0;segmentIdx<segmentCnt;segmentIdx++) {
+				listEndcodes[segmentIdx] = binparse (str, 2, 0+segmentIdx*2, 0, 1);
+				listStartcodes[segmentIdx] = binparse (str, 2, 2+listLen+segmentIdx*2, 0, 1);
+				listDelta[segmentIdx] = binparse (str, 2, 2+listLen*2+segmentIdx*2, 1, 1);
+				listOffset[segmentIdx] = binparse (str, 2, 2+listLen*3+segmentIdx*2, 0, 1);
+			}	
+			offsetStartPos = gidListStartPos - listLen;			
+			// Search GID
+			for (ascii=0x20; ascii<=0xFF;ascii++) {
+				if (ttfValues["encoding"]==0) {
+					unicode = ascii + 0xF000;
+				}
+				else {
+					if (isset (pdfAscii2Unicode[ascii]))
+						unicode = pdfAscii2Unicode[ascii];
+					else
+						unicode = ascii;
+				}
+				gid = 0;
+				for (segmentIdx=0;segmentIdx<segmentCnt;segmentIdx++) {
+					gid = 0;
+					if (unicode>=listStartcodes[segmentIdx] && unicode<=listEndcodes[segmentIdx]) {
+						if (listOffset[segmentIdx]==0) {
+							gid = (unicode + listDelta[segmentIdx]) & 0xFFFF;
+						}
+						else {
+							pos = offsetStartPos + segmentIdx * 2  +  listOffset[segmentIdx]  + (unicode - listStartcodes[segmentIdx]) * 2;
+							fseek (fh,  pos);
+							if (fread (fh, str, 2)!=2)
+								return false;
+							gid = binparse (str, 2, 0, 0, 1);
+							gid+=listDelta[segmentIdx];
+							gid & 0xFFFF;
+						}						
+						break;
+					}
+				}
+				ascii2GIDList[ascii] = gid;
+				gid2UnicodeList[gid] = ascii;
+			}
+		}
+	}
+
+	ttfValues["glyphIndexMap"]=ascii2GIDList;
+
+	// hhea block
+	fseek (fh, blockPos = blockList["hhea"][0]);
+	if (fread (fh, str, blockList["hhea"][1])!=blockList["hhea"][1])
+		return false;	
+	maxGID = binparse (str, 2, 34, 0, 1);
+	ttfValues["numGlyphs"] = maxGID;
+
+	// hmtx block	
+	fseek (fh, blockPos = blockList["hmtx"][0]);
+	if (fread (fh, str, blockList["hmtx"][1])!=blockList["hmtx"][1])
+		return false;
+
+	widthIdx = count (def["pages"]["fonts"]) + 10;
+	size = strlen (str) / 4;
+	for (i=0;i<size-1;i++) {
+		c = gid2UnicodeList[i];
+		if (c<0x20 || c>255)
+			continue;
+		width=round (binparse (str, 2, i*4, 0, 1) * 1000 / scala);
+		// widthSpace = binparse (str, 2, i*4+2, 0, 1);
+		
+		// ttfValues["glyphWidthMap"][i]=width;			
+		pdfFontWeights[c][widthIdx] = width;
+	}
+	widths = "";
+	for (c=0x20;c<=255;c++) {
+		if (!empty (widths))
+			widths.=" ";
+		if (isset (pdfFontWeights[c][widthIdx]))
+			widths.=pdfFontWeights[c][widthIdx];
+		else
+			widths.="0";		
+	}
+
+	ttfValues["Widths"] = widths;	
+	array_push (def["pages"]["fonts"], array (fontName, "WinAnsiEncoding", widthIdx, ttfValues));
+	// print_r (ttfValues);
+	return true;
+}
+
+function pdf_add_image (&def, filename) {
+
+  pi = pathinfo (filename);      
+  ext = strtolower (pi["extension"]);
+  fh = fopen (filename, "r");
+  if (ext=="jpg" || ext=="jpeg") {
+    dl ("gd");
+    img = imagecreatefromfile  (filename);
+    imageWidth = imagesx (img);
+    imageHeight = imagesy (img);
+    imagedestroy (img);
+  }
+  else
+  if (ext=="png") {
+    block = "";
+    fread (fh, block, 8); // Header
+    while (!feof (fh)) {
+      fread (fh, block, 4); // Len
+      len = binparse (block, 3, 0, 0, 1);
+      fread (fh, block, 4); // Type
+      type = block;
+      fread (fh, block, len); // Data
+      if (type=="IHDR") {
+        imageWidth = binparse (block, 3, 0, 0, 1);
+        imageHeight = binparse (block, 3, 4, 0, 1);
+        imageBits = binparse (block, 1, 8, 0, 1);
+        imageModel = binparse (block, 1, 9, 0, 1); // only 2 is allowed
+        break;
+      }
+      fread (fh, block, 4); // Checkum
+      if (type=="IEND")
+        break;
+    }
+  }
+  fclose (fh);
+  array_push (def["pages"]["images"], array (filename, imageWidth, imageHeight, ext));
+}
+
+function pdf_add_page (&def, dimension=null) {
+  if (def["status_vars"]["fBT"])
+    def["pages"]["content"][count (def["pages"]["content"])-1]["stream"].="ET\n";
+  if (is_array (dimension))
+    array_push (def["pages"]["content"], ["dimension"=>dimension, "stream"=>""]);
+  else
+    array_push (def["pages"]["content"], ["stream"=>""]);
+}
+
+function pdf_stream_add (&def, cmd) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    def["pages"]["content"][idx-1]["stream"].=pdf_close_auto (def).cmd."\n";
+  }
+}
+
+function pdf_select_font (&def, fontId, sizePt) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    def["pages"]["content"][idx-1]["stream"].="/F".fontId." ".sizePt." Tf\n";
+    def["status_vars"]["font_id"] = fontId;
+    def["status_vars"]["font_size"] = sizePt;
+  }
+}
+
+function pdf_set_pos (&def, x, y) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    idx--;
+    def["status_vars"]["y"]=y;
+    def["status_vars"]["x"]=x;
+		
+    y = pdf_calc_y (def, idx, y);
+    y-=def["status_vars"]["font_size"];
+
+    def["pages"]["content"][idx]["stream"].=pdf_close_auto (def).pdf_bt_auto (def).x." ".y." Td\n";
+    def["status_vars"]["fBT"] = true;
+  }
+}
+
+function pdf_write_text (&def, text , tw=0, ts=0) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    def["pages"]["content"][idx-1]["stream"].=pdf_bt_auto (def)." ".(tw!=def["old"]["Tw"] ? tw." Tw " : "").(ts!=def["old"]["Ts"] ? ts." Ts " : "").pdf_encode_text (text)." Tj\n";
+    def["status_vars"]["fBT"] = true;
+		def["old"]["Ts"] = ts;
+		def["old"]["Tw"] = tw;
+  }
+}
+
+function pdf_parse_format (word, &format, &formatStack) {
+
+	if (strpos (word, "\\end")===false) {
+		array_push (formatStack, format);
+	}
+	else {
+		if (count (formatStack))
+			format = array_pop (formatStack);
+	}
+	
+	format[2] = format[3] = 1; // Spaces on
+	cmdList = explode ("\\", word);							
+	foreach (cmdList as cmd) {
+		if (empty (cmd))
+			continue;
+		assign (key, value) = explode ("=", cmd);
+		switch (key) {
+			case "font":
+				format[0] = value;
+				break;		
+			case "size":
+				format[1] = value;
+				break;
+			case "r0":
+				format[2] = 0;
+				break;	
+			case "l0":
+				format[3] = value;
+				break;
+			case "sup":
+				format[4] = format[1] * 0.65;
+				break;
+			case "sub":
+				format[4] = -format[1] * 0.65;
+				break;
+			case "nowrap":
+				format[5] = 0;
+				break;			
+			case "wrap":
+				format[5] = 1;
+				break;
+			case "underline":
+				format[6]|= 1;
+				break;
+			case "striekout":
+				format[6]|= 2;
+				break;
+		}
+	}
+}
+
+function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0, firstLineIndent=0) {
+
+	pdf_set_line_width (pdf, 1);
+	charLenSpace = charLenSpaceOld = pdf_calc_string_width (pdf, " ");
+	charLenHyphen = charLenHyphenOld = pdf_calc_string_width (pdf, "~");
+	charLenMinus = charLenMinusOld = pdf_calc_string_width (pdf, "-");
+
+	lines = explode ("\n", text);	
+
+	startFontId = pdf["status_vars"]["font_id"];
+	startFontSize = pdf["status_vars"]["font_size"];
+	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0];
+	formatList = [0 => currentFormat];
+	innerWordList = [];
+	formatStack = [];
+	
+	underlineLeading = 5;
+
+	lineIdx  = 0;
+	foreach (lines as line) {
+		lineIdx++;
+		
+		line = str_replace (["~ ","~"], ["~", "~ "], line);
+		
+		words = explode (" ", line);
+		
+		text2 = "";
+		widthPt = 0;
+		spaceCnt = 0;
+		innerLineIdx = 0;
+		innerWordIdx = 0;
+		tw = twOld = 0;
+		fOwnFormats = false;
+		togetherCnt = 0;
+
+		// Write text
+		foreach (words as wordIdx => word) {
+		
+			if (substr (word, 0, 1)=="\\") 
+			{
+				fSetFont = false;
+				fOwnFormats = true;
+				pdf_parse_format (word, currentFormat, formatStack);
+				if (currentFormat[0]!=formatList[innerWordIdx][0] || 
+						currentFormat[1]!=formatList[innerWordIdx][1])
+					fSetFont = true;
+					
+				formatList[innerWordIdx] = currentFormat;
+				if (fSetFont) {
+					charLenSpace = pdf_calc_string_width (pdf, " ", currentFormat[1], currentFormat[0]);
+					charLenHyphen = pdf_calc_string_width (pdf, "~",  currentFormat[1], currentFormat[0]);
+					charLenMinus = pdf_calc_string_width (pdf, "-",  currentFormat[1], currentFormat[0]);
+				}
+				continue;
+			}
+			lastChar = substr (text2, -1, 1);
+
+			widthPtNew=pdf_calc_string_width (pdf, word, currentFormat[1], currentFormat[0]);
+			fSpace = false;
+			if (!empty (text2)) {
+				if (! ( 
+								(isset (formatList[innerWordIdx-1]) && !formatList[innerWordIdx-1][2]) || // space-right last word
+								(isset (formatList[innerWordIdx])   && !formatList[innerWordIdx][3]) // space-left currend word
+							) 
+					)
+				{
+					widthPtNew+=charLenSpace;
+					fSpace = true;
+				}
+			}
+			xOffs2 = 0;
+			if (innerLineIdx==0 && strlen (line)>100)
+				xOffs2 = firstLineIndent;
+			fWrap = (widthPt+widthPtNew+xOffs2)>width || (lastChar=='~' &&  ((widthPt+widthPtNew)/width)>0.85);
+
+			// Check if next tokens are no-wrap			
+			
+			if (!fWrap && !togetherCnt) {
+				formatStack2 = null;
+				togetherNextWidthPt = 0;
+				nextFormat = currentFormat, tmp = false;	
+				wordNextIdx = wordIdx;
+				fReadMore = false;
+				togetherCnt = 0;
+				wrap = 1;
+				while ((nextWord = words[wordNextIdx])!==null) {
+					fFormat = substr (nextWord, 0, 1)=="\\";
+					
+					if (!togetherCnt) {
+						wrap = nextFormat[5]; // wrap
+						if (!nextFormat[2]) // space-right=0
+							wrap = 0;
+					}
+					else
+					if (!fFormat) {
+						if (nextFormat[3]) { // space-left=1
+							if (wrap==1) {
+								togetherCnt--;
+								break;
+							}
+							else
+							if (nextFormat[5]==1 && nextFormat[2]) // wrap
+								break;
+						}
+					}
+					if (fFormat) {
+						if (formatStack2===null)
+							formatStack2 = formatStack;
+						pdf_parse_format (nextWord, nextFormat, formatStack2);
+					}
+					else {
+						togetherNextWidthPt+=pdf_calc_string_width (pdf, " ".nextWord, nextFormat[1], nextFormat[0]);
+						if (togetherCnt>0)
+							nextFormat[2] = nextFormat[3] = 1;
+						togetherCnt++;
+					}
+					wordNextIdx++;
+				}
+				if (togetherCnt) {
+					fWrap = (widthPt+xOffs2+togetherNextWidthPt)>width;
+					if (fWrap)
+						togetherCnt = 0;
+				}
+				// print (word." ".togetherNextWidthPt." ".(fWrap ? "true" : "false")."<br>");
+			}
+			if (!fWrap && togetherCnt)
+				togetherCnt--;
+			
+			if (fWrap) {
+				if (lastChar=="~") {
+					text2 = substr (text2, 0, strlen (text2)-1);
+					if (substr (text2, -1, 1)=="-")
+						widthPt-=charLenMinusOld;
+					else
+						text2.="-";
+					widthPt-=charLenHyphenOld;
+					widthPt+=charLenMinusOld;
+				}
+				widthLinePnt = widthPt; 
+				if (align=='B') {
+					if (spaceCnt)
+						tw = (width-widthPt-xOffs2)/spaceCnt;
+					twOld = tw;
+					pdf_set_pos (pdf, x+xOffs2, y);
+					widthLinePnt = width;
+				}
+				else
+				if (align=='R') {
+					pdf_set_pos (pdf, width+x-xOffs2-widthPt, y);
+				}
+				else
+				if (align=='C') {
+					pdf_set_pos (pdf, x+((width-widthPt)/2), y);
+				}
+				else	
+					pdf_set_pos (pdf, x+xOffs2, y); // L
+				fontHeightDiff = 0;
+				if (fOwnFormats) {
+					fIgnoreNextSpace = false;
+					x2 = x3 = pdf["status_vars"]["x"];
+					y2 = pdf["status_vars"]["y"];
+					oldTextDecoration = currentFormat[6];
+					foreach (innerWordList as i => word2) {
+						if (isset (formatList[i])) {
+							currentFormat = formatList[i];
+							if (pdf["status_vars"]["font_id"]  !=currentFormat[0] || 
+									pdf["status_vars"]["font_size"]!=currentFormat[1]) {
+								fontHeightDiff+= (currentFormat[1] - pdf["status_vars"]["font_size"]);
+								pdf_select_font (pdf, currentFormat[0], currentFormat[1]);
+							}
+						}
+						word3 = str_replace ("~", "", word2);
+						if (!fIgnoreNextSpace && i>0 && !(isset (formatList[i-1]) && !formatList[i-1][2]) && !(isset (formatList[i]) && !formatList[i][3])) {
+							word3=" ".word3;
+							if (currentFormat[6] && !oldTextDecoration)
+								x2+=tw+pdf_calc_string_width (pdf, " ");
+							x3+=tw;
+						}
+						oldTextDecoration = currentFormat[6];
+						if (substr (word2, -1, 1)=="~") {
+							if (i+1 == count (innerWordList))	
+								word3.="-";
+							else {					
+								fIgnoreNextSpace = true;
+							}
+						}
+						else {
+							fIgnoreNextSpace = false;						
+						}
+						pdf_write_text (pdf, word3, tw, currentFormat[4]);
+						x3+=pdf_calc_string_width (pdf, word3);
+						// text-deoration
+						if (currentFormat[6]) {
+							y3 = y2+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];							
+							// Underline
+							pdf_draw_start (pdf, x2, y3);
+							pdf_line_to (pdf, x3, y3);	
+							pdf_set_pos (pdf, x3, y2 - fontHeightDiff);
+						}
+						x2 = x3;						
+					}
+				}
+				else {
+					x2 = x3 = pdf["status_vars"]["x"];
+					pdf_write_text (pdf, text2, tw, currentFormat[4]);
+					if (currentFormat[6]) {
+						y3 = y+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
+						// Underline
+						pdf_draw_start (pdf, x2, y3);
+						pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+						pdf_set_pos (pdf, x3 + widthLinePnt, y3);
+					}
+				}
+
+				y +=pdf["status_vars"]["font_size"] + lineLeading;
+				y-=fontHeightDiff;
+				
+				if (pdf["pages"]["auto_page_wrap"]) {
+					if (y>(pdf["pages"]["auto_page_wrap"][1] - pdf["status_vars"]["font_size"] - lineLeading)) {
+						y = call_user_func (pdf["pages"]["auto_page_wrap"][0], pdf);						
+					}
+			  }
+				if (fSpace) {
+					widthPtNew-=charLenSpace;
+				}
+				if (isset (formatList[innerWordIdx])) {
+					if (formatList[innerWordIdx][0]!=pdf["status_vars"]["font_id"] || 
+							formatList[innerWordIdx][1]!=pdf["status_vars"]["font_size"]) 
+					{
+						pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
+						charLenSpace = pdf_calc_string_width (pdf, " ");
+						charLenHyphen = pdf_calc_string_width (pdf, "~");
+						charLenMinus = pdf_calc_string_width (pdf, "-");				
+					}
+					currentFormat = formatList[innerWordIdx];
+				}
+				formatList = [0 => currentFormat];
+			  text2 = "";      
+			  widthPt = 0;
+				spaceCnt = 0;				
+				innerWordIdx = 0;
+				innerWordList = [];
+				tw = 0;
+				fOwnFormats = false;
+				innerLineIdx++;
+			}
+			
+			widthPt+=widthPtNew;
+			if (!empty (text2)) {
+				if (lastChar=="~") {
+					text2 = substr (text2, 0, strlen (text2)-1);
+					widthPt-=charLenHyphenOld;
+					if (fSpace)
+						widthPt-=charLenSpace;
+				}
+				else 
+				if (fSpace) {
+					spaceCnt++;
+					text2.=" ";
+				}
+			}
+			text2.=word;			
+			if (substr (word, -1, 1)=="~") {
+				charLenMinusOld=charLenMinus;
+				charLenHyphenOld=charLenHyphen;
+			}
+			innerWordList[innerWordIdx] = word;
+			innerWordIdx++;
+		}
+		
+		// Last line		
+		if (!empty (text2)) {
+			widthLinePnt = widthPt;
+			if (align=='B') {
+				if (spaceCnt<=3 || (widthPt/width)<0.8)
+					tw = twOld / 2;
+				else {
+					tw = 0;								
+				 	if (spaceCnt && (lineIdx<count (lines) || (widthPt/width)>0.9)) {
+						tw = (width-widthPt)/spaceCnt;	
+						if ((tw / width)>0.2)
+							tw/=20;
+					}
+				}				
+				widthLinePnt+= (spaceCnt*tw);
+				pdf_set_pos (pdf, x, y);
+			}
+			else
+			if (align=='R') {
+				if (strpos (text2, "{nb}")!==false) {
+					xKey = "{".microtime()."_X_".pdf_page_number(pdf)."}";
+					pdf["correction_vars"][xKey]=array (align, width, x, pdf["status_vars"]["font_size"], pdf["status_vars"]["font_id"], text2);
+					pdf_set_pos (pdf, xKey, y);				
+				}
+				else
+					pdf_set_pos (pdf, width+x-widthPt, y);
+			}
+			else
+			if (align=='C') {
+				if (strpos (text2, "{nb}")!==false) {
+					xKey = "{".microtime()."_X_".pdf_page_number(pdf)."}";
+					pdf["correction_vars"][xKey]=array (align, width, x, pdf["status_vars"]["font_size"], pdf["status_vars"]["font_id"], text2);
+					pdf_set_pos (pdf, xKey, y);				
+				}
+				else
+					pdf_set_pos (pdf, x+((width-widthPt)/2), y);
+			}
+			else
+				pdf_set_pos (pdf, x, y);
+
+			fontHeightDiff = 0;
+			if (fOwnFormats) {
+				fIgnoreNextSpace = false;
+				x2 = x3 = pdf["status_vars"]["x"];
+				y2 = pdf["status_vars"]["y"];
+				oldTextDecoration = currentFormat[6];
+				foreach (innerWordList as i => word2) {
+					if (isset (formatList[i])) {
+						currentFormat = formatList[i];
+						if (pdf["status_vars"]["font_id"]  !=formatList[i][0] || 
+								pdf["status_vars"]["font_size"]!=formatList[i][1]) {
+							pdf_select_font (pdf, formatList[i][0], formatList[i][1]);
+							fontHeightDiff+= (formatList[i][1] - pdf["status_vars"]["font_size"]);
+						}
+					}
+					word3 = str_replace ("~", "", word2);
+					if (!fIgnoreNextSpace && i>0 && !(isset (formatList[i-1]) && !formatList[i-1][2]) && !(isset (formatList[i]) && !formatList[i][3])) {
+						word3=" ".word3;
+						if (currentFormat[6] && !oldTextDecoration)
+							x2+=tw+pdf_calc_string_width (pdf, " ");
+						x3+=tw;
+					}
+					oldTextDecoration = currentFormat[6];
+					if (substr (word2, -1, 1)=="~") {
+						if (i+1 == count (innerWordList))	
+							word3.="-";
+						else
+							fIgnoreNextSpace = true;
+					}
+					else {
+							fIgnoreNextSpace = false;	
+					}
+						
+					pdf_write_text (pdf, word3, tw, currentFormat[4]);
+					x3+=pdf_calc_string_width (pdf, word3);
+					// text-deoration
+					if (currentFormat[6]) {
+						y3 = y2+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];							
+						// Underline
+						pdf_draw_start (pdf, x2, y3);
+						pdf_line_to (pdf, x3, y3);	
+						pdf_set_pos (pdf, x3, y2 - fontHeightDiff);
+					}
+					x2 = x3;
+				}
+			}
+			else {				
+				x2 = x3 = pdf["status_vars"]["x"];
+				pdf_write_text (pdf, text2, tw, currentFormat[4]);
+				if (currentFormat[6]) {
+					y3 = y+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];							
+					// Underline
+					pdf_draw_start (pdf, x2, y3);
+					pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+					pdf_set_pos (pdf, x3 + widthLinePnt, y3);
+				}
+			}
+			if (isset (formatList[innerWordIdx])) {
+				if (formatList[innerWordIdx][0]!=pdf["status_vars"]["font_id"] || 
+						formatList[innerWordIdx][1]!=pdf["status_vars"]["font_size"]) 
+				{
+					pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
+					charLenSpace = pdf_calc_string_width (pdf, " ");
+					charLenHyphen = pdf_calc_string_width (pdf, "~");
+					charLenMinus = pdf_calc_string_width (pdf, "-");				
+				}
+				currentFormat = formatList[innerWordIdx];
+			}
+			formatList = [0 => currentFormat];
+			innerLineIdx++;
+    }
+    
+    if (lineIdx<count (lines)) {
+      y+=pdf["status_vars"]["font_size"] + lineLeading;
+			y-=fontHeightDiff;
+			if (pdf["pages"]["auto_page_wrap"]) {
+				if (y>(pdf["pages"]["auto_page_wrap"][1] - pdf["status_vars"]["font_size"] - lineLeading)) {						
+					y = call_user_func (pdf["pages"]["auto_page_wrap"][0], pdf);	
+				}
+			}
+		}
+	}
+	return y;
+}
+
+function pdf_set_line_width (&def, pt) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    def["pages"]["content"][idx-1]["stream"].=pdf_close_auto (def).pt." w\n";
+  }
+}
+
+function pdf_draw_start (&def, x, y) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    idx--;
+    def["pages"]["content"][idx]["stream"].=pdf_close_auto (def, false).x." ".pdf_calc_y (def, idx, y)." m\n";
+    def["status_vars"]["fS"] = true;
+  }
+}
+
+function pdf_line_to (&def, x, y) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    idx--;
+    def["pages"]["content"][idx]["stream"].=x." ".pdf_calc_y (def, idx, y)." l\n";
+  }
+}
+
+// Mode can be: s, d, b, B
+function pdf_draw_end (&def, mode='S') {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    def["pages"]["content"][idx-1]["stream"].=mode."\n";
+    def["status_vars"]["fS"] = false;
+  }
+}
+
+function pdf_set_line_color (&def, r, g, b) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    def["pages"]["content"][idx-1]["stream"].=r." ".g." ".b." RG\n";
+  }
+}
+
+function pdf_set_fill_color (&def, r, g, b) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    def["pages"]["content"][idx-1]["stream"].=r." ".g." ".b." rg\n";
+  }
+}
+
+function pdf_set_image (&def, imageId, x, y, w=300, h=-1) {
+  imageWidth = def["pages"]["images"][imageId-1][1];
+  imageHeight = def["pages"]["images"][imageId-1][2];
+  
+  r = imageWidth / imageHeight;
+  if (w==-1 && h>=0)
+    w = h * r;
+  if (h==-1)
+    h = w / r;
+  y+=h;
+  // https://www.p2501.ch/pdf-howto/grundlagen/seiteninhalt/transformation
+  pdf_stream_add (def, 'q
+1 0 0 1 '.x.' '.(def["pages"]["dimension"][1]-y).' cm
+'.w.' 0 0 '.h.' 0 0 cm
+/I'.imageId.' Do
+Q');
+	return array (w, h);
+}
+
+function pdf_page_width (&def) {
+	return def["pages"]["dimension"][0];
+}
+
+function pdf_page_height (&def) {
+	return def["pages"]["dimension"][1];
+}
+
+function pdf_page_number (&def) {
+	return count (def["pages"]["content"]);
+}
+
+function pdf_generate (&def) {
+
+  idx = count (def["pages"]["content"]);
+  if (idx)
+    def["pages"]["content"][idx-1]["stream"].=pdf_close_auto (def); 
+
+  refPos = [];
+  oid = 1;
+  pdf = "%PDF-1.4\n";
+    
+  // Create metadata
+  refPos[oid++] = strlen (pdf);
+  pdf.="1 0 obj\n<< ";
+  foreach (def["metadata"] as key => value) {
+    if (!empty (value))
+      pdf.="/".key." ".pdf_encode_text (value)."\n";
+  }
+  pdf.=">>\nendobj\n";
+  
+  // Catalog
+  refPos[oid++] = strlen (pdf);
+  pdf.="2 0 obj\n<< /Type /Catalog\n/Pages {REF_PAGES}\n>>\nendobj\n";
+    
+  // Pages
+  refPages= oid." 0 R";
+  oidParent = oid;  
+
+  pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type /Pages\n/MediaBox [0 0 ".def["pages"]["dimension"][0]." ".def["pages"]["dimension"][1]."]\n/Rotate ".intval (def["pages"]["dimension"][2])."\n/Resources\n<< /Font << {REF_FONTS} >>\n/ProcSet [/PDF/Text/ImageB/ImageC/ImageI]\n/XObject << {REF_IMAGES} >>\n>>\n/Kids [{REF_KIDS}]\n/Count ".count(def["pages"]["content"])."\n>>\nendobj\n";
+  oid++;
+  
+  refFonts = "";
+  fontId = 1;
+  foreach (def["pages"]["fonts"] as font) {
+    if (!empty (refFonts))
+      refFonts.=" ";
+    refFonts.= "/F".fontId." ".oid." 0 R";
+    fontId++;
+		if (isset (font[3])) {
+			pdfTTF = "";
+			// TTF font
+			flags = 0;
+			if (font[3]["encoding"]==1)
+				flags|=8|32; // Regular font
+			else
+				flags|=4; // Symbolic font
+			if (font[3]["Skew"])
+				flags|=64;
+
+
+			fontDescriptor = "/FontFile2 ".(oid+2)." 0 R\n/Ascent ".font[3]["Ascent"]."\n/Descent ".font[3]["Descent"]."\n/CapHeight ".font[3]["CapHeight"]."\n/FontBBox [".font[3]["FontBBox"]."]\n/StemV 0\n/ItalicAngle ".font[3]["Skew"]."\n/Flags ".flags;
+	    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type /Font\n/Subtype /TrueType\n/BaseFont /".font[0]."\n/Encoding /".font[1]."\n/FirstChar 32\n/LastChar 255\n/Widths [ ".font[3]["Widths"]." ]\n/FontDescriptor ".(oid+1)." 0 R\n>>\nendobj\n{REF_POS_".(oid+1)."}".(oid+1)." 0 obj\n<< /Type /FontDescriptor\n/FontName/".font[0].fontDescriptor."\n>>\nendobj\n";
+	
+			fh = fopen (font[3]["filename"], "r");
+			if (!fh)
+				continue; 
+			block = ttfData = "";
+	  	while (fread (fh, block)) {
+	      ttfData.=block;
+	    }
+			fclose (fh);
+			decode="/FlateDecode";
+	    ttfDataCompressed = "";
+			compress (ttfDataCompressed, ttfData);
+	    pdf.="{REF_POS_".(oid+2)."}".(oid+2)." 0 obj\n<< /Filter[".decode."]/Length ".strlen (ttfDataCompressed)." /Length1 ".strlen (ttfData)."\n>>\n";    
+	  	pdf.="stream\n";
+	  	pdf.=ttfDataCompressed;
+	    pdf.="\nendstream\n";
+	    pdf.="endobj\n";
+			oid+=2;
+		}
+		else
+	    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type /Font\n/Subtype /Type1\n/BaseFont /".font[0]."\n/Encoding /".font[1]."\n>>\nendobj\n";
+    oid++;
+  }
+
+  pdf = str_replace ("{REF_FONTS}", refFonts, pdf); 
+
+
+  // https://www.p2501.ch/pdf-howto/grundlagen/dateien/bilder/jpeg
+  refImages = "";
+	imageId = 1;	
+	if (count (def["pages"]["images"])) {
+    foreach (def["pages"]["images"] as imageIdx => image) {
+      block = "";
+      filename = image[0];
+      imageWidth = image[1];
+      imageHeight = image[2];
+      imageBits = 8;
+      ext = image[3];
+      
+      fh = fopen (filename, "r");
+      refImages.= "/I".imageId." ".oid." 0 R";    
+      imageId++;
+      
+      imageData = "";
+      decode = "/ASCIIHexDecode";
+      decodeParams = "";
+      size = 0;
+      if (ext=="jpg" || ext=="jpeg") {
+        decode = "";
+        decode.="/DCTDecode";
+        size = filesize (filename);
+        while (fread (fh, block)) {
+          imageData.=block;
+        }
+      }
+      else
+      if (ext=="png") {
+        fread (fh, block, 8); // Header
+        lenTotal = 0;
+        while (!feof (fh)) {
+          fread (fh, block, 4); // Len
+          len = binparse (block, 3, 0, 0, 1);
+          fread (fh, block, 4); // Type
+          type = block;
+          fread (fh, block, len); // Data
+          if (type=="IHDR") {
+            imageWidth = binparse (block, 3, 0, 0, 1);
+            imageHeight = binparse (block, 3, 4, 0, 1);
+            imageBits = binparse (block, 1, 8, 0, 1);
+            imageModel = binparse (block, 1, 9, 0, 1); // only 2 is allowed
+          }
+          else
+          if (type=="IDAT") {
+            imageData.=block; // Image data
+          }
+          fread (fh, block, 4); // Checkum
+          if (type=="IEND")
+            break;
+        }
+        decode.="/FlateDecode";
+        decodeParams = "/DecodeParms [null << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns ".imageWidth." >>]";
+      }
+
+      pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type /XObject\n/Subtype /Image\n/Width ".imageWidth."/Height ".imageHeight."/ColorSpace/DeviceRGB/BitsPerComponent 8/Interpolate true/Filter[".decode."]".decodeParams."/Length ".strlen (imageData)."\n>>\n";    
+      pdf.="stream\n";
+      /*
+      if (strpos (decode, "FlateDecode")!==false) {
+        require_once ("zlib.inc.v1");
+        dst = "";
+        ret = compress (dst, imageData);
+        pdf.=dst;
+      }
+      else
+      */
+      if (strpos (decode, "ASCIIHexDecode")!==false)
+        pdf.=bin2hex (imageData);
+      else
+        pdf.=imageData;
+        
+      pdf.="\nendstream\n";
+      pdf.="endobj\n";
+      oid++;
+  	}
+  }
+  pdf = str_replace ("{REF_IMAGES}", refImages, pdf);    
+
+  refKids = "";
+	pageIdx = 1;
+	pageCnt = count (def["pages"]["content"]);
+
+	// Replace stream placeholders / corrections
+	find = ["{nb}"];
+	replace = [pageCnt];
+	foreach (def["correction_vars"] as key => data) {
+		array_push (find, key);		
+		len = pdf_calc_string_width (def, str_replace ("{nb}", pageCnt, data[5]), data[3], data[4]);
+		if (data[0]=='R')
+			x = data[2] + data[1] - len;
+		else {
+			x = data[2] + ((data[1] - len)/2); // C
+		}
+		array_push (replace, x);
+	}
+
+  foreach (def["pages"]["content"] as page) {
+    if (!empty (refKids))
+      refKids.=" ";
+    refKids.=oid." 0 R";
+    
+    ownMediaBox = "";
+    if (isset (page["dimension"])) {
+      ownMediaBox = "/MediaBox [0 0 ".page["dimension"][0]." ".page["dimension"][1]."]\n/Rotate ".intval (page["dimension"][2])."\n";
+    }
+
+    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type/Page/Parent ".oidParent." 0 R\n".ownMediaBox."/Contents ".(oid+1)." 0 R\n>>\nendobj\n";
+    oid++;		
+		
+		page["stream"] = str_replace (find, replace, page["stream"]);
+    // Create stream
+    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Length ".strlen (page["stream"])."\n>>\nstream\n".page["stream"]."endstream\nendobj\n";
+    /*
+		decode="/FlateDecode";
+    streamCompressed = "";
+		compress (streamCompressed, page["stream"]);		
+    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Filter[".decode."]/Length ".strlen (streamCompressed)."\n>>\nstream\n".streamCompressed."endstream\nendobj\n";    
+		*/
+		oid++;    
+		pageIdx++;
+  }
+  
+  pdf = str_replace (["{REF_KIDS}", "{REF_PAGES}"], [refKids, refPages], pdf);
+  
+  // Calc positions of reference table
+  subSize = 0;
+  replaceFrom = [];
+  replaceTo = [];
+  pos = 0;
+  for (i=3;i<oid;i++) {
+    key = "{REF_POS_".i."}";
+    array_push (replaceFrom, key);
+    array_push (replaceTo, "");
+    if (i>3)
+      subSize+=strlen (key);
+    pos = strpos (pdf, key, pos) - subSize;
+    refPos[i]=pos;
+  }
+  
+  // Replace placeholders
+  pdf = str_replace (replaceFrom, replaceTo, pdf);
+  
+  // Write reference table
+  posXRef = strlen (pdf);
+  
+  pdf.="xref\n0 ".oid."\n0000000000 65535 f\n";
+  for (i=1;i<oid;i++) {
+    pdf.=sprintf ("%010d 00000 n ", refPos[i])."\n";
+  }
+  
+  // Trailer
+  pdf.="trailer\n<< /Size ".oid."\n/Info 1 0 R\n/Root 2 0 R\n>>\nstartxref\n".posXRef."\n%%EOF";
+  return pdf;
+}
+
+pdf_load_font_config ();
+
+?>
