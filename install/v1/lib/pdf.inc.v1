@@ -485,7 +485,7 @@ function pdf_parse_format (word, &format, &formatStack) {
 			case "underline":
 				format[6]|= 1;
 				break;
-			case "striekout":
+			case "strikeout":
 				format[6]|= 2;
 				break;
 		}
@@ -494,7 +494,7 @@ function pdf_parse_format (word, &format, &formatStack) {
 
 function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0, firstLineIndent=0) {
 
-	pdf_set_line_width (pdf, 1);
+	// pdf_set_line_width (pdf, 1);
 	charLenSpace = charLenSpaceOld = pdf_calc_string_width (pdf, " ");
 	charLenHyphen = charLenHyphenOld = pdf_calc_string_width (pdf, "~");
 	charLenMinus = charLenMinusOld = pdf_calc_string_width (pdf, "-");
@@ -527,9 +527,8 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 		fOwnFormats = false;
 		togetherCnt = 0;
 
-		// Write text
-		foreach (words as wordIdx => word) {
-		
+		// Write the text
+		foreach (words as wordIdx => word) {		
 			if (substr (word, 0, 1)=="\\") 
 			{
 				fSetFont = false;
@@ -685,10 +684,19 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 						x3+=pdf_calc_string_width (pdf, word3);
 						// text-deoration
 						if (currentFormat[6]) {
-							y3 = y2+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];							
 							// Underline
-							pdf_draw_start (pdf, x2, y3);
-							pdf_line_to (pdf, x3, y3);	
+							y3 = y2 + pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];	
+							if (currentFormat[6] & 1) {					
+								pdf_draw_start (pdf, x2, y3);
+								pdf_line_to (pdf, x3, y3);	
+							}
+							// Strikeout
+							if (currentFormat[6] & 2) {
+								y3-=(pdf["status_vars"]["font_size"] / 2);							
+								pdf_draw_start (pdf, x2, y3);
+								pdf_line_to (pdf, x3, y3);	
+							}
+
 							pdf_set_pos (pdf, x3, y2 - fontHeightDiff);
 						}
 						x2 = x3;						
@@ -700,8 +708,16 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					if (currentFormat[6]) {
 						y3 = y+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
 						// Underline
-						pdf_draw_start (pdf, x2, y3);
-						pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+						if (currentFormat[6] & 1) {
+							pdf_draw_start (pdf, x2, y3);
+							pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+						}
+						// Strikeout
+						if (currentFormat[6] & 2) {
+							y3-=(pdf["status_vars"]["font_size"] / 2);							
+							pdf_draw_start (pdf, x2, y3);
+							pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+						}
 						pdf_set_pos (pdf, x3 + widthLinePnt, y3);
 					}
 				}
@@ -811,10 +827,10 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 				foreach (innerWordList as i => word2) {
 					if (isset (formatList[i])) {
 						currentFormat = formatList[i];
-						if (pdf["status_vars"]["font_id"]  !=formatList[i][0] || 
-								pdf["status_vars"]["font_size"]!=formatList[i][1]) {
-							pdf_select_font (pdf, formatList[i][0], formatList[i][1]);
-							fontHeightDiff+= (formatList[i][1] - pdf["status_vars"]["font_size"]);
+						if (pdf["status_vars"]["font_id"]  !=currentFormat[0] || 
+								pdf["status_vars"]["font_size"]!=currentFormat[1]) {
+							fontHeightDiff+= (currentFormat[1] - pdf["status_vars"]["font_size"]);
+							pdf_select_font (pdf, currentFormat[0], currentFormat[1]);
 						}
 					}
 					word3 = str_replace ("~", "", word2);
@@ -841,9 +857,17 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					if (currentFormat[6]) {
 						y3 = y2+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];							
 						// Underline
-						pdf_draw_start (pdf, x2, y3);
-						pdf_line_to (pdf, x3, y3);	
-						pdf_set_pos (pdf, x3, y2 - fontHeightDiff);
+						if (currentFormat[6] & 1) {
+							pdf_draw_start (pdf, x2, y3);
+							pdf_line_to (pdf, x3, y3);	
+						}
+						// Strikeout
+						if (currentFormat[6] & 2) {
+							y3-=(pdf["status_vars"]["font_size"] / 2);							
+							pdf_draw_start (pdf, x2, y3);
+							pdf_line_to (pdf, x3, y3);	
+						}
+						pdf_set_pos (pdf, x3, y-fontHeightDiff);
 					}
 					x2 = x3;
 				}
@@ -852,10 +876,18 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 				x2 = x3 = pdf["status_vars"]["x"];
 				pdf_write_text (pdf, text2, tw, currentFormat[4]);
 				if (currentFormat[6]) {
-					y3 = y+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];							
+					y3 = y+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
 					// Underline
-					pdf_draw_start (pdf, x2, y3);
-					pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+					if (currentFormat[6] & 1) {
+						pdf_draw_start (pdf, x2, y3);
+						pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+					}
+					// Strikeout
+					if (currentFormat[6] & 2) {
+						y3-=(pdf["status_vars"]["font_size"] / 2);							
+						pdf_draw_start (pdf, x2, y3);
+						pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+					}
 					pdf_set_pos (pdf, x3 + widthLinePnt, y3);
 				}
 			}
