@@ -2,6 +2,7 @@
 dl ("regex");
 require_once ("iconv.inc.v1");
 require_once ("zlib.inc.v1");
+// https://www.p2501.ch/pdf-howto/anhang/schriftbreite
 
 pdfFontWeights = array ();
 pdfAscii2Unicode = [0x80 =>	0x20AC,0x82 =>	0x201A,0x83 =>	0x0192,0x84 =>	0x201E,0x85 =>	0x2026,0x86 =>	0x2020,0x87 => 0x2021,0x88 =>	0x02C6,0x89 =>	0x2030,0x8A =>	0x0160,0x8B => 0x2039,0x8C =>	0x0152,0x8E =>	0x017D,0x91 =>	0x2018,0x92 =>	0x2019,0x93 =>	0x201C,0x94 =>	0x201D,0x95 =>	0x2022,0x96 =>	0x2013,0x97 =>	0x2014,0x98 =>	0x02DC,0x99 =>	0x2122,0x9A =>	0x0161,0x9B =>	0x203A,0x9C => 0x0153,0x9E => 0x017E,0x9F => 0x0178];
@@ -146,6 +147,36 @@ function pdf_add_font (&def, fontName, encoding="WinAnsiEncoding") {
   ];
   array_push (def["pages"]["fonts"], array (fontName, encoding, widthIdx[fontName]));
 }
+
+// https://www.p2501.ch/pdf-howto/grundlagen/dateien/fonts/start#fn__1
+// https://www.p2501.ch/pdf-howto/grundlagen/dateien/fonts/ttf
+// https://www.p2501.ch/pdf-howto/anhang/namen_und_codes
+// https://mirrors.ibiblio.org/CTAN/fonts/cm/ps-type1/bakoma/ttf/
+// https://www.fontsquirrel.com/fonts/computer-modern
+// https://fontdrop.info/
+// https://www.pdf-online.com/osa/validate.aspx
+
+/*
+
+00000002
+0001000000000014
+000300010000011a
+0000010600000100000000000000010200000002000000000000000000000000000000010000531d222763306d3a77447e4c15541e5c2864316e3b78457f4d16551f672935326f56205d2a6533703c7946804e1757215f2b6937713d7a47814f183e58487c1a1973417b4982501b5924602c6a3874427d4a84521c5a25622d6b3975762e4b005b00000000000000000000000000000000000000000000000000000000000000003406070a003f00260900660b000000005e0000037200000000000f23000000051300000000000061006c404300000000000000000000000000000e00000000003600000014000d000000000000000000000000000000006800000051000000
+0004013c
+0000
+0008
+0008
+0002
+0000
+007e00c42219ffff
+0000
+002000a02219ffff
+0000000000000000
+000800c4010c010c
+0053001d0022002700630030006d003a00770044007e004c00150054001e005c002800640031006e003b00780045007f004d00160055001f0067002900350032006f00560020005d002a006500330070003c007900460080004e001700570021005f002b006900370071003d007a00470081004f0018003e00580048007c001a001900730041007b004900820050001b005900240060002c006a003800740042007d004a00840052001c005a00250062002d006b003900750076002e004b006c001300060007000e00030011000a000b0009000f00000000000c002600680034005e002f000400660072003f0000005100830023006100080010001200050040000d00140043005b00360000
+{"32":83,"33":29,"34":34,"35":39,"36":99,"37":48,"38":109,"39":58,"40":119,"41":68,"42":126,"43":76,"44":21,"45":84,"46":30,"47":92,"48":40,"49":100,"50":49,"51":110,"52":59,"53":120,"54":69,"55":127,"56":77,"57":22,"58":85,"59":31,"60":103,"61":41,"62":53,"63":50,"64":111,"65":86,"66":32,"67":93,"68":42,"69":101,"70":51,"71":112,"72":60,"73":121,"74":70,"75":128,"76":78,"77":23,"78":87,"79":33,"80":95,"81":43,"82":105,"83":55,"84":113,"85":61,"86":122,"87":71,"88":129,"89":79,"90":24,"91":62,"92":88,"93":72,"94":124,"95":26,"96":25,"97":115,"98":65,"99":123,"100":73,"101":130,"102":80,"103":27,"104":89,"105":36,"106":96,"107":44,"108":106,"109":56,"110":116,"111":66,"112":125,"113":74,"114":132,"115":82,"116":28,"117":90,"118":37,"119":98,"120":45,"121":107,"122":57,"123":117,"124":118,"125":46,"126":75,"160":108,"161":19,"162":6,"163":7,"164":14,"165":3,"166":17,"167":10,"168":11,"169":9,"170":15,"171":0,"172":0,"173":12,"174":38,"175":104,"176":52,"177":94,"178":47,"179":4,"180":102,"181":114,"182":63,"183":0,"184":81,"185":131,"186":35,"187":97,"188":8,"189":16,"190":18,"191":5,"192":64,"193":13,"194":20,"195":67,"196":91,"8729":54}
+
+*/
 
 function pdf_add_ttf_font (&def, filename) {
 	global pdfAscii2Unicode, pdfFontWeights;
@@ -395,9 +426,9 @@ function pdf_add_page (&def, dimension=null) {
   if (def["status_vars"]["fBT"])
     def["pages"]["content"][count (def["pages"]["content"])-1]["stream"].="ET\n";
   if (is_array (dimension))
-    array_push (def["pages"]["content"], ["dimension"=>dimension, "stream"=>""]);
+    array_push (def["pages"]["content"], ["dimension"=>dimension, "stream"=>"", "links"=>[]]);
   else
-    array_push (def["pages"]["content"], ["stream"=>""]);
+    array_push (def["pages"]["content"], ["stream"=>"", "links"=>[]]);
 }
 
 function pdf_stream_add (&def, cmd) {
@@ -441,14 +472,29 @@ function pdf_write_text (&def, text , tw=0, ts=0) {
   }
 }
 
+// https://www.p2501.ch/pdf-howto/grundlagen/zusatzinfos/inhaltsverzeichnis_und_links
+function pdf_add_link (&def, x, y, x2, y2, url) {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+    idx--;
+		y = pdf_calc_y (def, idx, y);
+    y2 = pdf_calc_y (def, idx, y2);
+		array_push (def["pages"]["content"][idx]["links"], ["x"=>x, "y"=>y, "x2"=>x2, "y2"=>y2, "url"=>url]);
+  }
+}
+
 function pdf_parse_format (word, &format, &formatStack) {
 
 	if (strpos (word, "\\end")===false) {
-		array_push (formatStack, format);
+		if (strpos (word, "\\fontend")===false)
+			array_push (formatStack, format);
 	}
 	else {
 		if (count (formatStack))
 			format = array_pop (formatStack);
+		else 
+			format[5]=1; // wrap
+		format[8]=true;
 	}
 	
 	format[2] = format[3] = 1; // Spaces on
@@ -463,6 +509,13 @@ function pdf_parse_format (word, &format, &formatStack) {
 				break;		
 			case "size":
 				format[1] = value;
+				break;
+			case "fontend":
+				if (count (formatStack)) {
+					format2 = array_pop (formatStack);
+					format[0]=format2[0];
+					format[1]=format2[1];
+				}
 				break;
 			case "r0":
 				format[2] = 0;
@@ -485,13 +538,140 @@ function pdf_parse_format (word, &format, &formatStack) {
 			case "underline":
 				format[6]|= 1;
 				break;
-			case "strikeout":
+			case "strike-through":
 				format[6]|= 2;
+				break;
+			case "link":
+				format[7] = value;
+				break;
+			case "align":
+				format[9] = value;
+				break;
+			case "line-leading":
+				format[10] = value;
+				break;
+			case "first-line-indent":
+				format[11] = value;
+				break;
+			case "ignore-spaces":
+				format[12] = strlen(value)==0 ? 1 : value;
 				break;
 		}
 	}
 }
 
+function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentFormat, tw, underlineLeading, &fontHeightDiff) 
+{
+	fIgnoreNextSpace = false;
+	x2 = x2Link = x3 = pdf["status_vars"]["x"];
+	y2 = y2Link = pdf["status_vars"]["y"];
+	y3Link = fontSizeLink = fontHeightDiff2 = y2LinkDiff = 0;	
+	oldTextDecoration = currentFormat[6];
+	oldLink = currentFormat[7];
+	links = [];
+	foreach (innerWordList as i => word2) {
+
+		if (isset (formatList[i])) {
+			currentFormat = formatList[i];
+			if (pdf["status_vars"]["font_id"]  !=currentFormat[0] || 
+					pdf["status_vars"]["font_size"]!=currentFormat[1]) {
+				fontHeightDiff+= (fontHeightDiff2 = (currentFormat[1] - pdf["status_vars"]["font_size"]));				 
+				pdf_select_font (pdf, currentFormat[0], currentFormat[1]);
+			}
+		}
+		else {
+			currentFormat[8] = false;
+		}
+		x3Old = x3;						
+		word3 = str_replace ("~", "", word2);
+		if (!fIgnoreNextSpace && i>0 && !(isset (formatList[i-1]) && !formatList[i-1][2]) && !(isset (formatList[i]) && !formatList[i][3])) {
+			word3=" ".word3;
+			if (currentFormat[6] && (!oldTextDecoration || currentFormat[8]))
+				x2+=tw+pdf_calc_string_width (pdf, " ");
+			else
+			if (!empty (currentFormat[7]) && (empty (oldLink) || currentFormat[8]))
+				x2+=tw+pdf_calc_string_width (pdf, " ");
+			x3+=tw;
+		}
+		if (substr (word2, -1, 1)=="~") {
+			if (i+1 == count (innerWordList))	
+				word3.="-";
+			else {					
+				fIgnoreNextSpace = true;
+			}
+		}
+		else {
+			fIgnoreNextSpace = false;						
+		}
+		pdf_write_text (pdf, word3, tw, currentFormat[4]);
+		x3+=pdf_calc_string_width (pdf, word3);
+		// text-deoration
+		if (currentFormat[6] || !empty (currentFormat[7]) || !empty (oldLink)) {
+			// Underline
+			y3 = y2 + pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
+
+			if (currentFormat[6] & 1) {					
+				pdf_draw_start (pdf, x2, y3);
+				pdf_line_to (pdf, x3, y3);	
+			}
+			// Link
+			if (currentFormat[7]!=oldLink) {
+				x3Link = x3Old;
+				if (!empty (oldLink)) {
+					pdf_add_link (pdf, x2Link, y2Link, x3Link, y3Link, oldLink);
+				}
+				if (!empty (currentFormat[7])) {
+					x2Link = x2;
+					y2Link = y2;
+					// print (word2." = Set2 y2Link = ".y2Link."<br>");
+					y3Link = y3;
+				}
+			}
+			if ((y2-fontHeightDiff2) < y2Link) {
+				y2Link-=fontHeightDiff2;			
+			}
+
+			// Strikeout
+			if (currentFormat[6] & 2) {
+				y3-=(pdf["status_vars"]["font_size"] / 2);							
+				pdf_draw_start (pdf, x2, y3);
+				pdf_line_to (pdf, x3, y3);	
+			}
+			if (currentFormat[6])
+				pdf_set_pos (pdf, x3, y2 - fontHeightDiff);
+		}
+		oldTextDecoration = currentFormat[6];
+		oldLink = currentFormat[7];
+		x2 = x3;						
+	}
+	// Link
+	if (!empty (oldLink)) {
+		pdf_add_link (pdf, x2Link, y2Link, x3, y3, currentFormat[7]);
+	}
+}
+
+function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw, underlineLeading, &fontHeightDiff) {
+	x2 = x3 = pdf["status_vars"]["x"];
+	pdf_write_text (pdf, text2, tw, currentFormat[4]);
+	if (currentFormat[6]) {
+		y3 = pdf["status_vars"]["y"]+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
+		// Underline
+		if (currentFormat[6] & 1) {
+			pdf_draw_start (pdf, x2, y3);
+			pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+		}
+		// Strikeout
+		if (currentFormat[6] & 2) {
+			y3-=(pdf["status_vars"]["font_size"] / 2);							
+			pdf_draw_start (pdf, x2, y3);
+			pdf_line_to (pdf, x3 + widthLinePnt, y3);	
+		}
+		pdf_set_pos (pdf, x3 + widthLinePnt, y3);
+	}
+}
+
+
+// https://www.p2501.ch/pdf-howto/grundlagen/layout/fliesstext
 function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0, firstLineIndent=0) {
 
 	// pdf_set_line_width (pdf, 1);
@@ -503,10 +683,11 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 
 	startFontId = pdf["status_vars"]["font_id"];
 	startFontSize = pdf["status_vars"]["font_size"];
-	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0];
+	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0, "", false, align, lineLeading, firstLineIndent, 0];
 	formatList = [0 => currentFormat];
 	innerWordList = [];
 	formatStack = [];
+	array_push (formatStack, currentFormat);
 	
 	underlineLeading = 5;
 
@@ -514,7 +695,7 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 	foreach (lines as line) {
 		lineIdx++;
 		
-		line = str_replace (["~ ","~"], ["~", "~ "], line);
+		line = str_replace (["~ ","~", " \\end", "\\end"], ["~", "~ ", "\\end", " \\end"], line);
 		
 		words = explode (" ", line);
 		
@@ -528,12 +709,20 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 		togetherCnt = 0;
 
 		// Write the text
-		foreach (words as wordIdx => word) {		
+		foreach (words as wordIdx => word) {
+			
+			if (currentFormat[12] && empty (word))
+				continue;
+
 			if (substr (word, 0, 1)=="\\") 
 			{
 				fSetFont = false;
 				fOwnFormats = true;
 				pdf_parse_format (word, currentFormat, formatStack);
+				
+				if (!currentFormat[8])
+					align = currentFormat[9];
+				
 				if (currentFormat[0]!=formatList[innerWordIdx][0] || 
 						currentFormat[1]!=formatList[innerWordIdx][1])
 					fSetFont = true;
@@ -546,8 +735,10 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 				}
 				continue;
 			}
+			currentFormat[8] = false;
 			lastChar = substr (text2, -1, 1);
-
+			if (empty (word) && empty (text2))
+				word = " "; // Allow first spaces
 			widthPtNew=pdf_calc_string_width (pdf, word, currentFormat[1], currentFormat[0]);
 			fSpace = false;
 			if (!empty (text2)) {
@@ -561,9 +752,11 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					fSpace = true;
 				}
 			}
+			
 			xOffs2 = 0;
-			if (innerLineIdx==0 && strlen (line)>100)
-				xOffs2 = firstLineIndent;
+			if (innerLineIdx==0 && strlen (line)>100) {
+				xOffs2 = currentFormat[11];
+			}
 			fWrap = (widthPt+widthPtNew+xOffs2)>width || (lastChar=='~' &&  ((widthPt+widthPtNew)/width)>0.85);
 
 			// Check if next tokens are no-wrap			
@@ -582,7 +775,7 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					if (!togetherCnt) {
 						wrap = nextFormat[5]; // wrap
 						if (!nextFormat[2]) // space-right=0
-							wrap = 0;
+							wrap = 0;					
 					}
 					else
 					if (!fFormat) {
@@ -592,13 +785,15 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 								break;
 							}
 							else
-							if (nextFormat[5]==1 && nextFormat[2]) // wrap
+							if (nextFormat[5]==1 && nextFormat[2]) { // wrap
 								break;
+							}
 						}
 					}
 					if (fFormat) {
-						if (formatStack2===null)
+						if (formatStack2===null) {
 							formatStack2 = formatStack;
+						}
 						pdf_parse_format (nextWord, nextFormat, formatStack2);
 					}
 					else {
@@ -614,7 +809,6 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					if (fWrap)
 						togetherCnt = 0;
 				}
-				// print (word." ".togetherNextWidthPt." ".(fWrap ? "true" : "false")."<br>");
 			}
 			if (!fWrap && togetherCnt)
 				togetherCnt--;
@@ -649,84 +843,17 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					pdf_set_pos (pdf, x+xOffs2, y); // L
 				fontHeightDiff = 0;
 				if (fOwnFormats) {
-					fIgnoreNextSpace = false;
-					x2 = x3 = pdf["status_vars"]["x"];
-					y2 = pdf["status_vars"]["y"];
-					oldTextDecoration = currentFormat[6];
-					foreach (innerWordList as i => word2) {
-						if (isset (formatList[i])) {
-							currentFormat = formatList[i];
-							if (pdf["status_vars"]["font_id"]  !=currentFormat[0] || 
-									pdf["status_vars"]["font_size"]!=currentFormat[1]) {
-								fontHeightDiff+= (currentFormat[1] - pdf["status_vars"]["font_size"]);
-								pdf_select_font (pdf, currentFormat[0], currentFormat[1]);
-							}
-						}
-						word3 = str_replace ("~", "", word2);
-						if (!fIgnoreNextSpace && i>0 && !(isset (formatList[i-1]) && !formatList[i-1][2]) && !(isset (formatList[i]) && !formatList[i][3])) {
-							word3=" ".word3;
-							if (currentFormat[6] && !oldTextDecoration)
-								x2+=tw+pdf_calc_string_width (pdf, " ");
-							x3+=tw;
-						}
-						oldTextDecoration = currentFormat[6];
-						if (substr (word2, -1, 1)=="~") {
-							if (i+1 == count (innerWordList))	
-								word3.="-";
-							else {					
-								fIgnoreNextSpace = true;
-							}
-						}
-						else {
-							fIgnoreNextSpace = false;						
-						}
-						pdf_write_text (pdf, word3, tw, currentFormat[4]);
-						x3+=pdf_calc_string_width (pdf, word3);
-						// text-deoration
-						if (currentFormat[6]) {
-							// Underline
-							y3 = y2 + pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];	
-							if (currentFormat[6] & 1) {					
-								pdf_draw_start (pdf, x2, y3);
-								pdf_line_to (pdf, x3, y3);	
-							}
-							// Strikeout
-							if (currentFormat[6] & 2) {
-								y3-=(pdf["status_vars"]["font_size"] / 2);							
-								pdf_draw_start (pdf, x2, y3);
-								pdf_line_to (pdf, x3, y3);	
-							}
-
-							pdf_set_pos (pdf, x3, y2 - fontHeightDiff);
-						}
-						x2 = x3;						
-					}
+					pdf_write_inner_words (pdf, innerWordList, formatList, currentFormat, tw, underlineLeading, fontHeightDiff);
 				}
 				else {
-					x2 = x3 = pdf["status_vars"]["x"];
-					pdf_write_text (pdf, text2, tw, currentFormat[4]);
-					if (currentFormat[6]) {
-						y3 = y+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
-						// Underline
-						if (currentFormat[6] & 1) {
-							pdf_draw_start (pdf, x2, y3);
-							pdf_line_to (pdf, x3 + widthLinePnt, y3);	
-						}
-						// Strikeout
-						if (currentFormat[6] & 2) {
-							y3-=(pdf["status_vars"]["font_size"] / 2);							
-							pdf_draw_start (pdf, x2, y3);
-							pdf_line_to (pdf, x3 + widthLinePnt, y3);	
-						}
-						pdf_set_pos (pdf, x3 + widthLinePnt, y3);
-					}
+					pdf_write_inner_words2 (pdf, text2, currentFormat, widthLinePnt, tw, underlineLeading, fontHeightDiff);					
 				}
 
-				y +=pdf["status_vars"]["font_size"] + lineLeading;
+				y +=pdf["status_vars"]["font_size"] + currentFormat[10];
 				y-=fontHeightDiff;
 				
 				if (pdf["pages"]["auto_page_wrap"]) {
-					if (y>(pdf["pages"]["auto_page_wrap"][1] - pdf["status_vars"]["font_size"] - lineLeading)) {
+					if (y>(pdf["pages"]["auto_page_wrap"][1] - pdf["status_vars"]["font_size"] - currentFormat[10])) {
 						y = call_user_func (pdf["pages"]["auto_page_wrap"][0], pdf);						
 					}
 			  }
@@ -781,6 +908,7 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 		// Last line		
 		if (!empty (text2)) {
 			widthLinePnt = widthPt;
+			// align = currentFormat[9];
 			if (align=='B') {
 				if (spaceCnt<=3 || (widthPt/width)<0.8)
 					tw = twOld / 2;
@@ -820,77 +948,12 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 
 			fontHeightDiff = 0;
 			if (fOwnFormats) {
-				fIgnoreNextSpace = false;
-				x2 = x3 = pdf["status_vars"]["x"];
-				y2 = pdf["status_vars"]["y"];
-				oldTextDecoration = currentFormat[6];
-				foreach (innerWordList as i => word2) {
-					if (isset (formatList[i])) {
-						currentFormat = formatList[i];
-						if (pdf["status_vars"]["font_id"]  !=currentFormat[0] || 
-								pdf["status_vars"]["font_size"]!=currentFormat[1]) {
-							fontHeightDiff+= (currentFormat[1] - pdf["status_vars"]["font_size"]);
-							pdf_select_font (pdf, currentFormat[0], currentFormat[1]);
-						}
-					}
-					word3 = str_replace ("~", "", word2);
-					if (!fIgnoreNextSpace && i>0 && !(isset (formatList[i-1]) && !formatList[i-1][2]) && !(isset (formatList[i]) && !formatList[i][3])) {
-						word3=" ".word3;
-						if (currentFormat[6] && !oldTextDecoration)
-							x2+=tw+pdf_calc_string_width (pdf, " ");
-						x3+=tw;
-					}
-					oldTextDecoration = currentFormat[6];
-					if (substr (word2, -1, 1)=="~") {
-						if (i+1 == count (innerWordList))	
-							word3.="-";
-						else
-							fIgnoreNextSpace = true;
-					}
-					else {
-							fIgnoreNextSpace = false;	
-					}
-						
-					pdf_write_text (pdf, word3, tw, currentFormat[4]);
-					x3+=pdf_calc_string_width (pdf, word3);
-					// text-deoration
-					if (currentFormat[6]) {
-						y3 = y2+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];							
-						// Underline
-						if (currentFormat[6] & 1) {
-							pdf_draw_start (pdf, x2, y3);
-							pdf_line_to (pdf, x3, y3);	
-						}
-						// Strikeout
-						if (currentFormat[6] & 2) {
-							y3-=(pdf["status_vars"]["font_size"] / 2);							
-							pdf_draw_start (pdf, x2, y3);
-							pdf_line_to (pdf, x3, y3);	
-						}
-						pdf_set_pos (pdf, x3, y-fontHeightDiff);
-					}
-					x2 = x3;
-				}
+				 pdf_write_inner_words (pdf, innerWordList, formatList, currentFormat, tw, underlineLeading, fontHeightDiff);				 
 			}
-			else {				
-				x2 = x3 = pdf["status_vars"]["x"];
-				pdf_write_text (pdf, text2, tw, currentFormat[4]);
-				if (currentFormat[6]) {
-					y3 = y+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
-					// Underline
-					if (currentFormat[6] & 1) {
-						pdf_draw_start (pdf, x2, y3);
-						pdf_line_to (pdf, x3 + widthLinePnt, y3);	
-					}
-					// Strikeout
-					if (currentFormat[6] & 2) {
-						y3-=(pdf["status_vars"]["font_size"] / 2);							
-						pdf_draw_start (pdf, x2, y3);
-						pdf_line_to (pdf, x3 + widthLinePnt, y3);	
-					}
-					pdf_set_pos (pdf, x3 + widthLinePnt, y3);
-				}
+			else {	
+				pdf_write_inner_words2 (pdf, text2, currentFormat, widthLinePnt, tw, underlineLeading, fontHeightDiff);	
 			}
+
 			if (isset (formatList[innerWordIdx])) {
 				if (formatList[innerWordIdx][0]!=pdf["status_vars"]["font_id"] || 
 						formatList[innerWordIdx][1]!=pdf["status_vars"]["font_size"]) 
@@ -903,14 +966,15 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 				currentFormat = formatList[innerWordIdx];
 			}
 			formatList = [0 => currentFormat];
+			
 			innerLineIdx++;
     }
     
     if (lineIdx<count (lines)) {
-      y+=pdf["status_vars"]["font_size"] + lineLeading;
+      y+=pdf["status_vars"]["font_size"] + currentFormat[10];
 			y-=fontHeightDiff;
 			if (pdf["pages"]["auto_page_wrap"]) {
-				if (y>(pdf["pages"]["auto_page_wrap"][1] - pdf["status_vars"]["font_size"] - lineLeading)) {						
+				if (y>(pdf["pages"]["auto_page_wrap"][1] - pdf["status_vars"]["font_size"] - currentFormat[10])) {						
 					y = call_user_func (pdf["pages"]["auto_page_wrap"][0], pdf);	
 				}
 			}
@@ -1026,7 +1090,9 @@ function pdf_generate (&def) {
 
   pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type /Pages\n/MediaBox [0 0 ".def["pages"]["dimension"][0]." ".def["pages"]["dimension"][1]."]\n/Rotate ".intval (def["pages"]["dimension"][2])."\n/Resources\n<< /Font << {REF_FONTS} >>\n/ProcSet [/PDF/Text/ImageB/ImageC/ImageI]\n/XObject << {REF_IMAGES} >>\n>>\n/Kids [{REF_KIDS}]\n/Count ".count(def["pages"]["content"])."\n>>\nendobj\n";
   oid++;
-  
+
+
+	// Fonts
   refFonts = "";
   fontId = 1;
   foreach (def["pages"]["fonts"] as font) {
@@ -1045,10 +1111,8 @@ function pdf_generate (&def) {
 			if (font[3]["Skew"])
 				flags|=64;
 
-
 			fontDescriptor = "/FontFile2 ".(oid+2)." 0 R\n/Ascent ".font[3]["Ascent"]."\n/Descent ".font[3]["Descent"]."\n/CapHeight ".font[3]["CapHeight"]."\n/FontBBox [".font[3]["FontBBox"]."]\n/StemV 0\n/ItalicAngle ".font[3]["Skew"]."\n/Flags ".flags;
-	    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type /Font\n/Subtype /TrueType\n/BaseFont /".font[0]."\n/Encoding /".font[1]."\n/FirstChar 32\n/LastChar 255\n/Widths [ ".font[3]["Widths"]." ]\n/FontDescriptor ".(oid+1)." 0 R\n>>\nendobj\n{REF_POS_".(oid+1)."}".(oid+1)." 0 obj\n<< /Type /FontDescriptor\n/FontName/".font[0].fontDescriptor."\n>>\nendobj\n";
-	
+	    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type /Font\n/Subtype /TrueType\n/BaseFont /".font[0]."\n/Encoding /".font[1]."\n/FirstChar 32\n/LastChar 255\n/Widths [ ".font[3]["Widths"]." ]\n/FontDescriptor ".(oid+1)." 0 R\n>>\nendobj\n{REF_POS_".(oid+1)."}".(oid+1)." 0 obj\n<< /Type /FontDescriptor\n/FontName/".font[0].fontDescriptor."\n>>\nendobj\n";	
 			fh = fopen (font[3]["filename"], "r");
 			if (!fh)
 				continue; 
@@ -1075,7 +1139,7 @@ function pdf_generate (&def) {
   pdf = str_replace ("{REF_FONTS}", refFonts, pdf); 
 
 
-  // https://www.p2501.ch/pdf-howto/grundlagen/dateien/bilder/jpeg
+  // Images
   refImages = "";
 	imageId = 1;	
 	if (count (def["pages"]["images"])) {
@@ -1171,24 +1235,36 @@ function pdf_generate (&def) {
 		}
 		array_push (replace, x);
 	}
-
   foreach (def["pages"]["content"] as page) {
-    if (!empty (refKids))
-      refKids.=" ";
-    refKids.=oid." 0 R";
+
     
+		// Links
+		refAnnots = "";
+		pdfAnnots = "";
+		foreach (page["links"] as link) {
+	    pdfAnnots.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type /Annot /Subtype /Link /Rect [".link["x"]." ".link["y"]." ".link["x2"]." ".link["y2"]."] /A <<\n/S /URI\n/URI (".link["url"].") >>\n/Border [0 0 0] >>\nendobj\n";
+			if (!empty (refAnnots))
+				refAnnots.=" ";
+			refAnnots.=oid." 0 R";
+			oid++;
+		}
+
+		// Page object
     ownMediaBox = "";
     if (isset (page["dimension"])) {
       ownMediaBox = "/MediaBox [0 0 ".page["dimension"][0]." ".page["dimension"][1]."]\n/Rotate ".intval (page["dimension"][2])."\n";
     }
-
-    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type/Page/Parent ".oidParent." 0 R\n".ownMediaBox."/Contents ".(oid+1)." 0 R\n>>\nendobj\n";
+    if (!empty (refKids))
+      refKids.=" ";
+    refKids.=oid." 0 R";		
+		pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Type/Page/Parent ".oidParent." 0 R".(!empty (refAnnots) ? "\n/Annots [".refAnnots."]" : "")."\n".ownMediaBox."/Contents ".(oid+1)." 0 R\n>>\nendobj\n".pdfAnnots;
     oid++;		
 		
 		page["stream"] = str_replace (find, replace, page["stream"]);
     // Create stream
     pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Length ".strlen (page["stream"])."\n>>\nstream\n".page["stream"]."endstream\nendobj\n";
     /*
+		// Compress stream
 		decode="/FlateDecode";
     streamCompressed = "";
 		compress (streamCompressed, page["stream"]);		
