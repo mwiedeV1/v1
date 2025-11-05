@@ -113,9 +113,13 @@ function pdf_calc_string_width (&def, str, fontSize=0, fontId=0) {
   w = 0;
 	if (!fontSize)
   	fontSize = def["status_vars"]["font_size"];
-	if (!fontId)
+	if (!fontId) 
 		fontId = def["status_vars"]["font_id"];
-  widthIdx = def["pages"]["fonts"][fontId-1][2];
+	if (isset (def["pages"]["fontKey2Idx"][fontId]))
+		fontIdx = def["pages"]["fontKey2Idx"][fontId];
+	else
+		fontIdx = fontId;
+  widthIdx = def["pages"]["fonts"][fontIdx-1][2];
   len = strlen (str);
   for (i=0;i<len;i++) {	
     w+=(pdfFontWeights[binparse (str, 1, i)][widthIdx] / 1000) * fontSize; // mbsubstr
@@ -129,7 +133,7 @@ function pdf_calc_y (&def, idx, y) {
   return def["pages"]["dimension"][1] - y;
 }
 
-function pdf_add_font (&def, fontName, encoding="WinAnsiEncoding") {
+function pdf_add_font (&def, fontName, key=null, encoding="WinAnsiEncoding") {
 
   widthIdx = [
     "Times-Roman" => 0,
@@ -145,6 +149,10 @@ function pdf_add_font (&def, fontName, encoding="WinAnsiEncoding") {
     "Courier-Bold" => 8,
     "Courier-BoldOblique" => 8
   ];
+	if (key) {
+		def["pages"]["fontKey2Idx"][key]=count (def["pages"]["fonts"])+1;
+	}
+	
   array_push (def["pages"]["fonts"], array (fontName, encoding, widthIdx[fontName]));
 }
 
@@ -178,7 +186,7 @@ function pdf_add_font (&def, fontName, encoding="WinAnsiEncoding") {
 
 */
 
-function pdf_add_ttf_font (&def, filename) {
+function pdf_add_ttf_font (&def, filename, key=null) {
 	global pdfAscii2Unicode, pdfFontWeights;
 	fh = fopen (filename, "r");
 	if (!fh)
@@ -379,6 +387,9 @@ function pdf_add_ttf_font (&def, filename) {
 	}
 
 	ttfValues["Widths"] = widths;	
+	if (key) {
+		def["pages"]["fontKey2Idx"][key]=count (def["pages"]["fonts"])+1;
+	}
 	array_push (def["pages"]["fonts"], array (fontName, "WinAnsiEncoding", widthIdx, ttfValues));
 	// print_r (ttfValues);
 	return true;
@@ -440,9 +451,15 @@ function pdf_stream_add (&def, cmd) {
 
 function pdf_select_font (&def, fontId, sizePt) {
   idx = count (def["pages"]["content"]);
+	
+	if (isset (def["pages"]["fontKey2Idx"][fontId]))
+		fontIdx = def["pages"]["fontKey2Idx"][fontId];
+	else
+		fontIdx = fontId;
   if (idx) {
-    def["pages"]["content"][idx-1]["stream"].="/F".fontId." ".sizePt." Tf\n";
+    def["pages"]["content"][idx-1]["stream"].="/F".fontIdx." ".sizePt." Tf\n";
     def["status_vars"]["font_id"] = fontId;
+    def["status_vars"]["font_idx"] = fontIdx;
     def["status_vars"]["font_size"] = sizePt;
   }
 }
@@ -553,8 +570,14 @@ function pdf_parse_format (word, &format, &formatStack) {
 			case "first-line-indent":
 				format[11] = value;
 				break;
-			case "ignore-spaces":
+			case "spaces":
 				format[12] = strlen(value)==0 ? 1 : value;
+				break;
+			case "color":
+				format[13] = value;
+				break;
+			case "line-color":
+				format[14] = value;
 				break;
 		}
 	}
@@ -573,6 +596,13 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 
 		if (isset (formatList[i])) {
 			currentFormat = formatList[i];
+			// Color
+			if (pdf["status_vars"]["fill_color"]!=currentFormat[13]) {
+				pdf_set_fill_color (pdf, currentFormat[13]);
+			}
+			if (pdf["status_vars"]["line_color"]!=currentFormat[14]) {
+				pdf_set_line_color (pdf, currentFormat[14]);
+			}
 			if (pdf["status_vars"]["font_id"]  !=currentFormat[0] || 
 					pdf["status_vars"]["font_size"]!=currentFormat[1]) {
 				fontHeightDiff+= (fontHeightDiff2 = (currentFormat[1] - pdf["status_vars"]["font_size"]));				 
@@ -653,6 +683,15 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw, underlineLeading, &fontHeightDiff) {
 	x2 = x3 = pdf["status_vars"]["x"];
 	pdf_write_text (pdf, text2, tw, currentFormat[4]);
+
+		// Color
+	if (pdf["status_vars"]["fill_color"]!=currentFormat[13]) {
+		pdf_set_fill_color (pdf, currentFormat[13]);
+	}
+	if (pdf["status_vars"]["line_color"]!=currentFormat[14]) {
+		pdf_set_line_color (pdf, currentFormat[14]);
+	}
+
 	if (currentFormat[6]) {
 		y3 = pdf["status_vars"]["y"]+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
 		// Underline
@@ -683,7 +722,7 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 
 	startFontId = pdf["status_vars"]["font_id"];
 	startFontSize = pdf["status_vars"]["font_size"];
-	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0, "", false, align, lineLeading, firstLineIndent, 0];
+	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0, "", false, align, lineLeading, firstLineIndent, 0, "#000000", "#000000"];
 	formatList = [0 => currentFormat];
 	innerWordList = [];
 	formatStack = [];
@@ -711,7 +750,7 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 		// Write the text
 		foreach (words as wordIdx => word) {
 			
-			if (currentFormat[12] && empty (word))
+			if (!currentFormat[12] && empty (word))
 				continue;
 
 			if (substr (word, 0, 1)=="\\") 
@@ -1016,17 +1055,23 @@ function pdf_draw_end (&def, mode='S') {
   }
 }
 
-function pdf_set_line_color (&def, r, g, b) {
+function pdf_set_line_color (&def, color) {
   idx = count (def["pages"]["content"]);
   if (idx) {
-    def["pages"]["content"][idx-1]["stream"].=r." ".g." ".b." RG\n";
+		r = g = b = 0;
+		sscanf (color, "#%02x%02x%02x", r, g, b);
+    def["pages"]["content"][idx-1]["stream"].=(r/255)." ".(g/255)." ".(b/255)." RG\n";
+		def["status_vars"]["line_color"]=color;
   }
 }
 
-function pdf_set_fill_color (&def, r, g, b) {
+function pdf_set_fill_color (&def, color) {
   idx = count (def["pages"]["content"]);
   if (idx) {
-    def["pages"]["content"][idx-1]["stream"].=r." ".g." ".b." rg\n";
+		r = g = b = 0;
+		sscanf (color, "#%02x%02x%02x", r, g, b);
+    def["pages"]["content"][idx-1]["stream"].=(r/255)." ".(g/255)." ".(b/255)." rg\n";
+		def["status_vars"]["fill_color"]=color;
   }
 }
 
@@ -1262,14 +1307,14 @@ function pdf_generate (&def) {
 		
 		page["stream"] = str_replace (find, replace, page["stream"]);
     // Create stream
-    pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Length ".strlen (page["stream"])."\n>>\nstream\n".page["stream"]."endstream\nendobj\n";
-    /*
+    // pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Length ".strlen (page["stream"])."\n>>\nstream\n".page["stream"]."endstream\nendobj\n";
+    
 		// Compress stream
 		decode="/FlateDecode";
     streamCompressed = "";
 		compress (streamCompressed, page["stream"]);		
     pdf.="{REF_POS_".oid."}".oid." 0 obj\n<< /Filter[".decode."]/Length ".strlen (streamCompressed)."\n>>\nstream\n".streamCompressed."endstream\nendobj\n";    
-		*/
+		
 		oid++;    
 		pageIdx++;
   }
