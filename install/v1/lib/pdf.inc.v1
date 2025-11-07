@@ -84,6 +84,14 @@ function pdf_create (title, author="", dimension=[595.32, 841.92, 0]) {
   ];
 }
 
+function pdf_create_a4_science (name="", author="") {
+    pdf = pdf_create (name, author);
+    pdf_add_font (pdf, "Times-Roman", "default");
+    pdf_add_ttf_font (pdf, "lib/conf/math_symbols.ttf", "math");
+    return pdf;
+}
+
+
 function pdf_bt_auto (&def) {
   return !def["status_vars"]["fBT"] ? "BT\n" : "";
 }
@@ -479,10 +487,15 @@ function pdf_set_pos (&def, x, y) {
   }
 }
 
-function pdf_write_text (&def, text , tw=0, ts=0) {
+function pdf_write_text (&def, text , tw=0, ts=0, tj=0) {
   idx = count (def["pages"]["content"]);
   if (idx) {
-    def["pages"]["content"][idx-1]["stream"].=pdf_bt_auto (def)." ".(tw!=def["old"]["Tw"] ? tw." Tw " : "").(ts!=def["old"]["Ts"] ? ts." Ts " : "").pdf_encode_text (text)." Tj\n";
+		if (tj) {
+			tj*=-(66.6 / (def["status_vars"]["font_size"] / 15)); // Dont know why!
+			def["pages"]["content"][idx-1]["stream"].=pdf_bt_auto (def)." ".(tw!=def["old"]["Tw"] ? tw." Tw " : "").(ts!=def["old"]["Ts"] ? ts." Ts " : "")."[".tj." ".pdf_encode_text (text)."] TJ\n";		
+		}
+	  else
+		  def["pages"]["content"][idx-1]["stream"].=pdf_bt_auto (def)." ".(tw!=def["old"]["Tw"] ? tw." Tw " : "").(ts!=def["old"]["Ts"] ? ts." Ts " : "").pdf_encode_text (text)." Tj\n";
     def["status_vars"]["fBT"] = true;
 		def["old"]["Ts"] = ts;
 		def["old"]["Tw"] = tw;
@@ -500,7 +513,7 @@ function pdf_add_link (&def, x, y, x2, y2, url) {
   }
 }
 
-function pdf_parse_format (word, &format, &formatStack) {
+function pdf_parse_format (word, &format, &formatStack, &newWord) {
 
 	if (strpos (word, "\\end")===false) {
 		if (strpos (word, "\\fontend")===false)
@@ -515,6 +528,8 @@ function pdf_parse_format (word, &format, &formatStack) {
 	}
 	
 	format[2] = format[3] = 1; // Spaces on
+	format[15] = 0; // No indent
+	
 	cmdList = explode ("\\", word);							
 	foreach (cmdList as cmd) {
 		if (empty (cmd))
@@ -558,6 +573,9 @@ function pdf_parse_format (word, &format, &formatStack) {
 			case "strike-through":
 				format[6]|= 2;
 				break;
+			case "sqrt":
+				format[6]|= 4;
+				break;
 			case "link":
 				format[7] = value;
 				break;
@@ -578,6 +596,12 @@ function pdf_parse_format (word, &format, &formatStack) {
 				break;
 			case "line-color":
 				format[14] = value;
+				break;
+			case "chr":
+				newWord.=chr(value);
+				break;
+			case "indent":
+				format[15] = value;
 				break;
 		}
 	}
@@ -633,8 +657,10 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 		else {
 			fIgnoreNextSpace = false;						
 		}
-		pdf_write_text (pdf, word3, tw, currentFormat[4]);
+		pdf_write_text (pdf, word3, tw, currentFormat[4], currentFormat[15]);
 		x3+=pdf_calc_string_width (pdf, word3);
+		x3+=currentFormat[15];
+		
 		// text-deoration
 		if (currentFormat[6] || !empty (currentFormat[7]) || !empty (oldLink)) {
 			// Underline
@@ -722,19 +748,19 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 
 	startFontId = pdf["status_vars"]["font_id"];
 	startFontSize = pdf["status_vars"]["font_size"];
-	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0, "", false, align, lineLeading, firstLineIndent, 0, "#000000", "#000000"];
+	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0, "", false, align, lineLeading, firstLineIndent, 0, "#000000", "#000000", 0];
 	formatList = [0 => currentFormat];
 	innerWordList = [];
 	formatStack = [];
 	array_push (formatStack, currentFormat);
-	
+
 	underlineLeading = 5;
 
 	lineIdx  = 0;
 	foreach (lines as line) {
 		lineIdx++;
 		
-		line = str_replace (["~ ","~", " \\end", "\\end"], ["~", "~ ", "\\end", " \\end"], line);
+		line = str_replace (["~ ","~", " \\end", "\\end", " \\fontend", "\\fontend"], ["~", "~ ", "\\end", " \\end", "\\fontend", " \\fontend"], line);
 		
 		words = explode (" ", line);
 		
@@ -746,18 +772,19 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 		tw = twOld = 0;
 		fOwnFormats = false;
 		togetherCnt = 0;
+		innerWordList = [];
 
 		// Write the text
 		foreach (words as wordIdx => word) {
-			
 			if (!currentFormat[12] && empty (word))
 				continue;
-
+				
 			if (substr (word, 0, 1)=="\\") 
 			{
 				fSetFont = false;
 				fOwnFormats = true;
-				pdf_parse_format (word, currentFormat, formatStack);
+				newWord = "";
+				pdf_parse_format (word, currentFormat, formatStack, newWord);
 				
 				if (!currentFormat[8])
 					align = currentFormat[9];
@@ -771,8 +798,11 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					charLenSpace = pdf_calc_string_width (pdf, " ", currentFormat[1], currentFormat[0]);
 					charLenHyphen = pdf_calc_string_width (pdf, "~",  currentFormat[1], currentFormat[0]);
 					charLenMinus = pdf_calc_string_width (pdf, "-",  currentFormat[1], currentFormat[0]);
-				}
-				continue;
+				}				
+				if (!empty (newWord))
+					word = newWord;
+				else
+					continue;
 			}
 			currentFormat[8] = false;
 			lastChar = substr (text2, -1, 1);
@@ -791,6 +821,7 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					fSpace = true;
 				}
 			}
+			widthPtNew+=currentFormat[15];
 			
 			xOffs2 = 0;
 			if (innerLineIdx==0 && strlen (line)>100) {
@@ -799,7 +830,6 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 			fWrap = (widthPt+widthPtNew+xOffs2)>width || (lastChar=='~' &&  ((widthPt+widthPtNew)/width)>0.85);
 
 			// Check if next tokens are no-wrap			
-			
 			if (!fWrap && !togetherCnt) {
 				formatStack2 = null;
 				togetherNextWidthPt = 0;
@@ -808,9 +838,13 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 				fReadMore = false;
 				togetherCnt = 0;
 				wrap = 1;
+				newWord = "";
 				while ((nextWord = words[wordNextIdx])!==null) {
-					fFormat = substr (nextWord, 0, 1)=="\\";
-					
+					if (!empty (newWord)) {
+						nextWord = newWord;
+						newWord = "";
+					}
+					fFormat = substr (nextWord, 0, 1)=="\\";					
 					if (!togetherCnt) {
 						wrap = nextFormat[5]; // wrap
 						if (!nextFormat[2]) // space-right=0
@@ -833,10 +867,13 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 						if (formatStack2===null) {
 							formatStack2 = formatStack;
 						}
-						pdf_parse_format (nextWord, nextFormat, formatStack2);
+						newWord = "";
+						pdf_parse_format (nextWord, nextFormat, formatStack2, newWord);						
+						if (!empty (newWord))
+							wordNextIdx--;
 					}
 					else {
-						togetherNextWidthPt+=pdf_calc_string_width (pdf, " ".nextWord, nextFormat[1], nextFormat[0]);
+						togetherNextWidthPt+=pdf_calc_string_width (pdf, " ".nextWord, nextFormat[1], nextFormat[0]) + nextFormat[15];
 						if (togetherCnt>0)
 							nextFormat[2] = nextFormat[3] = 1;
 						togetherCnt++;
@@ -911,7 +948,7 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 					currentFormat = formatList[innerWordIdx];
 				}
 				formatList = [0 => currentFormat];
-			  text2 = "";      
+			  text2 = "";
 			  widthPt = 0;
 				spaceCnt = 0;				
 				innerWordIdx = 0;
