@@ -858,14 +858,15 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 	formatList = [0 => currentFormat];
 	innerWordList = [];
 	formatStack = [];
-	array_push (formatStack, currentFormat);
 	outline = [x, y+startFontSize, 0, y+startFontSize];
 	fFirstWord = true;
 
 	underlineLeading = 5;
-
+	array_push (formatStack, currentFormat);
+		
 	lineIdx  = 0;
 	foreach (lines as line) {
+
 		lineIdx++;
 		
 		line = str_replace (["~ ","~", " \\end", "\\end", " \\fontend", "\\fontend"], ["~", "~ ", "\\end", " \\end", "\\fontend", " \\fontend"], line);
@@ -881,7 +882,7 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 		fOwnFormats = false;
 		togetherCnt = 0;
 		innerWordList = [];
-
+		
 		// Write the text
 		foreach (words as wordIdx => word) {
 			if (!currentFormat[12] && empty (word))
@@ -1166,20 +1167,21 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 			if (outline2[3]<outline[3]) // y2
 				outline[3] = outline2[3];
 				
-			if (isset (formatList[innerWordIdx])) {
-				if (formatList[innerWordIdx][0]!=pdf["status_vars"]["font_id"] || 
-						formatList[innerWordIdx][1]!=pdf["status_vars"]["font_size"]) 
-				{
-					pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
-					charLenSpace = pdf_calc_string_width (pdf, " ");
-					charLenHyphen = pdf_calc_string_width (pdf, "~");
-					charLenMinus = pdf_calc_string_width (pdf, "-");				
-				}
-				currentFormat = formatList[innerWordIdx];
-			}
-			formatList = [0 => currentFormat];			
+
 			innerLineIdx++;
     }
+		if (isset (formatList[innerWordIdx])) {
+			if (formatList[innerWordIdx][0]!=pdf["status_vars"]["font_id"] || 
+					formatList[innerWordIdx][1]!=pdf["status_vars"]["font_size"]) 
+			{
+				pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
+				charLenSpace = pdf_calc_string_width (pdf, " ");
+				charLenHyphen = pdf_calc_string_width (pdf, "~");
+				charLenMinus = pdf_calc_string_width (pdf, "-");				
+			}
+			currentFormat = formatList[innerWordIdx];
+		}
+		formatList = [0 => currentFormat];			
     
     if (lineIdx<count (lines)) {
       y+=pdf["status_vars"]["font_size"] + currentFormat[10];
