@@ -674,6 +674,7 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 	y2Link+=startFontSize;
 	outline = [x2, y2Link, 0, 0];
 	fFirstWord = true;
+	oldSup = 0;
 
 	foreach (innerWordList as i => word2) {
 
@@ -746,17 +747,17 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 				x3Link = x3Old;
 				if (!empty (oldLink)) {
 					if (substr (oldLink, 0, 1)=="$")
-						pdf_rectangle (pdf, x2Link, y2Link-yMin, x3Link-x2Link, -(yMax-yMin));
+						pdf_rectangle (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin));
 					else
-						pdf_add_link (pdf, x2Link, y2Link-yMin, x3Link-x2Link, -(yMax-yMin), oldLink);
+						pdf_add_link (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin), oldLink);
 				}
 				if (!empty (currentFormat[7])) {
 					x2Link = x2;
 					y2Link = y3-underlineLeading; // estimated begin
 					yMax = 0;
-					yMin = 0;
-					if (substr (currentFormat[7], 0, 1)!="$") {
-						yMin = -underlineLeading;
+					yMin = currentFormat[4];
+					if (!currentFormat[4] &&  substr (currentFormat[7], 0, 1)!="$") {
+						yMin = currentFormat[4]-underlineLeading;
 						yMax = pdf["status_vars"]["font_size"];
 					}
 					if (yMin<outline[2])
@@ -777,9 +778,9 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 				pdf_set_pos (pdf, x3, y2 - fontHeightDiff);			
 		}
 
-		if ((metrics[1] + currentFormat[4]) <yMin)
+		if ((metrics[1] + currentFormat[4]) < yMin)
 			yMin = metrics[1] + currentFormat[4];
-		if ((metrics[2] + currentFormat[4])  >yMax)
+		if ((metrics[2] + currentFormat[4]) > yMax)
 			yMax = metrics[2] + currentFormat[4];
 		if (yMin<outline[2])
 			outline[2] = yMin;
@@ -787,15 +788,16 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 			outline[3] = yMax;
 		oldTextDecoration = currentFormat[6];
 		oldLink = currentFormat[7];
-		x2 = x3;						
+		oldSup = currentFormat[4];
+		x2 = x3;
 	}
 	// Link
 	if (!empty (oldLink)) {
 		if (substr (oldLink, 0, 1)=="$") {
-			pdf_rectangle (pdf, x2Link, y2Link-yMin, x3-x2Link, -(yMax-yMin));
+			pdf_rectangle (pdf, x2Link, y2Link-yMin+oldSup, x3-x2Link, -(yMax-yMin));
 		}
 		else {
-			pdf_add_link (pdf, x2Link, y2Link-yMin, x3-x2Link, -(yMax-yMin), currentFormat[7]);
+			pdf_add_link (pdf, x2Link, y2Link-yMin+oldSup, x3-x2Link, -(yMax-yMin), currentFormat[7]);
 		}
 	}
 	
