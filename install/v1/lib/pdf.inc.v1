@@ -89,7 +89,7 @@ function pdf_create_a4_science (name="", author="") {
     pdf = pdf_create (name, author);
     // pdf_add_font (pdf, "Times-Roman", "default");		
     pdf_add_ttf_font (pdf, "lib/conf/crimson-pro-v17-latin-regular.ttf", "default");
-    pdf_add_ttf_font (pdf, "lib/conf/math_symbols.ttf", "math");
+    pdf_add_ttf_font (pdf, "lib/conf/math_symbols.ttf", "math");		
     return pdf;
 }
 
@@ -524,7 +524,6 @@ function pdf_set_pos (&def, x, y) {
 
 		if (def["status_vars"]["calc_metrics"])
 			return;
-		
     y = pdf_calc_y (def, idx, y);
     y-=def["status_vars"]["font_size"];
 
@@ -609,10 +608,10 @@ function pdf_parse_format (&pdf, word, &format, &formatStack, &newWord) {
 				format[3] = value;
 				break;
 			case "sup":
-				format[4] = format[1] * 0.65;
+				format[4] = format[4]+ format[1] * 0.65;
 				break;
 			case "sub":
-				format[4] = -format[1] * 0.65;
+				format[4] = format[4]-format[1] * 0.65;
 				break;
 			case "nowrap":
 				format[5] = 0;
@@ -674,6 +673,7 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 	oldLink = currentFormat[7];
 	y2Link+=startFontSize;
 	outline = [x2, y2Link, 0, 0];
+	fFirstWord = true;
 
 	foreach (innerWordList as i => word2) {
 
@@ -686,6 +686,13 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 			if (pdf["status_vars"]["line_color"]!=currentFormat[14]) {
 				pdf_set_line_color (pdf, currentFormat[14]);
 			}
+			/*
+			if (fFirstWord && pdf["status_vars"]["font_size"]!=currentFormat[1]) {
+				outline[1]-=(pdf["status_vars"]["font_size"]-currentFormat[1]);
+				fFirstWord=false;
+			}
+			*/
+
 			if (pdf["status_vars"]["font_id"]  !=currentFormat[0] || 
 					pdf["status_vars"]["font_size"]!=currentFormat[1]) {
 				fontHeightDiff+= (currentFormat[1] - pdf["status_vars"]["font_size"]);				
@@ -719,10 +726,10 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 		}
 
 		pdf_write_text (pdf, word3, tw, currentFormat[4], currentFormat[15]);
+		fFirstWord =false;
 		metrics = pdf_calc_string_width (pdf, word3, 0, 0, true);
 		x3+=metrics[0]; // width
 		x3+=currentFormat[15]; // indent
-
 		
 		// text-deoration
 		if (currentFormat[6] || !empty (currentFormat[7]) || !empty (oldLink)) {
@@ -831,7 +838,7 @@ function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw,
 
 
 // https://www.p2501.ch/pdf-howto/grundlagen/layout/fliesstext
-function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0, firstLineIndent=0) {
+function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLeading=0, firstLineIndent=0) {
 
 	// pdf_set_line_width (pdf, 1);
 	charLenSpace = charLenSpaceOld = pdf_calc_string_width (pdf, " ");
@@ -851,6 +858,7 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 	formatStack = [];
 	array_push (formatStack, currentFormat);
 	outline = [x, y+startFontSize, 0, y+startFontSize];
+	fFirstWord = true;
 
 	underlineLeading = 5;
 
@@ -891,13 +899,19 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 						currentFormat[1]!=formatList[innerWordIdx][1]) {
 					fSetFont = true;
 				}
-					
+				
+				if (fFirstWord && currentFormat[1]!=formatList[innerWordIdx][1]) {
+					outline[1]-=(pdf["status_vars"]["font_size"]-currentFormat[1]);
+					y-=(pdf["status_vars"]["font_size"]-currentFormat[1]);
+					fFirstWord = false;
+				}
+				
 				formatList[innerWordIdx] = currentFormat;
 				if (fSetFont) {
 					charLenSpace = pdf_calc_string_width (pdf, " ", currentFormat[1], currentFormat[0]);
 					charLenHyphen = pdf_calc_string_width (pdf, "~",  currentFormat[1], currentFormat[0]);
 					charLenMinus = pdf_calc_string_width (pdf, "-",  currentFormat[1], currentFormat[0]);
-				}				
+				}
 				if (!empty (newWord))
 					word = newWord;
 				else
@@ -910,10 +924,10 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 			widthPtNew=pdf_calc_string_width (pdf, word, currentFormat[1], currentFormat[0]);
 			fSpace = false;
 			if (!empty (text2)) {
-				if (! ( 
+				if (! (
 								(isset (formatList[innerWordIdx-1]) && !formatList[innerWordIdx-1][2]) || // space-right last word
 								(isset (formatList[innerWordIdx])   && !formatList[innerWordIdx][3]) // space-left currend word
-							) 
+							)
 					)
 				{
 					widthPtNew+=charLenSpace;
@@ -1023,6 +1037,8 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 				else {
 					outline2 = pdf_write_inner_words2 (pdf, text2, currentFormat, widthLinePnt, tw, underlineLeading, fontHeightDiff);					
 				}
+				fFirstWord = false;
+
 				if (outline2[0]<outline[0]) // x
 					outline[0] = outline2[0];
 				if (outline2[1]>outline[1]) // y
@@ -1137,6 +1153,8 @@ function pdf_write_text_block (&pdf, text, x, y, width, align='L', lineLeading=0
 			else {
 				outline2 = pdf_write_inner_words2 (pdf, text2, currentFormat, widthLinePnt, tw, underlineLeading, fontHeightDiff);	
 			}
+			fFirstWord = false;
+
 			if (outline2[0]<outline[0]) // x
 				outline[0] = outline2[0];
 			if (outline2[1]>outline[1]) // y
@@ -1241,6 +1259,22 @@ function pdf_draw_end (&def, mode='S') {
   }
 }
 
+function pdf_draw_path (&def, &path, mode='S') {
+  idx = count (def["pages"]["content"]);
+  if (idx) {
+		idx--;
+		stream = "";
+	  foreach (path as segment) {
+	      if (empty (stream))
+	          stream.=segment[0].' '.pdf_calc_y (def, idx, segment[1]).' m ';
+	      else        
+	          stream.=segment[0].' '.pdf_calc_y (def, idx, segment[1]).' l ';
+	  }
+	  stream.=mode;
+	  pdf_stream_add (def, stream);
+	}
+}
+
 function pdf_set_line_color (&def, color) {
 	if (def["status_vars"]["calc_metrics"])
 		return;
@@ -1298,6 +1332,14 @@ function pdf_page_height (&def) {
 
 function pdf_page_number (&def) {
 	return count (def["pages"]["content"]);
+}
+
+function pdf_is_calc_metrics (&def) {
+	return def["status_vars"]["calc_metrics"];
+}
+
+function pdf_set_calc_metrics (&def, on) {
+	def["status_vars"]["calc_metrics"] = on;
 }
 
 function pdf_generate (&def) {
