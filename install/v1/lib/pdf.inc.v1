@@ -539,7 +539,8 @@ function pdf_write_text (&def, text , tw=0, ts=0, tj=0) {
   idx = count (def["pages"]["content"]);
   if (idx) {
 		if (tj) {
-			tj*=-(66.6 / (def["status_vars"]["font_size"] / 15)); // Dont know why!
+			skew = def["pages"]["fonts"][def["status_vars"]["font_idx"]-1][3]["Skew"];
+			tj*=-((66.6+skew) / (def["status_vars"]["font_size"] / 15)); // Dont know why!
 			def["pages"]["content"][idx-1]["stream"].=pdf_bt_auto (def)." ".(tw!=def["old"]["Tw"] ? tw." Tw " : "").(ts!=def["old"]["Ts"] ? ts." Ts " : "")."[".tj." ".pdf_encode_text (text)."] TJ\n";		
 		}
 	  else
@@ -577,7 +578,7 @@ function pdf_parse_format (&pdf, word, &format, &formatStack, &newWord) {
 	}
 	
 	format[2] = format[3] = 1; // Spaces on
-	format[15] = 0; // No indent
+	// format[15] = 0; // No indent
 	
 	cmdList = explode ("\\", word);							
 	foreach (cmdList as cmd) {
@@ -625,14 +626,15 @@ function pdf_parse_format (&pdf, word, &format, &formatStack, &newWord) {
 			case "strike-through":
 				format[6]|= 2;
 				break;
+			case "overline":
+				format[7].= "$overline";
+				format[6]|=4;
+				break;
 			case "sqrt":
 				format[6]|= 4;
 				break;
 			case "link":
 				format[7] = value;
-				break;
-			case "box":
-				format[7] = "$".value;
 				break;
 			case "align":
 				format[9] = value;
@@ -670,12 +672,13 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 	startFontSize = pdf["status_vars"]["font_size"];
 	y3Link = fontSizeLink = yMin = yMax = 0;	
 	oldTextDecoration = currentFormat[6];
-	oldLink = currentFormat[7];
+	oldLink = ""; // currentFormat[7];
 	y2Link+=startFontSize;
 	outline = [x2, y2Link, 0, 0];
-	fFirstWord = true;
 	oldSup = 0;
 
+	charLenSpace = charLenSpaceOld = pdf_calc_string_width (pdf, " ", pdf["status_vars"]["font_size"], pdf["status_vars"]["font_id"]);
+	
 	foreach (innerWordList as i => word2) {
 
 		if (isset (formatList[i])) {
@@ -687,17 +690,12 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 			if (pdf["status_vars"]["line_color"]!=currentFormat[14]) {
 				pdf_set_line_color (pdf, currentFormat[14]);
 			}
-			/*
-			if (fFirstWord && pdf["status_vars"]["font_size"]!=currentFormat[1]) {
-				outline[1]-=(pdf["status_vars"]["font_size"]-currentFormat[1]);
-				fFirstWord=false;
-			}
-			*/
 
 			if (pdf["status_vars"]["font_id"]  !=currentFormat[0] || 
 					pdf["status_vars"]["font_size"]!=currentFormat[1]) {
 				fontHeightDiff+= (currentFormat[1] - pdf["status_vars"]["font_size"]);				
 				pdf_select_font (pdf, currentFormat[0], currentFormat[1]);
+				charLenSpace = pdf_calc_string_width (pdf, " ", currentFormat[1], currentFormat[0]);
 			}
 		}
 		else {
@@ -706,13 +704,20 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 		
 		x3Old = x3;						
 		word3 = str_replace ("~", "", word2);
+		indentCorr = 0;
 		if (!fIgnoreNextSpace && i>0 && !(isset (formatList[i-1]) && !formatList[i-1][2]) && !(isset (formatList[i]) && !formatList[i][3])) {
 			word3=" ".word3;
+			
+			indentCorr = charLenSpaceOld - charLenSpace;
+			if (indentCorr>0)
+				indentCorr = 0;
+			
 			if (currentFormat[6] && (!oldTextDecoration || currentFormat[8]))
-				x2+=tw+pdf_calc_string_width (pdf, " ");
+				x2+=tw+charLenSpace;
 			else
 			if (!empty (currentFormat[7]) && (empty (oldLink) || currentFormat[8]))
-				x2+=tw+pdf_calc_string_width (pdf, " ");
+				x2+=tw+charLenSpace;
+			x2+=indentCorr;
 			x3+=tw;
 		}
 		if (substr (word2, -1, 1)=="~") {
@@ -726,46 +731,66 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 			fIgnoreNextSpace = false;						
 		}
 
-		pdf_write_text (pdf, word3, tw, currentFormat[4], currentFormat[15]);
-		fFirstWord =false;
+		pdf_write_text (pdf, word3, tw, currentFormat[4], currentFormat[15]+indentCorr);
 		metrics = pdf_calc_string_width (pdf, word3, 0, 0, true);
 		x3+=metrics[0]; // width
-		x3+=currentFormat[15]; // indent
+		x3+=currentFormat[15]+indentCorr; // indent
+		charLenSpaceOld = charLenSpace;
 		
 		// text-deoration
 		if (currentFormat[6] || !empty (currentFormat[7]) || !empty (oldLink)) {
 
-			// Underline
-			y3 = y2 + pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
+			y3 = y2 + pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];			
 
-			if (currentFormat[6] & 1) {					
-				pdf_draw_start (pdf, x2, y3);
-				pdf_line_to (pdf, x3, y3);	
-			}
+
 			// Link
 			if (currentFormat[7]!=oldLink) {
 				x3Link = x3Old;
 				if (!empty (oldLink)) {
-					if (substr (oldLink, 0, 1)=="$")
-						pdf_rectangle (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin));
-					else
-						pdf_add_link (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin), oldLink);
+					tokens = explode ("$", oldLink);
+					foreach (tokens as token) {
+						if (empty (token))
+							continue;
+						if (token=="overline") {
+							// Overline
+							yLine = y2Link-yMin+oldSup-underlineLeading-(yMax-yMin);
+							pdf_draw_start (pdf, x2Link, yLine);
+							pdf_line_to (pdf, x3Link, yLine);	
+							pdf_set_pos (pdf, x3, y2 - fontHeightDiff);		
+
+						}
+						else
+						if (token=="box") {
+							pdf_rectangle (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin));
+						}
+						else
+							pdf_add_link (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin), oldLink);
+					}
 				}
 				if (!empty (currentFormat[7])) {
 					x2Link = x2;
 					y2Link = y3-underlineLeading; // estimated begin
-					yMax = 0;
+					yMax = currentFormat[4];
 					yMin = currentFormat[4];
-					if (!currentFormat[4] &&  substr (currentFormat[7], 0, 1)!="$") {
+				
+					if (!currentFormat[4] &&  strpos (currentFormat[7], "$")===false) {
+						// Better link size for text
 						yMin = currentFormat[4]-underlineLeading;
-						yMax = pdf["status_vars"]["font_size"];
+						yMax = pdf["status_vars"]["font_size"]-underlineLeading;
 					}
+					
 					if (yMin<outline[2])
 						outline[2] = yMin;
 					if (yMax>outline[3])
 						outline[3] = yMax;
 				}
 			}
+
+			// Underline
+			if (currentFormat[6] & 1) {					
+				pdf_draw_start (pdf, x2, y3);
+				pdf_line_to (pdf, x3, y3);
+			}			
 
 			// Strikeout
 			if (currentFormat[6] & 2) {
@@ -775,7 +800,7 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 			}
 			
 			if (currentFormat[6]) 
-				pdf_set_pos (pdf, x3, y2 - fontHeightDiff);			
+				pdf_set_pos (pdf, x3, y2 - fontHeightDiff);		
 		}
 
 		if ((metrics[1] + currentFormat[4]) < yMin)
@@ -786,6 +811,7 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 			outline[2] = yMin;
 		if (yMax>outline[3])
 			outline[3] = yMax;
+			
 		oldTextDecoration = currentFormat[6];
 		oldLink = currentFormat[7];
 		oldSup = currentFormat[4];
@@ -793,11 +819,22 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 	}
 	// Link
 	if (!empty (oldLink)) {
-		if (substr (oldLink, 0, 1)=="$") {
-			pdf_rectangle (pdf, x2Link, y2Link-yMin+oldSup, x3-x2Link, -(yMax-yMin));
-		}
-		else {
-			pdf_add_link (pdf, x2Link, y2Link-yMin+oldSup, x3-x2Link, -(yMax-yMin), currentFormat[7]);
+		tokens = explode ("$", oldLink);
+		foreach (tokens as token) {
+			if (empty (token))
+				continue;
+			if (token=="overline") {
+				// Overline
+				yLine = y2Link-yMin+oldSup-underlineLeading-(yMax-yMin);
+				pdf_draw_start (pdf, x2Link, yLine);
+				pdf_line_to (pdf, x3, yLine);
+			}
+			else
+			if (token=="box") {
+				pdf_rectangle (pdf, x2Link, y2Link-yMin+oldSup, x3-x2Link, -(yMax-yMin));
+			}
+			else
+				pdf_add_link (pdf, x2Link, y2Link-yMin+oldSup, x3-x2Link, -(yMax-yMin), token);
 		}
 	}
 	
@@ -810,7 +847,6 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw, underlineLeading, &fontHeightDiff) {
 	x2 = pdf["status_vars"]["x"];
 	outline = array (x2, pdf["status_vars"]["y"]+pdf["status_vars"]["font_size"], x2+widthLinePnt, pdf["status_vars"]["y"]);
-	pdf_write_text (pdf, text2, tw, currentFormat[4]);
 
 		// Color
 	if (pdf["status_vars"]["fill_color"]!=currentFormat[13]) {
@@ -820,13 +856,27 @@ function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw,
 		pdf_set_line_color (pdf, currentFormat[14]);
 	}
 
+	metrics = pdf_calc_string_width (pdf, text2, 0, 0, true);
+	outline[1]-=metrics[1];
+	outline[3]=outline[1]-(metrics[2]-metrics[1])-currentFormat[4];
+	
+	pdf_write_text (pdf, text2, tw, currentFormat[4], currentFormat[15]);
+
+
 	if (currentFormat[6]) {
-		y3 = pdf["status_vars"]["y"]+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
+		y2 = pdf["status_vars"]["y"];
+		y3 = y2+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
+		if (y3>outline[1])
+			outline[1]=y3;
+		
+		outline[3] = outline[1] - pdf["status_vars"]["font_size"] - currentFormat[4];
+		
 		// Underline
 		if (currentFormat[6] & 1) {
 			pdf_draw_start (pdf, x2, y3);
 			pdf_line_to (pdf, x2 + widthLinePnt, y3);	
 		}
+				
 		// Strikeout
 		if (currentFormat[6] & 2) {
 			y3-=(pdf["status_vars"]["font_size"] / 2);							
@@ -835,12 +885,16 @@ function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw,
 		}
 		pdf_set_pos (pdf, x2 + widthLinePnt, y3);
 	}
+	// Link
+	if (!empty (currentFormat[7])) {
+		pdf_add_link (pdf, outline[0], outline[1], outline[2]-outline[0], outline[3]-outline[1], currentFormat[7]);		
+	}
 	return outline;
 }
 
 
 // https://www.p2501.ch/pdf-howto/grundlagen/layout/fliesstext
-function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLeading=0, firstLineIndent=0) {
+function pdf_write_text_block (&pdf, text, x=20, y=30, width=595.32-40, align='L', lineLeading=0, firstLineIndent=0) {
 
 	// pdf_set_line_width (pdf, 1);
 	charLenSpace = charLenSpaceOld = pdf_calc_string_width (pdf, " ");
@@ -883,6 +937,7 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 		togetherCnt = 0;
 		innerWordList = [];
 		
+		
 		// Write the text
 		foreach (words as wordIdx => word) {
 			if (!currentFormat[12] && empty (word))
@@ -893,10 +948,12 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 				fSetFont = false;
 				fOwnFormats = true;
 				newWord = "";
+
 				pdf_parse_format (pdf, word, currentFormat, formatStack, newWord);
-				
-				if (!currentFormat[8])
-					align = currentFormat[9];
+				/*
+				if (!newFormat[8])
+					align = newFormat[9];
+				*/
 				
 				if (currentFormat[0]!=formatList[innerWordIdx][0] || 
 						currentFormat[1]!=formatList[innerWordIdx][1]) {
@@ -926,6 +983,7 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 				word = " "; // Allow first spaces
 			widthPtNew=pdf_calc_string_width (pdf, word, currentFormat[1], currentFormat[0]);
 			fSpace = false;
+			indentCorr = 0;
 			if (!empty (text2)) {
 				if (! (
 								(isset (formatList[innerWordIdx-1]) && !formatList[innerWordIdx-1][2]) || // space-right last word
@@ -935,13 +993,18 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 				{
 					widthPtNew+=charLenSpace;
 					fSpace = true;
+					
+					indentCorr = charLenSpaceOld - charLenSpace;
+					if (indentCorr>0)
+						indentCorr = 0;
 				}
 			}
-			widthPtNew+=currentFormat[15];
+			widthPtNew+=currentFormat[15] + indentCorr;
+			charLenSpaceOld = charLenSpace;
 			
 			xOffs2 = 0;
 			if (innerLineIdx==0 && strlen (line)>100) {
-				xOffs2 = currentFormat[11];
+				xOffs2+= currentFormat[11];
 			}
 			fWrap = (widthPt+widthPtNew+xOffs2)>width || (lastChar=='~' &&  ((widthPt+widthPtNew)/width)>0.85);
 
@@ -1006,6 +1069,7 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 				togetherCnt--;
 			
 			if (fWrap) {
+
 				if (lastChar=="~") {
 					text2 = substr (text2, 0, strlen (text2)-1);
 					if (substr (text2, -1, 1)=="-")
@@ -1016,7 +1080,7 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 					widthPt+=charLenMinusOld;
 				}
 				widthLinePnt = widthPt; 
-				if (align=='B') {
+				if (currentFormat[9]=='B') {
 					if (spaceCnt)
 						tw = (width-widthPt-xOffs2)/spaceCnt;
 					twOld = tw;
@@ -1024,11 +1088,11 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 					widthLinePnt = width;
 				}
 				else
-				if (align=='R') {
+				if (currentFormat[9]=='R') {
 					pdf_set_pos (pdf, width+x-xOffs2-widthPt, y);
 				}
 				else
-				if (align=='C') {
+				if (currentFormat[9]=='C') {
 					pdf_set_pos (pdf, x+((width-widthPt)/2), y);
 				}
 				else
@@ -1061,16 +1125,18 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 					}
 			  }
 				if (fSpace) {
-					widthPtNew-=charLenSpace;
+					widthPtNew-=charLenSpace+indentCorr;
 				}
 				if (isset (formatList[innerWordIdx])) {
 					if (formatList[innerWordIdx][0]!=pdf["status_vars"]["font_id"] || 
 							formatList[innerWordIdx][1]!=pdf["status_vars"]["font_size"]) 
-					{
-						pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
-						charLenSpace = pdf_calc_string_width (pdf, " ");
-						charLenHyphen = pdf_calc_string_width (pdf, "~");
-						charLenMinus = pdf_calc_string_width (pdf, "-");				
+					{						
+						if (!empty (line)) {
+							pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
+							charLenSpace = pdf_calc_string_width (pdf, " ");
+							charLenHyphen = pdf_calc_string_width (pdf, "~");
+							charLenMinus = pdf_calc_string_width (pdf, "-");				
+						}
 					}
 					currentFormat = formatList[innerWordIdx];
 				}
@@ -1110,9 +1176,11 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 		
 		// Last line		
 		if (!empty (text2)) {
+			currentFormat = formatList[0];
+
 			widthLinePnt = widthPt;
-			// align = currentFormat[9];
-			if (align=='B') {
+			// align = currentFormat[9];			
+			if (currentFormat[9]=='B') {
 				if (spaceCnt<=3 || (widthPt/width)<0.8)
 					tw = twOld / 2;
 				else {
@@ -1127,7 +1195,7 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 				pdf_set_pos (pdf, x, y);
 			}
 			else
-			if (align=='R') {
+			if (currentFormat[9]=='R') {
 				if (strpos (text2, "{nb}")!==false) {
 					xKey = "{".microtime()."_X_".pdf_page_number(pdf)."}";
 					pdf["correction_vars"][xKey]=array (align, width, x, pdf["status_vars"]["font_size"], pdf["status_vars"]["font_id"], text2);
@@ -1137,7 +1205,7 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 					pdf_set_pos (pdf, width+x-widthPt, y);
 			}
 			else
-			if (align=='C') {
+			if (currentFormat[9]=='C') {
 				if (strpos (text2, "{nb}")!==false) {
 					xKey = "{".microtime()."_X_".pdf_page_number(pdf)."}";
 					pdf["correction_vars"][xKey]=array (align, width, x, pdf["status_vars"]["font_size"], pdf["status_vars"]["font_id"], text2);
@@ -1166,26 +1234,29 @@ function pdf_write_text_block (&pdf, text, x, y, width=595.32, align='L', lineLe
 				outline[2] = outline2[2];
 			if (outline2[3]<outline[3]) // y2
 				outline[3] = outline2[3];
-				
-
 			innerLineIdx++;
     }
+		
 		if (isset (formatList[innerWordIdx])) {
 			if (formatList[innerWordIdx][0]!=pdf["status_vars"]["font_id"] || 
 					formatList[innerWordIdx][1]!=pdf["status_vars"]["font_size"]) 
 			{
-				pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
-				charLenSpace = pdf_calc_string_width (pdf, " ");
-				charLenHyphen = pdf_calc_string_width (pdf, "~");
-				charLenMinus = pdf_calc_string_width (pdf, "-");				
+				if (!empty (line)) {
+					pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
+					charLenSpace = pdf_calc_string_width (pdf, " ");
+					charLenHyphen = pdf_calc_string_width (pdf, "~");
+					charLenMinus = pdf_calc_string_width (pdf, "-");
+				}
 			}
 			currentFormat = formatList[innerWordIdx];
 		}
 		formatList = [0 => currentFormat];			
     
     if (lineIdx<count (lines)) {
-      y+=pdf["status_vars"]["font_size"] + currentFormat[10];
-			y-=fontHeightDiff;
+			if (innerWordIdx || empty (line)) {
+	      y+=pdf["status_vars"]["font_size"] + currentFormat[10];
+				// y-=fontHeightDiff;
+			}
 			if (pdf["pages"]["auto_page_wrap"]) {
 				if (y>(pdf["pages"]["auto_page_wrap"][1] - pdf["status_vars"]["font_size"] - currentFormat[10])) {						
 					y = call_user_func (pdf["pages"]["auto_page_wrap"][0], pdf);	
