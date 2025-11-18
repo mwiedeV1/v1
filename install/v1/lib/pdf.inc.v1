@@ -570,8 +570,13 @@ function pdf_parse_format (&pdf, word, &format, &formatStack, &newWord) {
 			array_push (formatStack, format);
 	}
 	else {
-		if (count (formatStack))
+		if (count (formatStack)) {
 			format = array_pop (formatStack);
+			/*
+			if (count (formatStack))
+				format = formatStack[count (formatStack)-1];
+			*/
+		}
 		else 
 			format[5]=1; // wrap
 		format[8]=true;
@@ -622,6 +627,7 @@ function pdf_parse_format (&pdf, word, &format, &formatStack, &newWord) {
 				break;
 			case "underline":
 				format[6]|= 1;
+				format[16] = value ? value : 5;
 				break;
 			case "strike-through":
 				format[6]|= 2;
@@ -629,12 +635,16 @@ function pdf_parse_format (&pdf, word, &format, &formatStack, &newWord) {
 			case "overline":
 				format[7].= "$overline";
 				format[6]|=4;
+				format[17] = value ? value : 5;
 				break;
-			case "sqrt":
-				format[6]|= 4;
+			case "box":
+				format[7].= "$box";
 				break;
 			case "link":
-				format[7] = value;
+				if ((p=strpos (format[7], "$"))!==false)
+					format[7] = value.substr (format[7], p);
+				else
+					format[7] = value;
 				break;
 			case "align":
 				format[9] = value;
@@ -664,7 +674,7 @@ function pdf_parse_format (&pdf, word, &format, &formatStack, &newWord) {
 	}
 }
 
-function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentFormat, tw, underlineLeading, &fontHeightDiff) 
+function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentFormat, tw, &fontHeightDiff) 
 {
 	fIgnoreNextSpace = false;
 	x2 = x2Link = x3 = pdf["status_vars"]["x"];
@@ -672,10 +682,11 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 	startFontSize = pdf["status_vars"]["font_size"];
 	y3Link = fontSizeLink = yMin = yMax = 0;	
 	oldTextDecoration = currentFormat[6];
-	oldLink = ""; // currentFormat[7];
+	oldLink = null; // currentFormat[7];
 	y2Link+=startFontSize;
 	outline = [x2, y2Link, 0, 0];
 	oldSup = 0;
+	oldOverlineLeading = currentFormat[17];
 
 	charLenSpace = charLenSpaceOld = pdf_calc_string_width (pdf, " ", pdf["status_vars"]["font_size"], pdf["status_vars"]["font_id"]);
 	
@@ -740,8 +751,7 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 		// text-deoration
 		if (currentFormat[6] || !empty (currentFormat[7]) || !empty (oldLink)) {
 
-			y3 = y2 + pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];			
-
+			y3 = y2 + pdf["status_vars"]["font_size"] + currentFormat[16] - fontHeightDiff - currentFormat[4];			
 
 			// Link
 			if (currentFormat[7]!=oldLink) {
@@ -753,32 +763,34 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 							continue;
 						if (token=="overline") {
 							// Overline
-							yLine = y2Link-yMin+oldSup-underlineLeading-(yMax-yMin);
+							yLine = y2Link-yMin+oldSup-oldOverlineLeading-(yMax-yMin);
 							pdf_draw_start (pdf, x2Link, yLine);
 							pdf_line_to (pdf, x3Link, yLine);	
 							pdf_set_pos (pdf, x3, y2 - fontHeightDiff);		
-
+							if (yMax+oldOverlineLeading>outline[3])
+								outline[3] = yMax+oldOverlineLeading;
 						}
 						else
 						if (token=="box") {
 							pdf_rectangle (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin));
 						}
 						else
-							pdf_add_link (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin), oldLink);
+							pdf_add_link (pdf, x2Link, y2Link-yMin+oldSup, x3Link-x2Link, -(yMax-yMin), token);
 					}
 				}
 				if (!empty (currentFormat[7])) {
 					x2Link = x2;
-					y2Link = y3-underlineLeading; // estimated begin
+					y2Link = y3-currentFormat[16]; // estimated begin
 					yMax = currentFormat[4];
 					yMin = currentFormat[4];
 				
 					if (!currentFormat[4] &&  strpos (currentFormat[7], "$")===false) {
-						// Better link size for text
-						yMin = currentFormat[4]-underlineLeading;
-						yMax = pdf["status_vars"]["font_size"]-underlineLeading;
-					}
-					
+						// Better link size for text						
+						yMin = currentFormat[4]-currentFormat[16];
+						yMax = pdf["status_vars"]["font_size"]-currentFormat[16];
+					}					
+					oldOverlineLeading = currentFormat[17];
+									
 					if (yMin<outline[2])
 						outline[2] = yMin;
 					if (yMax>outline[3])
@@ -825,9 +837,11 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 				continue;
 			if (token=="overline") {
 				// Overline
-				yLine = y2Link-yMin+oldSup-underlineLeading-(yMax-yMin);
+				yLine = y2Link-yMin+oldSup-oldOverlineLeading-(yMax-yMin);
 				pdf_draw_start (pdf, x2Link, yLine);
 				pdf_line_to (pdf, x3, yLine);
+				if (yMax+oldOverlineLeading>outline[3])
+					outline[3] = yMax+oldOverlineLeading;
 			}
 			else
 			if (token=="box") {
@@ -844,9 +858,9 @@ function pdf_write_inner_words (&pdf, &innerWordList, &formatList, &currentForma
 	return outline;
 }
 
-function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw, underlineLeading, &fontHeightDiff) {
+function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw, &fontHeightDiff) {
 	x2 = pdf["status_vars"]["x"];
-	outline = array (x2, pdf["status_vars"]["y"]+pdf["status_vars"]["font_size"], x2+widthLinePnt, pdf["status_vars"]["y"]);
+	outline = array (x2, pdf["status_vars"]["y"]+pdf["status_vars"]["font_size"]-currentFormat[4], x2+widthLinePnt, pdf["status_vars"]["y"]-currentFormat[4]);
 
 		// Color
 	if (pdf["status_vars"]["fill_color"]!=currentFormat[13]) {
@@ -862,15 +876,16 @@ function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw,
 	
 	pdf_write_text (pdf, text2, tw, currentFormat[4], currentFormat[15]);
 
-
 	if (currentFormat[6]) {
 		y2 = pdf["status_vars"]["y"];
-		y3 = y2+pdf["status_vars"]["font_size"] + underlineLeading - fontHeightDiff - currentFormat[4];
+		y3 = y2+pdf["status_vars"]["font_size"] + currentFormat[16] - fontHeightDiff - currentFormat[4];
 		if (y3>outline[1])
-			outline[1]=y3;
-		
-		outline[3] = outline[1] - pdf["status_vars"]["font_size"] - currentFormat[4];
-		
+			outline[1]=y3;	
+
+		if (strpos (currentFormat[7], "$")===false) {
+			outline[3] = outline[1] - pdf["status_vars"]["font_size"] - currentFormat[4];
+		}
+				
 		// Underline
 		if (currentFormat[6] & 1) {
 			pdf_draw_start (pdf, x2, y3);
@@ -885,10 +900,31 @@ function pdf_write_inner_words2 (&pdf, &text2, &currentFormat, widthLinePnt, tw,
 		}
 		pdf_set_pos (pdf, x2 + widthLinePnt, y3);
 	}
-	// Link
+
 	if (!empty (currentFormat[7])) {
-		pdf_add_link (pdf, outline[0], outline[1], outline[2]-outline[0], outline[3]-outline[1], currentFormat[7]);		
+		tokens = explode ("$", currentFormat[7]);
+		foreach (tokens as token) {
+			if (empty (token))
+				continue;
+			if (token=="overline") {
+				// Overline
+				yLine = outline[3]-currentFormat[17];
+				pdf_draw_start (pdf, outline[0], yLine);
+				pdf_line_to (pdf, outline[2], yLine);
+				if (yLine<outline[3])
+					outline[3] = yLine;
+			}
+			else
+			if (token=="box") {
+				pdf_rectangle (pdf, outline[0], outline[1], outline[2]-outline[0], outline[3]-outline[1]);
+			}
+			else {
+				pdf_add_link (pdf, outline[0], outline[1], outline[2]-outline[0], outline[3]-outline[1], token);
+			}
+		}	
 	}
+
+
 	return outline;
 }
 
@@ -908,14 +944,13 @@ function pdf_write_text_block (&pdf, text, x=20, y=30, width=595.32-40, align='L
 	startX =  pdf["status_vars"]["x"];
 	startY =  pdf["status_vars"]["y"];
 	
-	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0, "", false, align, lineLeading, firstLineIndent, 0, "#000000", "#000000", 0];
+	currentFormat = [startFontId, startFontSize, 1, 1, 0, 1, 0, "", false, align, lineLeading, firstLineIndent, 0, "#000000", "#000000", 0, 5, 5];
 	formatList = [0 => currentFormat];
 	innerWordList = [];
 	formatStack = [];
 	outline = [x, y+startFontSize, 0, y+startFontSize];
 	fFirstWord = true;
 
-	underlineLeading = 5;
 	array_push (formatStack, currentFormat);
 		
 	lineIdx  = 0;
@@ -1099,10 +1134,10 @@ function pdf_write_text_block (&pdf, text, x=20, y=30, width=595.32-40, align='L
 					pdf_set_pos (pdf, x+xOffs2, y); // L
 				fontHeightDiff = 0;
 				if (fOwnFormats) {
-					outline2 = pdf_write_inner_words (pdf, innerWordList, formatList, currentFormat, tw, underlineLeading, fontHeightDiff);
+					outline2 = pdf_write_inner_words (pdf, innerWordList, formatList, currentFormat, tw, fontHeightDiff);
 				}
 				else {
-					outline2 = pdf_write_inner_words2 (pdf, text2, currentFormat, widthLinePnt, tw, underlineLeading, fontHeightDiff);					
+					outline2 = pdf_write_inner_words2 (pdf, text2, currentFormat, widthLinePnt, tw, fontHeightDiff);					
 				}
 				fFirstWord = false;
 
@@ -1130,7 +1165,7 @@ function pdf_write_text_block (&pdf, text, x=20, y=30, width=595.32-40, align='L
 				if (isset (formatList[innerWordIdx])) {
 					if (formatList[innerWordIdx][0]!=pdf["status_vars"]["font_id"] || 
 							formatList[innerWordIdx][1]!=pdf["status_vars"]["font_size"]) 
-					{						
+					{
 						if (!empty (line)) {
 							pdf_select_font (pdf, formatList[innerWordIdx][0], formatList[innerWordIdx][1]);	
 							charLenSpace = pdf_calc_string_width (pdf, " ");
@@ -1219,10 +1254,10 @@ function pdf_write_text_block (&pdf, text, x=20, y=30, width=595.32-40, align='L
 
 			fontHeightDiff = 0;
 			if (fOwnFormats) {
-				outline2 = pdf_write_inner_words (pdf, innerWordList, formatList, currentFormat, tw, underlineLeading, fontHeightDiff);				 
+				outline2 = pdf_write_inner_words (pdf, innerWordList, formatList, currentFormat, tw, fontHeightDiff);				 
 			}
 			else {
-				outline2 = pdf_write_inner_words2 (pdf, text2, currentFormat, widthLinePnt, tw, underlineLeading, fontHeightDiff);	
+				outline2 = pdf_write_inner_words2 (pdf, text2, currentFormat, widthLinePnt, tw, fontHeightDiff);	
 			}
 			fFirstWord = false;
 
