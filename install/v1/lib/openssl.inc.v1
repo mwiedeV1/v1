@@ -1,9 +1,9 @@
 <?v1
 require_once ("libconf.inc.v1");
 if (isset (libcryptoLibName))
-	assign (hDLLCrypto, cryptoLibName) = libOpen ("libcrypto", libcryptoLibName, libcryptoLibName);
+	assign (hDLLCrypto, libcryptoLibName) = libOpen ("libcrypto", libcryptoLibName, libcryptoLibName);
 else
-	assign (hDLLCrypto, cryptoLibName) = libOpen ("libcrypto", "libcryptoMD.dll", "libcrypto.so"); 
+	assign (hDLLCrypto, libcryptoLibName) = libOpen ("libcrypto", "libcryptoMD.dll", "libcrypto.so"); 
 
 // OpenSSL functions
 // https://github.com/openssl/openssl/blob/master/include/openssl/rsa.h

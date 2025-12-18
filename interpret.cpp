@@ -2022,47 +2022,61 @@ int func_exit(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext
 	return 0;
 }
 
-int func_include_internal(WCSTR filename, DataValue &ret, InterpreterContext &ctx, bool fRequireOnce)
+int func_include_internal (WCSTR filename, DataValue& ret, InterpreterContext& ctx, bool fRequireOnce) 
 {
 	WString path = filename;
-	if (path.indexOf(":") != -1 || path.charAt(0) == '/' || path.charAt(0) == '\\') {
+	if (path.indexOf (":")!=-1 || path.charAt(0)=='/' || path.charAt(0)=='\\') {
 		// Absolute path
 	}
 	else {
 		// Relative path
-		WSystem::extractPath(ctx.getFilenameByIdx(WSCRIPT_FILE(ctx.line)), path);
-		path = WFormattedString("%s/%s", (WCSTR)path, (WCSTR)filename);
+		WSystem::extractPath (ctx.getFilenameByIdx(WSCRIPT_FILE(ctx.line)), path);
+		if (path.length ()>0)
+			path.append ('/');
+		path.append (filename);
 	}
 
-	if (!WSystem::existsFile(path)) {
-		ctx.abortInterprete(WFormattedString("Include file %s not found", (WCSTR)filename));
-		ret = false;
+	if (ctx.internalScriptHT.size()==0 && !WSystem::existsFile (path)) {
+		ctx.abortInterprete (WFormattedString ("Include file %s not found", (WCSTR) filename));
 		return WSCRIPT_RET_ABORT;
 	}
 
-	// Reset status vars
+	SymbolTable* oldSymbols = NULL; 
+	if (ctx.funcDeep>1) {
+		if (!fRequireOnce || ctx.getIdxByFilename (filename)==0) {	
+			oldSymbols = new SymbolTable;
+			*oldSymbols = *ctx.symbols[ctx.funcDeep];
+		}
+	}
+
+	// Reset status vars	
 	int loopDeep = ctx.loopDeep;
 	int switchDeep = ctx.switchDeep;
 	int funcDeep = ctx.funcDeep;
 	int flag = ctx.flag;
-	ctx.loopDeep = 0;
-	ctx.switchDeep = 0;
-	ctx.funcDeep = 1;
-	ctx.flag = 0;
+	
+	ctx.loopDeep=0;
+	ctx.switchDeep=0;
+	ctx.funcDeep=1;
+	ctx.flag=0;
 
-	ctx.exitCode = ctx.execute(path, fRequireOnce);
-	if (ctx.fAbort == 1) {
-		throw AbortException("Aborted", -2);
+	ctx.exitCode = ctx.execute (path, fRequireOnce);
+	if (ctx.fAbort==1) {
+		throw AbortException ("Aborted", -2);
 	}
-	if (ctx.fAbort == 2) {
-		throw AbortException("Exited", ctx.exitCode);
+	if (ctx.fAbort==2) {
+		throw AbortException ("Exited", ctx.exitCode);
 	}
 
 	// Restore status vars
-	ctx.loopDeep = loopDeep;
-	ctx.switchDeep = switchDeep;
-	ctx.funcDeep = funcDeep;
-	ctx.flag = flag;
+	ctx.loopDeep=loopDeep;
+	ctx.switchDeep=switchDeep;
+	ctx.funcDeep=funcDeep;
+	ctx.flag=flag;
+	if (oldSymbols) {
+		*ctx.symbols[ctx.funcDeep] = *oldSymbols;
+		delete oldSymbols;
+	}
 	ret = true;
 	return 0;
 }
@@ -5736,7 +5750,6 @@ int func_universal_call(vector<DataValue *> &argvalues, DataValue &ret, Interpre
 {
 	// func = (void*) testfunc;
 	// ctx.warnInterprete ("Native function calling not implemented on this architecture.");
-	ret = false;
 	int arrayParamIdx = -1;
 	int x2 = 0;
 	for (unsigned int i = 3; i < (paramCnt + 3); i++) {

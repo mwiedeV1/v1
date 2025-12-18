@@ -123,19 +123,19 @@ all:
 # V1 Core
 main.o: main.cpp $(V1_DEPENDS) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-ast.o: ast.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+ast.o: ast.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
-global.o: global.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+global.o: global.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
-interpret.o: interpret.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+interpret.o: interpret.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
-wscript.flex.o: wscript.flex.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+wscript.flex.o: wscript.flex.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
-wscript.tab.o: wscript.tab.cpp wscript.tab.h $(DEPENDS_V1) $(DEPENDS_WLIB)
+wscript.tab.o: wscript.tab.cpp wscript.tab.h $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
 
 # V1 Lib
-v1lib.o: v1lib.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+v1lib.o: v1lib.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
 
 # DynCall
@@ -164,60 +164,60 @@ dyncall_call_x86.o: $(DYNCALL_DIR)/dyncall_call_x86.S
 
 	
 # Extensions
-$(EXTENSION_DIR)/crypt/crypt.o: $(EXTENSION_DIR)/crypt/crypt.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+$(EXTENSION_DIR)/crypt/crypt.o: $(EXTENSION_DIR)/crypt/crypt.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $< -o $(EXTENSION_DIR)/crypt/crypt.o
 
-$(EXTENSION_DIR)/ssl/ssl.o: $(EXTENSION_DIR)/ssl/ssl.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+$(EXTENSION_DIR)/ssl/ssl.o: $(EXTENSION_DIR)/ssl/ssl.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) -I$(OPENSSL_DIR)/include $< -o $(EXTENSION_DIR)/ssl/ssl.o
 
-$(EXTENSION_DIR)/regex/regex.o: $(EXTENSION_DIR)/regex/regex.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+$(EXTENSION_DIR)/regex/regex.o: $(EXTENSION_DIR)/regex/regex.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $< -o $(EXTENSION_DIR)/regex/regex.o
 
-$(EXTENSION_DIR)/gd/gd.o: $(EXTENSION_DIR)/gd/gd.cpp $(DEPENDS_V1) $(DEPENDS_WLIB)
+$(EXTENSION_DIR)/gd/gd.o: $(EXTENSION_DIR)/gd/gd.cpp $(DEPENDS_V1) $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $< -o $(EXTENSION_DIR)/gd/gd.o
 
 # WLIB
-WException.o: $(WLIB_DIR)/WException.cpp $(WLIB_DIR)/WException.h $(DEPENDS_WLIB)
+WException.o: $(WLIB_DIR)/WException.cpp $(WLIB_DIR)/WException.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WMemory.o: $(WLIB_DIR)/WMemory.cpp $(WLIB_DIR)/WMemory.h $(DEPENDS_WLIB)
+WMemory.o: $(WLIB_DIR)/WMemory.cpp $(WLIB_DIR)/WMemory.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WSystem.o: $(WLIB_DIR)/WSystem.cpp $(WLIB_DIR)/WSystem.h $(DEPENDS_WLIB)
+WSystem.o: $(WLIB_DIR)/WSystem.cpp $(WLIB_DIR)/WSystem.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WString.o: $(WLIB_DIR)/WString.cpp $(WLIB_DIR)/WString.h $(DEPENDS_WLIB)
+WString.o: $(WLIB_DIR)/WString.cpp $(WLIB_DIR)/WString.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WDate.o: $(WLIB_DIR)/WDate.cpp $(WLIB_DIR)/WDate.h $(DEPENDS_WLIB)
+WDate.o: $(WLIB_DIR)/WDate.cpp $(WLIB_DIR)/WDate.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WFile.o: $(WLIB_DIR)/WFile.cpp $(WLIB_DIR)/WFile.h $(DEPENDS_WLIB)
+WFile.o: $(WLIB_DIR)/WFile.cpp $(WLIB_DIR)/WFile.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WSocket.o: $(WLIB_DIR)/WSocket.cpp $(WLIB_DIR)/WSocket.h $(DEPENDS_WLIB)
+WSocket.o: $(WLIB_DIR)/WSocket.cpp $(WLIB_DIR)/WSocket.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WThread.o: $(WLIB_DIR)/WThread.cpp $(WLIB_DIR)/WThread.h $(DEPENDS_WLIB)
+WThread.o: $(WLIB_DIR)/WThread.cpp $(WLIB_DIR)/WThread.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-Process.o: $(WLIB_DIR)/utils/Process.cpp $(WLIB_DIR)/utils/Process.h $(DEPENDS_WLIB)
+Process.o: $(WLIB_DIR)/utils/Process.cpp $(WLIB_DIR)/utils/Process.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WStringTokenizer.o: $(WLIB_DIR)/utils/WStringTokenizer.cpp $(WLIB_DIR)/utils/WStringTokenizer.h $(DEPENDS_WLIB)
+WStringTokenizer.o: $(WLIB_DIR)/utils/WStringTokenizer.cpp $(WLIB_DIR)/utils/WStringTokenizer.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-WInitFile.o: $(WLIB_DIR)/utils/WInitFile.cpp $(WLIB_DIR)/utils/WInitFile.h $(DEPENDS_WLIB)
+WInitFile.o: $(WLIB_DIR)/utils/WInitFile.cpp $(WLIB_DIR)/utils/WInitFile.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<
-URL.o: $(WLIB_DIR)/utils/URL.cpp $(WLIB_DIR)/utils/URL.h $(DEPENDS_WLIB)
+URL.o: $(WLIB_DIR)/utils/URL.cpp $(WLIB_DIR)/utils/URL.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
-CGIUtils.o: $(WLIB_DIR)/utils/CGIUtils.cpp $(WLIB_DIR)/utils/CGIUtils.h $(DEPENDS_WLIB)
+CGIUtils.o: $(WLIB_DIR)/utils/CGIUtils.cpp $(WLIB_DIR)/utils/CGIUtils.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
-HTTPClient.o: $(WLIB_DIR)/utils/HTTPClient.cpp $(WLIB_DIR)/utils/HTTPClient.h $(DEPENDS_WLIB)
+HTTPClient.o: $(WLIB_DIR)/utils/HTTPClient.cpp $(WLIB_DIR)/utils/HTTPClient.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
-base64.o: $(WLIB_DIR)/hash/base64.cpp $(WLIB_DIR)/hash/base64.h $(DEPENDS_WLIB)
+base64.o: $(WLIB_DIR)/hash/base64.cpp $(WLIB_DIR)/hash/base64.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<		
-blowfish.o: $(WLIB_DIR)/hash/blowfish.cpp $(WLIB_DIR)/hash/blowfish.h $(DEPENDS_WLIB)
+blowfish.o: $(WLIB_DIR)/hash/blowfish.cpp $(WLIB_DIR)/hash/blowfish.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<		
-des.o: $(WLIB_DIR)/hash/des.cpp $(WLIB_DIR)/hash/des.h $(DEPENDS_WLIB)
+des.o: $(WLIB_DIR)/hash/des.cpp $(WLIB_DIR)/hash/des.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<		
-md5.o: $(WLIB_DIR)/hash/md5.cpp $(WLIB_DIR)/hash/md5.h $(DEPENDS_WLIB)
+md5.o: $(WLIB_DIR)/hash/md5.cpp $(WLIB_DIR)/hash/md5.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<		
-sha256.o: $(WLIB_DIR)/hash/sha256.cpp $(WLIB_DIR)/hash/sha256.h $(DEPENDS_WLIB)
+sha256.o: $(WLIB_DIR)/hash/sha256.cpp $(WLIB_DIR)/hash/sha256.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<		
-sha512.o: $(WLIB_DIR)/hash/sha512.cpp $(WLIB_DIR)/hash/sha512.h $(DEPENDS_WLIB)
+sha512.o: $(WLIB_DIR)/hash/sha512.cpp $(WLIB_DIR)/hash/sha512.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<	
-sha1.o: $(WLIB_DIR)/hash/sha1.cpp $(WLIB_DIR)/hash/sha1.h $(DEPENDS_WLIB)
+sha1.o: $(WLIB_DIR)/hash/sha1.cpp $(WLIB_DIR)/hash/sha1.h $(WLIB_DEPENDS)
 	$(CC) -c $(C_FLAGS) $<		
 
 v1-core:

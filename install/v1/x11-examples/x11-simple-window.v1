@@ -22,7 +22,7 @@ hDLLX11 = dl ('libX11', true);
 if (!hDLLX11)
 {
 	// Search for X11 library
-	libList = explode ("\n", system ('/usr/bin/find /usr/lib'.(version(3)==1 ? '64' : '').' -name "libX11*.so*"'));
+	libList = explode ("\n", system ('/usr/bin/find /usr/lib'.(version(3)==1 ? '64' : '').' -name "libX11.so*"'));
 	if (!empty (libList[0])) {
 		hDLLX11 = dl (libList[0], true);
 		if (hDLLX11) {

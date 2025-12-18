@@ -18,7 +18,7 @@ hDLLC = 0; // 0 = RTLD_DEFAULT, search symbols direct in libc
 hDLLX11 = dl ('libX11', true);
 if (!hDLLX11) {
   // Search for X11 library
-  libList = explode ("\n", system ('/usr/bin/find /usr/ -name "libX11*.so*"'));
+  libList = explode ("\n", system ('/usr/bin/find /usr/ -name "libX11.so*"'));
   if (!empty (libList[0])) {
     hDLLX11 = dl (libList[0], true);
     if (hDLLX11) {
@@ -35,7 +35,7 @@ if (!hDLLX11) {
 hDLLXExt = dl ('libXext', true);
 if (!hDLLXExt) {
   // Search for X11ext library
-  libList = explode ("\n", system ('/usr/bin/find /usr/ -name "libXext*.so*"'));
+  libList = explode ("\n", system ('/usr/bin/find /usr/ -name "libXext.so*"'));
   if (!empty (libList[0])) {
     hDLLXExt = dl (libList[0], true);
     if (hDLLXExt) {

@@ -1,25 +1,47 @@
 <?v1
 require_once ("libconf.inc.v1");
 
-assign (hDLLIconv, iconvLibName) = libOpen ("iconv", "iconv.dll", "libiconv.so.2"); 
-
-function iconv (tocode, fromcode, src) {
-  global hDLLIconv;
-  conv = call (hDLLIconv, "libiconv_open", "ss:p", tocode, fromcode);
-  if (!conv)
-    return false;
-  srcLen = strlen (src);  
-  dst = "";
-  resize (dst, dstLen = srcLen*3); // make enough buffer    
-  srcLen = binformat (srcLen);  
-  dstLen = binformat (dstLen);  
-  srcPnt = binformat (memref (src));
-  dstPnt = binformat (memref (dst));  
-  ret = call (hDLLIconv, "libiconv", "prrrr:i", conv, srcPnt, srcLen, dstPnt, dstLen);
-  newLen = strlen (dst)-binparse (dstLen);
-  resize (dst, newLen);  
-  call (hDLLIconv, "libiconv_close", "p:i", conv); 
-  return dst;
+if (version(1)!='Windows') {
+  // LibC
+  function iconv (tocode, fromcode, src) {
+    global hDLLIconv;
+    conv = call (0, "iconv_open", "ss:p", tocode, fromcode);
+    if (!conv)
+      return false;
+    srcLen = strlen (src);  
+    dst = "";
+    resize (dst, dstLen = srcLen*3); // make enough buffer    
+    srcLen = binformat (srcLen);  
+    dstLen = binformat (dstLen);  
+    srcPnt = binformat (memref (src));
+    dstPnt = binformat (memref (dst));  
+    ret = call (0, "iconv", "prrrr:i", conv, srcPnt, srcLen, dstPnt, dstLen);
+    newLen = strlen (dst)-binparse (dstLen);
+    resize (dst, newLen);  
+    call (0, "iconv_close", "p:i", conv); 
+    return dst;
+  }
+}
+else {
+  assign (hDLLIconv, iconvLibName) = libOpen ("iconv", "iconv.dll", "libiconv.so.2"); 
+  function iconv (tocode, fromcode, src) {
+    global hDLLIconv;
+    conv = call (hDLLIconv, "libiconv_open", "ss:p", tocode, fromcode);
+    if (!conv)
+      return false;
+    srcLen = strlen (src);  
+    dst = "";
+    resize (dst, dstLen = srcLen*3); // make enough buffer    
+    srcLen = binformat (srcLen);  
+    dstLen = binformat (dstLen);  
+    srcPnt = binformat (memref (src));
+    dstPnt = binformat (memref (dst));  
+    ret = call (hDLLIconv, "libiconv", "prrrr:i", conv, srcPnt, srcLen, dstPnt, dstLen);
+    newLen = strlen (dst)-binparse (dstLen);
+    resize (dst, newLen);  
+    call (hDLLIconv, "libiconv_close", "p:i", conv); 
+    return dst;
+  }
 }
 
 ?>

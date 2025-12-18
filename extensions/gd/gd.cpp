@@ -1194,7 +1194,6 @@ bool fLog = false;
 
 int func_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx, void* func, const int* paramDef, unsigned int paramCnt=1, int retDef=0)
 {
-    ret = false;
     int arrayParamIdx = -1;
     int x2 = 0;
 
@@ -1357,7 +1356,6 @@ int func_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
     }
     else if (retDef==PARAM_GDImg) {
         Handle* h = new Handle;
-        ret = (Handle*) NULL;
         gdImagePtr ptr = (gdImagePtr) dcCallPointer (vm, (DCpointer) func);
         if (ptr) {
             h->handle = (void*) new GDImg (ptr);
@@ -1366,6 +1364,9 @@ int func_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
             h->freeFunction = freeGDHandles;
             ret = ctx.handleHT.put ((void*) h, h)->m_value;
         }
+				else {
+	        ret = (Handle*) NULL;			
+				}
     }
     else {
         dcCallInt (vm, (DCpointer) func);
@@ -1383,7 +1384,6 @@ int func_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
 #else
 int func_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx, void* func, const int* paramDef, unsigned int paramCnt=1, int retDef=0)
 {
-    ret = false;
     int arrayParamIdx = -1;
     int x2 = 0;
     for (unsigned int i=0; i<paramCnt; i++) {
@@ -1680,7 +1680,6 @@ int func_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
     }
     else if (retDef==PARAM_GDImg) {
         Handle* h = new Handle;
-        ret = (Handle*) NULL;
         if (v3) {
             h->handle = (void*) new GDImg ((gdImagePtr) v3);
             // Register handle
@@ -1688,6 +1687,10 @@ int func_universal (vector<DataValue*>& argvalues, DataValue& ret, InterpreterCo
             h->freeFunction = freeGDHandles;
             ret = ctx.handleHT.put ((void*) h, h)->m_value;
         }
+				else {
+	        ret = (Handle*) NULL;
+				
+				}
     }
     else {
         ret = true;

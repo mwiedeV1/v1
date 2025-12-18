@@ -10,8 +10,8 @@
 error_reporting (0); // 1 to show all warnings
 
 const SERVER_HOST = "localhost"; // Host or IP address
-const SERVER_PORT = 8080; // HTTP port
-const SERVER_SSL_PORT = 4430; // 443 to use https:// or 0 not using SSL
+const SERVER_PORT = 8080; // HTTP port or 0 not using HTTP
+const SERVER_SSL_PORT = 0; // 443 to use https:// or 0 not using HTTPS
 const CERT_DIR = "cert"; // Directory of SSL certificates (PEM format)
 const MAX_THREADS = 15; // Max. parallel requests
 const RECV_TIMEOUT = 30000; // Milliseconds a client should send data
@@ -53,8 +53,9 @@ serverCertList = array ();
 
 
 function maintenanceThread () {
+  global fExitAll;
   fFirstStart = true;
-  while (true) {
+  while (!fExitAll) {
     sleep (500);
     // Do some maintenance
     if (fFirstStart && isset (argv[3])) {
@@ -244,7 +245,7 @@ function workerThread (client, ssl=null) {
       envStr.="\0";
 
       cmd = './v1 -w "'.filename.'"';
-      if (exec (cmd, output, retCode, (contentLength>0 ? (ssl ? ssl : client) : null), contentLength, envStr)) {				
+      if (exec (cmd, output, retCode, (contentLength>0 ? (ssl ? ssl : client) : null), contentLength, envStr)) {
         responseStatus = "200 OK";
         //  Analyze response header
         p = strpos (output, "\n\n");
@@ -345,10 +346,20 @@ function port80Thread (fh) {
     // Create new thread
     t = thread_create ("workerThread", fh2); 
     threadList[currThreadIdx]=t;  
-    thread_start (t, false); // false = dont wait until thread is running
-    
+    thread_start (t, false); // false = dont wait until thread is running    
   }
+  
   fclose (fh);
+  foreach (threadList as idx => thread) {
+    if (thread_is_active (thread)) {
+      // print ("Finish HTTP thread ".idx);
+      thread_set_finish (thread);
+      thread_join (thread);    
+    }
+    // thread_close (thread);
+  }
+  // sleep (1000);
+  print ("HTTP threads finished");
 }
 
 
@@ -410,21 +421,39 @@ function port443Thread (fh) {
     threadList[currThreadIdx]=t;
     thread_start (t, false); // false = dont wait until thread is running 
   }
+  
+  foreach (threadList as idx => thread) {
+    if (thread_is_active (thread)) {
+      // print ("Finish HTTP thread ".idx);
+      thread_set_finish (thread);
+      thread_join (thread);    
+    }
+    // thread_close (thread);
+  }
+  // sleep (1000);
+
   SSL_CTX_free (ctx);  
   fclose (fh);
+  print ("HTTPS threads finished");
 }
 
 // Create Port 80
-fh = fsockserver (SERVER_HOST, SERVER_PORT, 0);
-if (!fh) {
-  print ("Cannot create HTTP-Server on ",  SERVER_HOST, ":", SERVER_PORT);
-  exit (1);
-}
-else {
-  print ("HTTP-Server created on ",  fsockip (fh), ":", fsockport(fh));
-  thread_start (thread_create ("port80Thread", fh));
+fh = null;
+httpThread = null;
+if (SERVER_PORT>0) {
+  fh = fsockserver (SERVER_HOST, SERVER_PORT, 0);
+  if (!fh) {
+    print ("Cannot create HTTP-Server on ",  SERVER_HOST, ":", SERVER_PORT);
+    exit (1);
+  }
+  else {
+    print ("HTTP-Server created on ",  fsockip (fh), ":", fsockport(fh));
+    thread_start (httpThread = thread_create ("port80Thread", fh));
+  }
 }
 
+fh2 = null;
+httpsThread = null;
 if (SERVER_SSL_PORT>0) {
   // Create Port 443
   fh2 = fsockserver (SERVER_HOST, SERVER_SSL_PORT);
@@ -434,13 +463,47 @@ if (SERVER_SSL_PORT>0) {
   }
   else {
     print ("HTTP-Server created on ",  fsockip (fh2), ":", fsockport(fh2));
-    thread_start (thread_create ("port443Thread", fh2));
+    thread_start (httpsThread = thread_create ("port443Thread", fh2));
   }
 }
 
 // Maintenance thread
-thread_start (thread_create ("maintenanceThread"));
-while (!fExitAll)
-  sleep (1000);
+thread_start (mainThread = thread_create ("maintenanceThread"));
+do{
+  print ("Press x to finish");
+} while (getch ()!='x');
 
+print ("Going to finish ...");
+fExitAll = true;
+// Ping the server processes to finish
+if (fh) {
+  fhPing = fsockopen (SERVER_HOST, SERVER_PORT);
+  if (fhPing) {
+    sleep (500);
+    fclose (fhPing);
+  }
+  if (httpThread) {
+    thread_join (httpThread);
+    // thread_close (httpThread);
+  }
+}
+
+if (fh2) {
+  fhPing = fsockopen (SERVER_HOST, SERVER_SSL_PORT);
+  if (fhPing) {
+    sleep (500);
+    fclose (fhPing);
+  }
+  if (httpsThread) {
+    thread_join (httpsThread);
+    // thread_close (httpsThread);
+  }
+}
+
+if (mainThread) {
+  thread_join (mainThread);
+  // thread_close (mainThread);
+}
+
+print ("Webserver successfull finished");
 ?>

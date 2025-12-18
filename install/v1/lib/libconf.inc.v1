@@ -36,7 +36,7 @@ function libOpen (name, libWIN, libUNIX, infoText="", extraRequireWIN="", extraR
     }
     else {
       // Search for libraries on unix systems
-      searchInList = array ('/usr/lib*/', '/usr/local/', '/lib*/');
+      searchInList = array ('/usr/lib'.(version(3)==1 ? '64' : '').'/', '/usr/local/', '/lib*/');
       foreach (searchInList as searchIn) {
         libList = explode ("\n", system ('/usr/bin/find '.searchIn.' -name "'.libUNIX.'*"'));
         if (!empty (libList[0])) {

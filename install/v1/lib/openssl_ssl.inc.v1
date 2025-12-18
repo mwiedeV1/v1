@@ -1,9 +1,9 @@
 <?v1
 require_once ("openssl.inc.v1");
-if (isset (libsslbName))
-	assign (hDLLSSL, sslLibName) = libOpen ("libssl", libsslbName, libsslbName); 
+if (isset (libsslibName))
+	assign (hDLLSSL, libsslibName) = libOpen ("libssl", libsslibName, libsslibName); 
 else
-	assign (hDLLSSL, sslLibName) = libOpen ("libssl", "libsslMD.dll", "libssl.so"); 
+	assign (hDLLSSL, libsslibName) = libOpen ("libssl", "libsslMD.dll", "libssl.so"); 
 
 const SSL_OP_NO_SSLv3 = 0x02000000;
 
