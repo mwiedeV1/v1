@@ -1535,7 +1535,7 @@ int func_binparse(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCon
 					bin = htons(bin);
 				}
 				ret.datatype = DataValue::DATATYPE_NUM;
-				ret.numvalue = (double)(!fSigned ? bin : (int16_t)bin);
+				ret.numvalue = (!fSigned ? (double) bin : (double) (int16_t)bin);
 			}
 			else {
 				warnLen = 2;
@@ -1552,7 +1552,7 @@ int func_binparse(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCon
 					bin = htonl(bin);
 				}
 				ret.datatype = DataValue::DATATYPE_NUM;
-				ret.numvalue = (double)(!fSigned ? bin : (int32_t)bin);
+				ret.numvalue = (!fSigned ? (double) bin : (double) (int32_t)bin);
 			}
 			else {
 				warnLen = 4;
@@ -1563,7 +1563,7 @@ int func_binparse(vector<DataValue *> &argvalues, DataValue &ret, InterpreterCon
 			if (argvalues[0]->value.length() >= (8 + pos)) {
 				uint64_t bin = *((uint64_t *)(argvalues[0]->value.c_str() + pos));
 				ret.datatype = DataValue::DATATYPE_NUM;
-				ret.numvalue = (double)(!fSigned ? bin : (int64_t)bin);
+				ret.numvalue = (!fSigned ? (double) bin : (double) (int64_t)bin);
 			}
 			else {
 				warnLen = 8;

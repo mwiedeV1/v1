@@ -11,7 +11,7 @@ error_reporting (0); // 1 to show all warnings
 
 const SERVER_HOST = "localhost"; // Host or IP address
 const SERVER_PORT = 8080; // HTTP port or 0 not using HTTP
-const SERVER_SSL_PORT = 4430; // 443 to use https:// or 0 not using HTTPS
+const SERVER_SSL_PORT = 0; // 443 to use https:// or 0 not using HTTPS
 const CERT_DIR = "cert"; // Directory of SSL certificates (PEM format)
 const MAX_THREADS = 15; // Max. parallel requests
 const RECV_TIMEOUT = 30000; // Milliseconds a client should send data
