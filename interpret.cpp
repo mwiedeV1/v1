@@ -4236,7 +4236,8 @@ void decodeJSONString (WCSTR src, int length, string& dst, bool fTrim=false)
 	}
 }
 
-char *parseJSON(WCSTR jsonStr, ArrayHT &arrayList)
+
+char* parseJSON (WCSTR jsonStr, ArrayHT& arrayList) 
 {
 	char* c = (char*) jsonStr, *key=NULL, *value = NULL;
 	int keyLength=0, valueLength = 0;
@@ -4300,14 +4301,17 @@ char *parseJSON(WCSTR jsonStr, ArrayHT &arrayList)
 				if (!(c=parseJSON (c, *newArrayPnt)))
 					return NULL;		
 			}
-			flag = 1;
+			else
+			if (*c=='[')
+				flag = 3; // Values
+			else
+				flag = 1; // Key required
 			key = value = NULL;
 		}
 		else
 		if (*c=='}' || *c==']' || *c==',') {
 			
-			if (flag==3)
-				return NULL; // No value
+
 			if (flag==6) {
 				valueLength = c-value;
 				if (valueLength==0)
@@ -4358,10 +4362,7 @@ char *parseJSON(WCSTR jsonStr, ArrayHT &arrayList)
 				}
 				arrayList.push (data);
 			}
-			else
-			if (flag==4) {
-				return NULL; // Wrong format
-			}
+
 			if (*c==',') 
 			{
 				key = value = NULL;
@@ -4433,6 +4434,19 @@ char *parseJSON(WCSTR jsonStr, ArrayHT &arrayList)
 	return c;
 }
 
+int func_json_decode (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
+	if (argvalues[0]->datatype!=DataValue::DATATYPE_STR) {
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
+	}
+
+	ret.arrayList.removeAll ();
+	ret.datatype = DataValue::DATATYPE_ARRAY;
+	if (!parseJSON (argvalues[0]->value.c_str (), ret.arrayList)) {
+		ctx.warnInterprete ("Wrong JSON format.");
+		ret = false;
+	}
+	return 0;
+}
 int func_json_decode(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
 {
 	if (argvalues[0]->datatype != DataValue::DATATYPE_STR) {
