@@ -69,5 +69,18 @@ function createCompatibleFilename (name, separator="_", maxChars=0, fLower=false
 	return trim (filename, separator);
 }	
 
+function file_get_contents (filename) {
+	if (strpos (filename, "https://")===0 || strpos (filename, "http://")===0) {
+		require_once ("wget.inc.v1");
+		return wget (filename); 
+	}
+	fh = fopen (filename, "r");
+	str = text = "";
+	while (fread (fh, str)) {
+			text.=str;
+	}
+	return text;	
+}
+
 
 ?>

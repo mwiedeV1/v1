@@ -9,8 +9,6 @@ cmd = _REQUEST["cmd"];
 html = "";
 errText = "";
 fCommand = false;
-docPath = getenv("DOCUMENT_ROOT");
-chdir (docPath."/".dirname(getenv("SCRIPT_NAME")));
 
 function createFormRename (oldFilename, newFilename="") {
 	global errText;
@@ -74,41 +72,46 @@ switch (cmd) {
 			/*
 			else
 			if (!WFormat::check  (newFilename, "filename", errText)) {
-				errText = "Filename is invalid.";
+				errText = "Filename is invalid.";				
 			}
 			*/
 			else {
-				if (is_dir (filename))
+				if (is_dir (filename)) {
 					pi["dirname"] = filename;
-				else 
+				}
+				else {
 					pi = pathinfo (filename);	
+				}
+							
 				filename2 = pi["dirname"]."/".newFilename;
+				
 				if (strpos (newFilename,".")===false) {
 					if (isset (pi["extension"]) && !empty (pi["extension"]))
 						filename2.=(".".pi["extension"]);
 				}
-		        if (is_file (filename2)) {
-		          errText = "File just exists.";
-		        }
-		        else {
-					fh = fopen (filename2, "w+");
-					if (fh) {
-						filename = filename2;
-						fclose (fh);
-						html.='
-						<script>
-						currentFilename = \''.filename.'\';
-						parent.editor.location.href=\'editor.v1?f=\'+currentFilename;
-						parent.output.location.href=currentFilename;
-						</script>
-						';
-						break;
-					}
-		  			fclose (fh);
-				}	
+        if (is_file (filename2)) {
+          errText = "File just exists.";
+        }
+        else {
+  				fh = fopen (filename2, "w+");
+  	
+  				if (fh) {
+  					filename = filename2;
+  					fclose (fh);
+  					html.='
+  					<script>
+  					currentFilename = \''.filename.'\';
+  					parent.editor.location.href=\'editor.v1?f=\'+currentFilename;
+  					parent.output.location.href=currentFilename;
+  					</script>
+  					';
+  					break;
+  				}
+  				fclose (fh);		
+         }	
 			}
 		}
-		html.= createFormNew (filename, newFilename);
+		html.= createFormNew (filename, newFilename);	
 		fCommand = true;
 		break;
 
@@ -117,22 +120,22 @@ switch (cmd) {
 		if (isset (_REQUEST["new_filename"])) {
 			if (empty (newFilename)) {
 				errText = "Please insert a new filename.";
-			}
+			}			
 			/*
 			else
 			if (!WFormat::check  (newFilename, "filename", errText)) {
-				errText = "Filename is invalid.";
+				errText = "Filename is invalid.";				
 			}
 			*/
 			else {
-				pi = pathinfo (filename);
+				pi = pathinfo (filename);			
 				filename2 = pi["dirname"]."/".newFilename;
 				if (strpos (newFilename,".")===false) {
 					if (isset (pi["extension"]) && !empty (pi["extension"]))
 						filename2.=(".".pi["extension"]);
 				}
 
-				if (is_file (filename2)) {
+				if (is_file (filename2)) {			
 					errText = "Filename just exists.";
 				}
 				else
@@ -153,9 +156,9 @@ switch (cmd) {
 		}
 		else {
 			pi = pathinfo(filename);
-			newFilename = pi["basename"];
+			newFilename = pi["basename"];		
 		}
-		html.= createFormRename (filename, newFilename);
+		html.= createFormRename (filename, newFilename);	
 		fCommand = true;
 		break;
 
@@ -163,12 +166,12 @@ switch (cmd) {
 		if (is_file (filename)) {
 			if (unlink (filename)) {
 				pi = pathinfo(filename);
-				filename = pi["dirname"];
+				filename = pi["dirname"];			
 			}
 		}
 		else {
 			pi = pathinfo(filename);
-			filename = pi["dirname"];
+			filename = pi["dirname"];			
 			
 		}
 		break;
@@ -197,42 +200,45 @@ if (!fCommand) {
 	btNew = "";
 	
 	if (!is_dir (dir)) {
-		htmlFileList = '<br /><div class="error msgText">'.htmlspecialchars (getenv("DOCUMENT_ROOT")."/".dir).' does not exists!</div>';
+		htmlFileList = '<br /><div class="error msgText">'.htmlspecialchars (dir).' does not exists!</div>';
 		pi = pathinfo(dir);
-		dir = pi["dirname"];
+		dir = pi["dirname"];			
 
 	}
 	else {
-		fileList = array ();
+
+    fileList = array ();
 		dh = opendir (dir);
  
-		while ((dirEntry = readdir (dh))!==false)
+		while ((dirEntry = readdir (dh))!==false) {
 			array_push (fileList, dirEntry);
+		}
           
 		closedir (dh);
 		sort (fileList);
 		
 		for (z=0;z<2;z++) {
-			foreach (fileList as file) 
-			{  
-				fi = pathinfo (file);  
+		  foreach (fileList as file) {  
+		  	fi = pathinfo (file);  
 				if (file=="." || (file==".." && dir==SCRIPT_PATH))
-				    continue;	
-				/*
-				if (is_dir (dir."/".file) || file=="." || file=="..")
-					continue;  
-				*/		  		
-				extra = "";
-				if (strcmp (selectedFile, file)==0)
-					extra = ' marked ';
-				  		
-				onmousedown = "";		  	
-				if (is_dir (dir."/".file)) {
-					if (z>0)
-						continue;
-					newDir = dir."/".file;
-					if (file=="..")
-					{
+						continue;	
+		  	/*
+		  	if (is_dir (dir."/".file) || file=="." || file=="..")
+		  		continue;  
+        */
+		  		
+		  	extra = "";
+		  	if (strcmp (selectedFile, file)==0)
+		  		extra = ' marked ';
+		  		
+		  	onmousedown = "";
+		  	
+		  	if (is_dir (dir."/".file)) {
+		  		if (z>0)
+		  			continue;
+		  		newDir = dir."/".file;
+			  	if (file=="..")
+			  	{
 						list = explode ("/", dir);
 						newDir = "";
 						for (i=0;i<count(list)-1;i++) {
@@ -241,25 +247,31 @@ if (!fCommand) {
 							newDir.=list[i];
 						}
 					}
-					htmlFileList.='<a class="dir" href="'.file.'" onclick="window.location.href=\''.basename(getenv("SCRIPT_FILENAME")).'?f='.newDir.'\';return false;">'.file.'</a>';		  	
-				}
-				else {
-					if (z==0)
-						continue;			  	
+					htmlFileList.='<a class="dir" href="'.dir."/".file.'" onclick="window.location.href=\''.basename(getenv("SCRIPT_FILENAME")).'?f='.newDir.'\';return false;">'.file.'</a>';		  	
+			  }
+		  	else {
+		  		if (z==0)
+		  			continue;			  	
+            
 					htmlFileList.='<a  class="'.getFileCSSClass (fi["extension"]).extra.'" oncontextmenu="return false;" onmousedown="'.onmousedown.';return false;" href="'.dir."/".file.'" onclick="loadSourceFile(this);return false;">'.file.'</a>';
-				}
-			}
-		}		
+			  }
+		  }
+		}
+		
 		btNew = '<button onclick="window.location.href=\''.basename(getenv("SCRIPT_FILENAME")).'?cmd=new&f=\'+currentFilename;return false;">New file</button>';
-	}	
+	}
+
+	
 	disabled = "";
 	if (!is_file (filename)) {
 		disabled = ' disabled="disabled" ';	
 	}
-
+	
+	
 	btRename = '<button class="edit_buttons" '.disabled.' onclick="window.location.href=\''.rebuildURI (basename(getenv("SCRIPT_FILENAME")), array (), false, array ("cmd")).'?cmd=rename&f=\'+currentFilename;return false;">Rename</button>';
 	btDelete = '<button class="edit_buttons" '.disabled.' onclick="if (confirm (\'Do you want to delete \'+currentFilename+\'?\')) window.location.href=\''.rebuildURI (basename(getenv("SCRIPT_FILENAME")), array (), false, array ("cmd")).'?cmd=delete&f=\'+currentFilename;return false;">Delete</button>';
 
+		
 	html.= '
 	<div class="toolbar"><span style="float:left;">'.btNew.btRename.btDelete.'</span><button id="bt_refresh" onclick="window.location.href=\''.rebuildURI (basename(getenv("SCRIPT_FILENAME")), array ("f"=>dir), false, array ("cmd")).'\';return false;">Refresh</button></div>
 	<div id="file_list" class="file_list">
@@ -295,7 +307,7 @@ function setFullHeight () {
 
 $(document).ready(function() 
 {
-	$(window).resize(function() {
+	$(window).resize(function() {		
 		setFullHeight ();
 	});
 	setFullHeight ();

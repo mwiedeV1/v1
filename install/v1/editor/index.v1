@@ -5,7 +5,7 @@ Main entry point of WWLabor
 
 require_once ("main.inc.v1");
 docPath = getenv("DOCUMENT_ROOT");
-chdir (docPath."/".dirname(getenv("SCRIPT_NAME")));
+// chdir (docPath."/".dirname(getenv("SCRIPT_NAME")));
 
 view = _REQUEST["view"];
 
@@ -43,12 +43,15 @@ path = rtrim (dirname(getenv("SCRIPT_NAME")), "/\\");
   </head>
   <frameset rows="60%,40%">
 	  <frameset cols="20%,40%,40%">
-	    <frame src="<?v1 print (path); ?>/navigator.v1?f=<?v1 print (filename);?>" name="navigator">
-	    <frame src="<?v1 print (path); ?>/editor.v1?f=<?v1 print (filename);?>" name="editor">
-	    <frame src="<?v1 print (path."/".filename);?>" name="output">
+	    <frame src="navigator.v1?f=<?v1 print (filename);?>" name="navigator">
+	    <frame src="editor.v1?f=<?v1 print (filename);?>" name="editor">
+	    <frame src="<?v1 print (filename);?>" name="output">
 	  </frameset>
 	  <frame src="../doc/index.html" name="documentation">
 	</frameset>
 </html>
 </body>
 </html>
+<?v1
+
+?>

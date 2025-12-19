@@ -11,7 +11,7 @@ error_reporting (0); // 1 to show all warnings
 
 const SERVER_HOST = "localhost"; // Host or IP address
 const SERVER_PORT = 8080; // HTTP port or 0 not using HTTP
-const SERVER_SSL_PORT = 0; // 443 to use https:// or 0 not using HTTPS
+const SERVER_SSL_PORT = 4430; // 443 to use https:// or 0 not using HTTPS
 const CERT_DIR = "cert"; // Directory of SSL certificates (PEM format)
 const MAX_THREADS = 15; // Max. parallel requests
 const RECV_TIMEOUT = 30000; // Milliseconds a client should send data
@@ -179,21 +179,30 @@ function workerThread (client, ssl=null) {
   path = url_decode (path);
     
   fFound = false;
-      
+ 
+	fRedirect = false;
   // Check for auto index files
-  if (!is_file (docPath.path)) {
-    autoIndexList = array ("index.html", "index.v1", "index.htm");
-    foreach (autoIndexList as autoFile) {
-    	path2=path."/".autoFile;
-    	if (is_file (docPath.path2)) {
-    		path = path."/".autoFile;
-        fFound = true;
-    		break;
-    	}
-    }
-  }
-  else {
+  if (is_file (docPath.path)) {
     fFound = true;
+  }
+	else
+	if (is_dir (docPath.path)) {
+		if (substr (path, -1, 1)!="/")	{
+				path.="/";
+				fRedirect = true;
+		}
+		else {
+			
+			autoIndexList = array ("index.html", "index.v1", "index.htm");
+			foreach (autoIndexList as autoFile) {
+				path2=path."/".autoFile;
+				if (is_file (docPath.path2)) {
+					path = path."/".autoFile;
+					fFound = true;
+					break;
+				}
+			}
+		}
   }
   
   // Handle the filename
@@ -207,10 +216,9 @@ function workerThread (client, ssl=null) {
   
   // Check if filename is outside docPath or special file extensions for security reasons
   realFilename = realpath (filename);   
-
   if ((fFound && fileSize>0 && strpos (realFilename, realDocPath)!==0) || fileExt=="key" || fileExt=="htaccess") {
     // Send HTTP status forbidden
-    clientWrite (client, "HTTP/1.1 403 Forbidden\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\nRequested ressource is forbidden.", ssl);    
+    clientWrite (client, "HTTP/1.1 403 Forbidden\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\nRequested ressource ".path." is forbidden.", ssl);    
   }
   else
   if (fFound) {
@@ -231,7 +239,7 @@ function workerThread (client, ssl=null) {
       envStr.="\0";
       envStr.='SCRIPT_NAME='.path;
       envStr.="\0";
-      envStr.='DOCUMENT_ROOT='.docPath;
+      envStr.='DOCUMENT_ROOT='.realDocPath;
       envStr.="\0";
       envStr.='REQUEST_URI='.uri;
       envStr.="\0";
@@ -299,7 +307,11 @@ function workerThread (client, ssl=null) {
       }
     }
   }
-  else {
+  else
+	if (fRedirect) {
+		clientWrite (client, "HTTP/1.1 301 Moved permanently\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nLocation: ".path, ssl);  
+	}
+	else {
     // Send HTTP status 404 Not found
     clientWrite (client, "HTTP/1.1 404 Not Found\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\n".path." not found on this server.", ssl);
   }
@@ -370,7 +382,7 @@ function port443Thread (fh) {
   threadList = array ();
 
   // Create SSL Context
-  ctx = SSL_CTX_new ("TLSv1_2_server_method");
+  ctx = SSL_CTX_new ("TLS_server_method");
 
   if (!is_file (CERT_DIR."/".SERVER_HOST.".crt")) {  
    // Create self signed

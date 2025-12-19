@@ -53,27 +53,12 @@ function getIndexFile (dir) {
 }
 	
 function createSecurePath (path) {
-	docRoot = getenv("DOCUMENT_ROOT");	
-
-	path = str_replace (array ("\\"), array("/"), path); 
-	p = strpos (path, ".");
-	if (p!==false && p==0)
-		return "";
-
-	if (file_exists (path)) {
-		// Security check if path is outside root directory
-		realPath = realpath (docRoot."/".path);
-		if (empty (realPath)) {
-			realPath = docRoot."/".path;
-		}
-		realPath = str_replace (array ("\\"), array("/"), realPath); 
-
-		p = strpos (realPath, docRoot."/".SCRIPT_PATH); 
-		if (p===false || p>0) {
-			return ""; // Path is outside script directory
-		}	
-	}
-	return rtrim (path, "/");
+	
+	docRoot = str_replace (array ("\\"), array("/"), getenv("DOCUMENT_ROOT"));	
+	realPath = str_replace (array ("\\"), array("/"), dirname(__FILE__)."/".path); 
+	if (strpos (realPath, docRoot)===0)
+		return path;
+	return "";
 }
 
 function getFileCSSClass (ext) {

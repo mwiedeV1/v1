@@ -508,6 +508,13 @@ int InterpreterContext::execute(WCSTR filename, int fRequireOnce)
     */
 		if (!ret && !fOnlySyntaxCheck) {
 
+			if (programMode & PROGRAM_MODE_WEB && fRequireOnce==2) {
+				// Set working directory of main file in web mode
+				WString path;
+				WSystem::extractPath (realFilename, path, false);
+				WSystem::setCurrentDirectory (path);
+			}
+			
 			// Now interprete
 			DataValue retvalue;
 			try {

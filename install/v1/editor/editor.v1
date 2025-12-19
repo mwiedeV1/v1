@@ -6,11 +6,6 @@ Editor of V1 Editor
 
 require_once ("main.inc.v1");
 
-
-docPath = getenv("DOCUMENT_ROOT");
-chdir (docPath."/".dirname(getenv("SCRIPT_NAME")));
-
-
 fi = pathinfo (filename);
 
 scriptType = "";
@@ -53,12 +48,12 @@ background-color:#FFFFFF;
 }
 
 .toolbar button {
-  height:30px;
-  display:inline-block;
-  vertical-align:middle;
-  font-size:12pt;
-  padding:0px 5px 0px 5px;
-  line-height:1.0;
+    height:30px;
+    display:inline-block;
+    vertical-align:middle;
+    font-size:12pt;
+    padding:0px 5px 0px 5px;
+    line-height:1.0;
 }
 
 .toolbar span {
@@ -135,4 +130,3 @@ else {
 
 </body>
 </html>
-
