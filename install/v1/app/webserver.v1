@@ -383,7 +383,7 @@ function port443Thread (fh) {
   threadList = array ();
 
   // Create SSL Context
-  ctx = SSL_CTX_new ("TLS_server_method");
+  ctx = SSL_CTX_new ("TLSv1_2_server_method");
 
   if (!is_file (CERT_DIR."/".SERVER_HOST.".crt")) {  
    // Create self signed
