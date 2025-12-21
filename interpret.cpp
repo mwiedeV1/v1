@@ -4437,19 +4437,6 @@ char* parseJSON (WCSTR jsonStr, ArrayHT& arrayList)
 	return c;
 }
 
-int func_json_decode (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
-	if (argvalues[0]->datatype!=DataValue::DATATYPE_STR) {
-		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_STR_REQUIRED;
-	}
-
-	ret.arrayList.removeAll ();
-	ret.datatype = DataValue::DATATYPE_ARRAY;
-	if (!parseJSON (argvalues[0]->value.c_str (), ret.arrayList)) {
-		ctx.warnInterprete ("Wrong JSON format.");
-		ret = false;
-	}
-	return 0;
-}
 int func_json_decode(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
 {
 	if (argvalues[0]->datatype != DataValue::DATATYPE_STR) {
