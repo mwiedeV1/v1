@@ -173,7 +173,7 @@ int main(int argc, char *argv[], char *envp[])
 		}
 
 		if (filename != NULL) {
-			ret = ctx.execute(filename);
+			ret = ctx.execute(filename, 2);
 		}
 		else if (fEval) {
 			DataValue retvalue;
