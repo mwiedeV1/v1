@@ -16,6 +16,7 @@ Licence: GPL V3
 #include <termios.h>
 #include <signal.h>
 #include <math.h>
+#include <libgen.h> 
 
 #include <termios.h>
 
@@ -166,8 +167,17 @@ void WSystem::getCurrentDirectory (WString& dir)
 void WSystem::getTempDirectory (WString& dir)
 {
 	WCSTR tmpDir = getenv("TMPDIR");
-	if (tmpDir == 0)
-		tmpDir = "./";
+	if (tmpDir == 0) {
+		char currExec[PATH_MAX + 1];
+		ssize_t len = readlink("/proc/self/exe", currExec, PATH_MAX);
+		if (len > 0) {
+			currExec[len] = 0;
+			tmpDir = (WCSTR) dirname(currExec);
+		}
+		else {
+			tmpDir = "/";
+		}
+	}
 	dir = tmpDir;
 }
 

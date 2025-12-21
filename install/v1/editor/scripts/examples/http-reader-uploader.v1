@@ -7,7 +7,7 @@ fUploaded = false;
 if (isset (_FILES["upload"]))
 {
 	foreach (_FILES["upload"]["tmp_name"] as i => tmpName) {
-		fUploaded = move_uploaded_file (tmpName, ROOT_PATH."/"._FILES["upload"]["name"][i]);
+		fUploaded = move_uploaded_file (tmpName, dirname(__FILE__)."/"._FILES["upload"]["name"][i]);
 		if (fUploaded) {
 			showSuccess (_FILES["upload"]["name"][i]." uploaded. Refresh file list.");
 		}

@@ -26,7 +26,7 @@ mimeTypeList = array (
   "jpg" => "image/jpeg",
   "jpeg" => "image/jpeg",
   "png" => "image/png",
-  "gif" => "image/jpeg",
+  "gif" => "image/gif",
   "svg" => "image/svg+xml",
   "exe" => "application/octet-stream",
   "pdf" => "application/pdf",
@@ -181,12 +181,13 @@ function workerThread (client, ssl=null) {
   fFound = false;
  
 	fRedirect = false;
+	filename = realDocPath.path;
   // Check for auto index files
-  if (is_file (realDocPath.path)) {
+  if (is_file (filename)) {
     fFound = true;
   }
 	else
-	if (is_dir (realDocPath.path)) {
+	if (is_dir (filename)) {
 		if (substr (path, -1, 1)!="/")	{
 				path.="/";
 				fRedirect = true;
@@ -196,8 +197,9 @@ function workerThread (client, ssl=null) {
 			autoIndexList = array ("index.html", "index.v1", "index.htm");
 			foreach (autoIndexList as autoFile) {
 				path2=path."/".autoFile;
-				if (is_file (docPath.path2)) {
+				if (is_file (realDocPath.path2)) {
 					path = path."/".autoFile;
+					filename = realDocPath.path;
 					fFound = true;
 					break;
 				}
@@ -206,7 +208,6 @@ function workerThread (client, ssl=null) {
   }
   
   // Handle the filename
-  filename = docPath."/".path;
   fileSize = 0;
   if (fFound) {
     fileSize = filesize (filename);
