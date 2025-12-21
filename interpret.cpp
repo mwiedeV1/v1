@@ -2036,7 +2036,7 @@ int func_include_internal (WCSTR filename, DataValue& ret, InterpreterContext& c
 		path.append (filename);
 	}
 
-	if (ctx.internalScriptHT.size()==0 && !WSystem::existsFile (path)) {
+	if (!WSystem::existsFile (path)) {
 		ctx.abortInterprete (WFormattedString ("Include file %s not found", (WCSTR) filename));
 		return WSCRIPT_RET_ABORT;
 	}
