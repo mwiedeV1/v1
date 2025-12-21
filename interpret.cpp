@@ -1755,15 +1755,18 @@ int func_substr(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 	}
 	int from = (int)*argvalues[1];
 	int to = len;
-	if (from < 0)
-		from = len - (abs(from) % len);
+	if (from < 0) {
+		from = len + from;
+		if (from<0)
+			from = 0;
+	}
 
 	if (argvalues.size() > 2) {
 		if (argvalues[2]->datatype > DataValue::DATATYPE_STR)
 			return WSCRIPT_RET_PARAM3 | WSCRIPT_RET_NUM_REQUIRED;
 		int offset = (int)*argvalues[2];
 		if (offset < 0)
-			to = len - (abs(offset) % len);
+			to = len + offset;
 		else
 			to = from + offset;
 	}
