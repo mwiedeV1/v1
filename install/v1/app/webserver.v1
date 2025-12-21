@@ -182,11 +182,11 @@ function workerThread (client, ssl=null) {
  
 	fRedirect = false;
   // Check for auto index files
-  if (is_file (docPath.path)) {
+  if (is_file (realDocPath.path)) {
     fFound = true;
   }
 	else
-	if (is_dir (docPath.path)) {
+	if (is_dir (realDocPath.path)) {
 		if (substr (path, -1, 1)!="/")	{
 				path.="/";
 				fRedirect = true;
@@ -218,7 +218,7 @@ function workerThread (client, ssl=null) {
   realFilename = realpath (filename);   
   if ((fFound && fileSize>0 && strpos (realFilename, realDocPath)!==0) || fileExt=="key" || fileExt=="htaccess") {
     // Send HTTP status forbidden
-    clientWrite (client, "HTTP/1.1 403 Forbidden\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\nRequested ressource ".path." is forbidden.", ssl);    
+    clientWrite (client, "HTTP/1.1 403 Forbidden\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\nRequested ressource ".path." is forbidden.\r\n\r\n", ssl);    
   }
   else
   if (fFound) {
@@ -274,7 +274,7 @@ function workerThread (client, ssl=null) {
         clientWrite (client, output, ssl);
       }
       else {
-        clientWrite (client, "HTTP/1.1 500 Internal Server Error\r\nServer: V1 HTTP-Server\r\n\r\nCannot execute: ".cmd, ssl);							
+        clientWrite (client, "HTTP/1.1 500 Internal Server Error\r\nServer: V1 HTTP-Server\r\n\r\nCannot execute: ".cmd."\r\n\r\n", ssl);							
       }
     }
     else {
@@ -309,11 +309,11 @@ function workerThread (client, ssl=null) {
   }
   else
 	if (fRedirect) {
-		clientWrite (client, "HTTP/1.1 301 Moved permanently\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nLocation: ".path, ssl);  
+		clientWrite (client, "HTTP/1.1 301 Moved permanently\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nLocation: ".path."\r\n\r\n", ssl);  
 	}
 	else {
     // Send HTTP status 404 Not found
-    clientWrite (client, "HTTP/1.1 404 Not Found\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\n".path." not found on this server.", ssl);
+    clientWrite (client, "HTTP/1.1 404 Not Found\r\nServer: V1 HTTP-Server\r\nConnection:close\r\nContent-Type: text/html\r\n\r\n".path." not found on this server.\r\n\r\n", ssl);
   }
 
   // Close connection and finish thread
@@ -481,6 +481,10 @@ if (SERVER_SSL_PORT>0) {
 
 // Maintenance thread
 thread_start (mainThread = thread_create ("maintenanceThread"));
+while (true) {
+		sleep (1000);
+}
+/*
 do{
   print ("Press x to finish");
 } while (getch ()!='x');
@@ -518,4 +522,5 @@ if (mainThread) {
 }
 
 print ("Webserver successfull finished");
+*/
 ?>
