@@ -60,7 +60,7 @@ for (i=0; i<1; i++)
 	print ("<br />SHA512 crypt() = ".crypt(text, salt));
 };
 
-print ("<br>SHA256 of file v1: ", hash_file ("sha256", "v1"));
+print ("<br>SHA256 of file v1: ", hash_file ("sha256", "../../../v1"));
 
 ?>
 <?v1 require_once ("helpers/end.v1");?>
