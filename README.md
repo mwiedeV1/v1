@@ -27,7 +27,7 @@ make
 **Compile OpenSSL**
 
 ~~~
-cd extensions/ssl/openssl-1.0.2u/
+cd extensions/ssl/openssl-1.1.1w/
 ./config -fPIC no-shared
 make
 ~~~
