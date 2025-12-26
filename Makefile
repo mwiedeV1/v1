@@ -31,7 +31,7 @@ LIB_DIR             = /usr/local/lib
 EXTENSION_DIR       = extensions
 
 # Open SSL dependencies
-OPENSSL_DIR         = $(EXTENSION_DIR)/ssl/openssl-1.0.2u
+OPENSSL_DIR         = $(EXTENSION_DIR)/ssl/openssl-1.1.1w
 LIBSSL              = $(OPENSSL_DIR)/libssl.a
 LIBCRYPTO           = $(OPENSSL_DIR)/libcrypto.a
 

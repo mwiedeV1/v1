@@ -1,8 +1,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif 
-#include "openssl-1.0.2u/include/openssl/conf.h"
-#include "openssl-1.0.2u/include/openssl/crypto.h"
+#include "openssl-1.1.1w/include/openssl/conf.h"
+#include "openssl-1.1.1w/include/openssl/crypto.h"
 #include <openssl/x509.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
@@ -25,6 +25,16 @@ using namespace std;
 WMUTEX* g_mutexList = NULL;
 int g_handletype_SSL_CTX = 12;
 int g_handletype_SSL = 13;
+
+
+#if OPENSSL_VERSION_NUMBER>=0x10101000L
+#ifndef X509_get_notBefore
+#define X509_get_notBefore(x) X509_getm_notBefore(x)
+#endif
+#ifndef X509_get_notAfter
+#define X509_get_notAfter(x) X509_getm_notAfter(x)
+#endif
+#endif
 
 typedef struct {
 	WCSTR name;
@@ -80,24 +90,20 @@ int openssl_pem_password_cb(char *, int, int, void *);
 int openssl_servername_cb(SSL *ssl, int *ad, void *arg);
 void ERR_print_errors (WString& str);
 
-#ifndef _WIN32
-void My_X509_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, const X509 *x)
-{
-    if (psig)
-        *psig = (ASN1_BIT_STRING *) &x->signature;
-    if (palg)
-        *palg = (X509_ALGOR *) &x->sig_alg;
-}
-#endif
 
 void cleanupOpenSSL () {
 
-    FIPS_mode_set(0);
-    CRYPTO_set_locking_callback(NULL);
-    CRYPTO_set_id_callback(NULL);
-    ERR_remove_state (0);
-    ERR_free_strings();
-    EVP_cleanup();      
+	FIPS_mode_set(0);
+#if CRYPTO_set_locking_callback
+	CRYPTO_set_locking_callback(NULL);
+#endif
+#if CRYPTO_set_id_callback
+	CRYPTO_set_id_callback(NULL);
+#endif
+#if OPENSSL_VERSION_NUMBER<0x10101000L
+	ERR_free_strings();
+	EVP_cleanup();
+#endif
 }
 
 
@@ -118,37 +124,52 @@ public:
 		if (m_ctx)
 			return;
 		
-		const SSL_METHOD *methodPnt = TLSv1_2_method ();
-		
-		if (!strcmp (method, "SSLv23_method"))
-			methodPnt = SSLv23_method();
-  	else
-		if (!strcmp (method, "SSLv23_server_method")) 
-			methodPnt = SSLv23_server_method();
-    else
-		if (!strcmp (method, "SSLv23_client_method"))
-			methodPnt = SSLv23_client_method();
-		else
-		if (!strcmp (method, "TLSv1_1_method"))
-			methodPnt = TLSv1_1_method();
-    else
-		if (!strcmp (method, "TLSv1_1_server_method"))
-			methodPnt = TLSv1_1_server_method();
-		else
-		if (!strcmp (method, "TLSv1_1_client_method"))
-			methodPnt = TLSv1_1_client_method();
-		else
-		if (!strcmp (method, "TLSv1_2_method"))
-			methodPnt = TLSv1_2_method();
-		else
-		if (!strcmp (method, "TLSv1_2_server_method"))
-			methodPnt = TLSv1_2_server_method();
-    else
-		if (!strcmp (method, "TLSv1_2_client_method"))
-			methodPnt = TLSv1_2_client_method();
-    else 
-		if (method[0]!=0)
-			throw WException ("SSL method unsupported", -1);
+		const SSL_METHOD *methodPnt = TLS_method ();
+		if (method[0]!=0) {
+			if (!strcmp (method, "TLS_method"))
+				methodPnt = TLS_method ();
+			else
+			if (!strcmp (method, "TLS_client_method")) {
+				methodPnt = TLS_client_method ();
+			}
+			else
+			if (!strcmp (method, "TLS_server_method")) {
+				methodPnt = TLS_server_method ();
+			}
+			else
+			if (!strcmp (method, "SSLv23_method"))
+				methodPnt = SSLv23_method();
+			else
+			if (!strcmp (method, "SSLv23_server_method")) {
+				methodPnt = SSLv23_server_method();
+			}
+			else
+			if (!strcmp (method, "SSLv23_client_method")) {
+				methodPnt = SSLv23_client_method();
+			}
+#if OPENSSL_VERSION_NUMBER<0x10101000L 
+			else
+			if (!strcmp (method, "TLSv1_1_method"))
+				methodPnt = TLSv1_1_method();
+			else
+			if (!strcmp (method, "TLSv1_1_server_method"))
+				methodPnt = TLSv1_1_server_method();
+			else
+			if (!strcmp (method, "TLSv1_1_client_method"))
+				methodPnt = TLSv1_1_client_method();
+			else
+			if (!strcmp (method, "TLSv1_2_method"))
+				methodPnt = TLSv1_2_method();
+			else
+			if (!strcmp (method, "TLSv1_2_server_method"))
+				methodPnt = TLSv1_2_server_method();
+			else
+			if (!strcmp (method, "TLSv1_2_client_method"))
+				methodPnt = TLSv1_2_client_method();
+#endif
+			else 
+				throw WException ("SSL method unsupported", -1);
+		}
 
 		m_ctx = SSL_CTX_new(methodPnt);  
 		if ( m_ctx == NULL )
@@ -420,8 +441,7 @@ private:
 };
 
 // OpenSSL Callbacks ans special functions
-int openssl_pem_password_cb(char *buf, int size, int rwflag, void *arg) {
-	
+int openssl_pem_password_cb(char *buf, int size, int rwflag, void *arg) {	
 	_SSL_CTX* ctx = (_SSL_CTX*) arg;
 	if (ctx) {
 		WString pwd = ctx->getKeyPassword ();
@@ -432,14 +452,12 @@ int openssl_pem_password_cb(char *buf, int size, int rwflag, void *arg) {
 	return 0;
 }
 
-
-void openSSLLockFunction (int mode, int n, const char *file, int line)
-{
+void openSSLLockFunction (int mode, int n, const char *file, int line) {
 	// printf ("openSSLLockFunction %i %s %i\r\n", mode, file, line);
-    if (mode & CRYPTO_LOCK)
-      WSystem::enterMutex (g_mutexList[n]);
-    else
-      WSystem::leaveMutex (g_mutexList[n]);
+	if (mode & CRYPTO_LOCK)
+		WSystem::enterMutex (g_mutexList[n]);
+	else
+		WSystem::leaveMutex (g_mutexList[n]);
 }
 
 int openssl_servername_cb(SSL *ssl, int *ad, void *arg)
@@ -540,7 +558,7 @@ int freeSSLHandle (void* handle, int handletype) {
 }
 
 int func_SSL_CTX_new (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {	
-	WCSTR method = "TLSv1_2_client_method";
+	WCSTR method = "TLS_client_method";
 
 	if (argvalues[0]->datatype!=DataValue::DATATYPE_NO_PARAM) {
 		if (argvalues[0]->datatype!=DataValue::DATATYPE_STR)
@@ -1243,30 +1261,13 @@ int func_SSL_universal (WCSTR function, vector<DataValue*>& argvalues, DataValue
 
 					tmp.datatype=DataValue::DATATYPE_NUM;
 					ret.arrayList.put ("VERSION", tmp)->m_value.numvalue=X509_get_version (cert);
-#ifdef _WIN32
-					const X509_ALGOR* palg = NULL;
-					const ASN1_BIT_STRING *psig = NULL;
+					tmp.datatype=DataValue::DATATYPE_STR;		
+					int sig_nid = X509_get_signature_nid (cert);
+					tmp.datatype =DataValue::DATATYPE_NUM;					
+					ret.arrayList.put ("SIGTYPE_ID", tmp)->m_value.numvalue=(double) sig_nid;
+					tmp.datatype =DataValue::DATATYPE_STR;
+					ret.arrayList.put ("SIGTYPE", tmp)->m_value=OBJ_nid2ln(sig_nid); 
 
-					X509_get0_signature(&psig, &palg, cert);
-					if (palg) {
-						tmp.datatype=DataValue::DATATYPE_STR;		
-						OBJ_obj2txt(buf, sizeof(buf)-1, palg->algorithm, 0);
-						ret.arrayList.put ("SIGTYPE", tmp)->m_value=(WCSTR) buf;
-					}
-#else
-					X509_ALGOR* palg = NULL;
-					ASN1_BIT_STRING *psig = NULL;
-
-					My_X509_get0_signature(&psig, &palg, cert);
-					if (palg) {
-						tmp.datatype=DataValue::DATATYPE_STR;		
-						int sig_nid = OBJ_obj2nid (cert->sig_alg->algorithm);
-            tmp.datatype =DataValue::DATATYPE_NUM;
-						ret.arrayList.put ("SIGTYPE_ID", tmp)->m_value.numvalue=(double) sig_nid;
-            tmp.datatype =DataValue::DATATYPE_STR;
-            ret.arrayList.put ("SIGTYPE", tmp)->m_value=OBJ_nid2ln(sig_nid); 
-					}
-#endif
 
 					ASN1_INTEGER* s = X509_get_serialNumber (cert);
 					if (s) {
@@ -1300,21 +1301,13 @@ int func_SSL_universal (WCSTR function, vector<DataValue*>& argvalues, DataValue
 					list = &ret.arrayList.put ("VALID", tmp)->m_value.arrayList;
 						
 					tmp.datatype =DataValue::DATATYPE_STR;
-#ifdef _WIN32
-					ASN1_TIME* t = X509_getm_notBefore (cert);
-#else
-					ASN1_TIME* t = cert->cert_info->validity->notBefore; 
-#endif                     
+					ASN1_TIME* t = X509_getm_notBefore (cert);               
 					if (t) {
 						tmp.value = (WCSTR) t->data;
 						list->put ("FROM", tmp);
 					}
-#ifdef _WIN32
 					t = X509_getm_notAfter (cert);
-#else
-					t = cert->cert_info->validity->notAfter;
-#endif
-                    if (t) {
+          if (t) {
 						tmp.value =  (WCSTR) t->data;
 						list->put ("TO", tmp);
 					}
@@ -1424,9 +1417,6 @@ int func_SSL_set_verify_result (vector<DataValue*>& argvalues, DataValue& ret, I
 int func_SSL_get_verify_result (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 	return func_SSL_universal ("SSL_get_verify_result", argvalues, ret, ctx);
 }
-
-
-
 
 int func_SSL_FLAG (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 	
@@ -1711,28 +1701,27 @@ extern "C" {
 
 int DLL_EXPORT wScriptDLLStartup (InterpreterContext& ctx) {
 
+#ifndef _WIN32
 	// Delete SIGPIPE signal
 	{struct sigaction act;
 	act.sa_handler = SIG_IGN;
 	sigemptyset (&act.sa_mask);
 	act.sa_flags = 0;
 	sigaction (SIGPIPE, &act, NULL);}
+#endif 
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
 #else
     OPENSSL_init_ssl(0, NULL);
-//  SSL_library_init();
 #endif    
 
-  // CRYPTO_malloc_init();
-  // CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
-  // OPENSSL_config(NULL);
-  SSL_load_error_strings();
-  ERR_load_crypto_strings ();
-  // OpenSSL_add_ssl_algorithms ();
-  OpenSSL_add_all_algorithms();
-
+#if OPENSSL_VERSION_NUMBER<0x10100000L
+	SSL_load_error_strings();
+	ERR_load_crypto_strings ();
+	OpenSSL_add_all_algorithms();
+	CRYPTO_set_locking_callback (openSSLLockFunction);	
+#endif	
   
   // Create mutex table    
   int cnt = CRYPTO_num_locks();

@@ -1,0 +1,186 @@
+<?v1
+
+function formatV1Code (text, &codeFormatted, &style, &codeCleaned, fLineNo=true)
+{
+	matches = matches2 = [];
+	tabCnt = oldTabCnt = tabCorr =  0;
+	// text = str_replace ("\r\n", "\n", text); // Line Feed = 1 character
+	str = htmlTab = codeFormatted = codeCleaned = '';    
+	tabSpaces = 2;
+	htmlSpace = ' ';
+	for (i=0;i<tabSpaces;i++)
+			htmlTab.=htmlSpace;
+
+	keywords = array ("if"=>1, "else"=>1, "while"=>1, "do"=>1, "case"=>1, "break"=>1, "foreach"=>1, "array" => 1, "assign"=>1, "function"=>1, "return"=>1,  "const"=>1, "require_once"=>1, "include"=>1, "default"=>1, "switch"=>1);
+	charFromIdxOld = 0;
+	
+	pattern = '(\<\?v1[\s\S]+?\?\>)'; /* V1 section */
+	
+	ret = preg_match_all ('/'.pattern.'/s', text, matches, 1);
+	
+	foreach (matches[0] as match) {
+		from = match[1];
+		to = match[1] + strlen (match[0]);
+		text2 = substr (text, from, to-from);
+
+		// V1 Tokens    
+		color = "blue";
+		charFromIdx = from;
+		charToIdx   = from + 5;
+		
+		// Reformat
+		str = substr (text, charFromIdx, charToIdx-charFromIdx);
+		formatted ='<span style="color:'.color.'">'.(str_replace (["\t", " "], [htmlTab, htmlSpace], htmlspecialchars (str))).'</span>';
+		str2 = substr (text, charFromIdxOld, charFromIdx-charFromIdxOld);
+		codeFormatted.='<span style="color:#A6A6A6;">'.(str_replace (["\t", " "], [htmlTab, htmlSpace], htmlspecialchars (str2))).'</span>';
+		codeCleaned.=str2;
+		codeFormatted.=formatted;
+		codeCleaned.=str;
+
+		charFromIdxOld = charToIdx;
+
+		pattern = 
+			// '(*LIMIT_RECURSION=2000)'.
+			'(//.*)|'. /* Single Comment */
+			'(\/\*[\s\S]+?\*\/)|'. /* Multiline Comment */
+			'(\b(if|while|do|case|foreach|assign|switch|function|return|const|array|else|break|require_once|include|default)\b)|'. // Keywords      
+			'(\b\d+\b|0[xX][0-9a-fA-F]+)|'. // Digits, Hex
+			'(\'(?:[^\'\\]|\\.)*\'|"(?:[^"\\]|\\.)*")|'. // Strings
+			'(\/\*[\s\S]+?$)'; /* Endless comment */
+		
+		ret = preg_match_all ('/'.pattern.'/', text2, matches2, 1);
+		
+		foreach (matches2[0] as match2) {
+			if (isset (keywords[match2[0]])) {
+				// Keyword
+				color = "blue";
+			}
+			else {
+				first = substr (match2[0], 0, 1);
+				if (first=="/") {
+					// Comment
+					color = "green";
+				}
+				else
+				if (first=="'" || first=="\"") {
+					// String
+					color = "red";
+				}
+				else {
+					// Digit
+					color = "#6600FF";
+				}
+			}
+			
+			charFromIdx = from + match2[1];
+			charToIdx   = from + match2[1] + strlen (match2[0]);
+			
+			str = substr (text, charFromIdx, charToIdx-charFromIdx);
+			formatted ='<span style="color:'.color.'">'.(str_replace (["\t", " "], [htmlTab, htmlSpace], htmlspecialchars (str))).'</span>';
+			
+			// Set tabs to 2 spaces
+			str2 = substr (text, charFromIdxOld, charFromIdx-charFromIdxOld);
+
+			str2Correct = "";
+			ptr = memref (str2);
+			len = strlen (str2);
+			fCorrect = false;
+
+			for (i=0;i<len;i++) {
+				c = memat(ptr+i,1);
+				if (fCorrect && c!=" " && c!="\t" && c!="\r")
+					fCorrect = false;
+				if (fCorrect) {
+					c2 = '';
+					if ((i+1)<len)
+						c2 = memat(ptr+i+1,1);
+					if ((c==" " && c2==" ") || (c==" " && c2=="\t")) {
+						tabCnt++;
+						str2Correct.="\t";
+						i++;
+						continue;
+					}
+					else
+					if (c=="\t") {
+						tabCnt++;
+					}
+					else
+					if (c==" ") {
+						if (tabCnt<oldTabCnt) {
+							str2Correct.="\t";
+							tabCnt++;
+						}
+						continue; 
+					}
+				}
+				str2Correct.=c;
+				if (c=="\n") {
+					oldTabCnt = tabCnt;
+					tabCnt = 0;
+					fCorrect = true;
+				}
+			}
+			codeCleaned.=str2Correct;
+			codeFormatted.=(str_replace (["\t", " "], [htmlTab, htmlSpace], htmlspecialchars (str2Correct)));			
+			codeFormatted.=formatted;
+			codeCleaned.=str;
+			charFromIdxOld = charToIdx;
+		}
+
+		color = "blue";
+		charFromIdx = to - 2;
+		charToIdx   = to;
+		str = substr (text, charFromIdx, charToIdx-charFromIdx);
+		formatted ='<span style="color:'.color.'">'.(str_replace (["\t", " "], [htmlTab, htmlSpace], htmlspecialchars (str))).'</span>';
+		str2 = substr (text, charFromIdxOld, charFromIdx-charFromIdxOld);
+		codeFormatted.=(str_replace (["\t", " "], [htmlTab, htmlSpace], htmlspecialchars (str2)));
+		codeCleaned.=str2;
+		codeFormatted.=formatted;
+		codeCleaned.=str;
+		charFromIdxOld = charToIdx;
+	}
+	charFromIdx = strlen (text);
+	str = substr (text, charFromIdxOld, charFromIdx-charFromIdxOld);
+	codeFormatted.='<span style="color:#A6A6A6;">'.(str_replace (["\t", " "], [htmlTab, htmlSpace], htmlspecialchars (str))).'</span>';
+	codeCleaned.=str;
+	
+	// Line numbers
+	style = "";
+	if (fLineNo) {
+		style = '
+		<style>
+		.code { padding:0px 20px 0px 60px;background-color:#F5F3E9;white-space:nowrap;overflow-x:auto;font-family:Courier; }
+		.lineno { position:absolute; left:18px; display:inline-block; background-color:#EBEBEB; border-right:1px solid #AAAAAA; color:#AAAAAA !important; margin-right:10px; width:40px; padding-right:10px; text-align:right; font-family:Courier;};
+		</style>';
+		
+		lineIdx = 1;
+		lines = explode ("\n", codeFormatted);
+		codeFormatted = "";
+		foreach (lines as idx => line) {
+			if (idx)
+				codeFormatted.="<br>";
+			codeFormatted.='<span class="lineno">'.lineIdx.'</span>'.line;
+			lineIdx++;
+		}
+	}
+	else {
+		style = '
+		<style>
+		.code { padding:20px;background-color:#F5F3E9;white-space:nowrap;overflow-x:auto;font-family:Courier; }
+		.lineno { position:absolute; left:18px; display:inline-block; background-color:#EBEBEB; border-right:1px solid #AAAAAA; color:#AAAAAA !important; margin-right:10px; width:40px; padding-right:10px; text-align:right; font-family:Courier;};
+		</style>';
+		codeFormatted = nl2br (codeFormatted);
+	}
+	
+	lines = explode ("\n", codeCleaned);
+	codeCleaned = "";
+	foreach (lines as idx => line) {
+		line = rtrim (line, " \r\t");
+		if (idx==count(lines)-1 && empty (line))
+				break;
+		if (idx)
+				codeCleaned.="\r\n";
+		codeCleaned.=line;
+	}
+}
+?>

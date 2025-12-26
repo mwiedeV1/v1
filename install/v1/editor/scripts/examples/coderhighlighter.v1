@@ -1,0 +1,16 @@
+<?v1  require_once ("helpers/start.v1");  ?>
+<h3>Code Highlighter with Regular Expressions</h3>
+<?v1 
+dl ("regex"); // Regular expression module
+require_once ("../../../lib/utils.inc.v1");
+require_once ("../../../lib/codeformatter.inc.v1");
+
+filename = __FILE__;
+codeFormatted = codeCleaned = style = "";
+formatV1Code (file_get_contents (filename), codeFormatted, style, codeCleaned);
+
+print (style.'<div class="code"><code>'.codeFormatted.'<br></code></div>');
+// print ('<p>Cleaned source code: </p><textarea style="width:100%;height:400px;">'.htmlspecialchars (codeCleaned).'</textarea>');
+
+?>
+<?v1 require_once ("helpers/end.v1"); ?>
