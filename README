@@ -23,7 +23,7 @@ cd extensions/regex/pcre-8.43/
 make
 
 3. Compile OpenSSL
-cd extensions/ssl/openssl-1.0.2u/
+cd extensions/ssl/openssl-1.1.1w/
 ./config -fPIC no-shared
 make
 
@@ -49,4 +49,4 @@ You can test directly in install/v1 sub directory.
 
 See also: https://www.v1-script.net
 
-V1 is a project from Matthias Wiede 2016-2021.
+V1 is a project from Matthias Wiede 2016-2025.
