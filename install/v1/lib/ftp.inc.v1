@@ -2,7 +2,7 @@
 require_once ("io.inc.v1");
 require_once ("utils.inc.v1");
 
-const FTP_RECV_TIMEOUT = 1000;
+const FTP_RECV_TIMEOUT = 10000;
 
 const FTP_STATUS_PROT_WRITE = 1;
 const FTP_STATUS_PROT_READ = 2;

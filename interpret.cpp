@@ -914,13 +914,19 @@ int func_date(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext
 		}
 		format = *argvalues[0];
 	}
-	if (argvalues.size() > 1) {
-		if (argvalues[1]->datatype > DataValue::DATATYPE_STR)
-			return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_NUM_REQUIRED;
-		date.setTime((WTIME)argvalues[1]->numvalue);
+	try {
+		if (argvalues.size() > 1) {
+			if (argvalues[1]->datatype > DataValue::DATATYPE_STR)
+				return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_NUM_REQUIRED;
+			date.setTime((WTIME)argvalues[1]->numvalue);
+		}
+		ret = (WCSTR)date.format(format);
+		ret.datatype = DataValue::DATATYPE_STR; // Interpretate as string
 	}
-	ret = (WCSTR)date.format(format);
-	ret.datatype = DataValue::DATATYPE_STR; // Interpretate as string
+	catch (WDateException& e ) {
+		ctx.warnInterprete ((WCSTR) e.getMessage ());
+		ret = (bool) false;
+	}
 	return 0;
 }
 
@@ -944,13 +950,19 @@ int func_gmdate(vector<DataValue *> &argvalues, DataValue &ret, InterpreterConte
 		}
 		format = *argvalues[0];
 	}
-	if (argvalues.size() > 1) {
-		if (argvalues[1]->datatype != DataValue::DATATYPE_NUM)
-			return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_NUM_REQUIRED;
-		date.setTime((WTIME)argvalues[1]->numvalue);
+	try {
+		if (argvalues.size() > 1) {
+			if (argvalues[1]->datatype != DataValue::DATATYPE_NUM)
+				return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_NUM_REQUIRED;
+			date.setTime((WTIME)argvalues[1]->numvalue);
+		}
+		ret = (WCSTR)date.format(format);
+		ret.datatype = DataValue::DATATYPE_STR; // Interpretate as string
 	}
-	ret = (WCSTR)date.format(format);
-	ret.datatype = DataValue::DATATYPE_STR; // Interpretate as string
+	catch (WDateException& e ) {
+		ctx.warnInterprete ((WCSTR) e.getMessage ());
+		ret = (bool) false;
+	}
 	return 0;
 }
 
