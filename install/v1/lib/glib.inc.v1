@@ -4,21 +4,34 @@ if (version(1)=='Windows')
 {
 	require_once ("win32.inc.v1");
 	glibLibName = 'libglib-2.0-0.dll';
+	gobjectLibName = 'libgobject-2.0-0.dll';
 }
 else
 {
 	glibLibName = 'libglib-2.0.so.0';
+	gobjectLibName = 'libgobject-2.0.so.0';
 }
 
 hDLLGLib = dl (glibLibName, true);
-if (!hDLLGLib)
-{
+if (!hDLLGLib) {
 	// Search for GLib library
 	libList = explode ("\n", system ('/usr/bin/find /usr -name "libglib*.so*"'));
 	if (!empty (libList[0])) {
-		hDLLGLib= dl (mySQLLibName = libList[0], true);
+		hDLLGLib= dl (glibLibName = libList[0], true);
 		if (hDLLGLib) {
 			print ('Please replace for faster starting: glibLibName="'.libList[0].'"; in '.__FILE__);
+		}
+	}
+}
+
+hDLLGObject = dl (gobjectLibName, true);
+if (!hDLLGObject) {
+	// Search for GObject library
+	libList = explode ("\n", system ('/usr/bin/find /usr -name "libgobject*.so*"'));
+	if (!empty (libList[0])) {
+		hDLLGObject= dl (gobjectLibName = libList[0], true);
+		if (hDLLGLib) {
+			print ('Please replace for faster starting: gobjectLibName="'.libList[0].'"; in '.__FILE__);
 		}
 	}
 }
@@ -92,6 +105,21 @@ function g_source_remove (tag)
 {
 	global hDLLGLib;
 	return call (hDLLGLib, "g_source_remove", [['p'],'b'], tag);
+}
+
+function g_free (ptr) {
+	global hDLLGLib;
+	call (hDLLGLib, 'g_free', 'p:', ptr);
+}
+
+function g_object_unref (ptr) {
+	global hDLLGObject;
+	call (hDLLGObject, 'g_object_unref', 'p:', ptr);
+}
+
+function g_object_set (object, prop1, prop2) {
+	global hDLLGObject;
+	call (hDLLGObject, 'g_object_set', 'pssp:', object, prop1, prop2, null);
 }
 
 ?>

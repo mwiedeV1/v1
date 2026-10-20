@@ -3,20 +3,23 @@
   Examples for GTK
 
   Note: GTK Library must be installed on your system.
-
-  On Windows you can install GTK Runtime Environment (32 Bit)
-  with following link: https://sourceforge.net/projects/gtk-win/
-
+  
+  On Windows you can install GTK Runtime Environment (32 Bit) 
+  with following link: https://sourceforge.net/projects/gtk-win/    
+  
   On Linux you can install it manually like this:
   apt-get install libgtk-3-dev
-
+  
   Usage: v1 gtk-examples.v1
 */
 
 error_reporting (0);
-require_once ("../lib/gtk.inc.v1");
-require_once ("../lib/cairo.inc.v1");
-require_once ("../lib/math_utils.inc.v1");
+
+const V1_LIB_PATH = "../../lib";
+
+require_once (V1_LIB_PATH."/gtk_layout.inc.v1");
+require_once (V1_LIB_PATH."/cairo.inc.v1");
+require_once (V1_LIB_PATH."/math_utils.inc.v1");
 
 const WINDOW_WIDTH  = 800;
 const WINDOW_HEIGHT = 500;
@@ -30,430 +33,901 @@ cairoDrawArea = null;
 
 // Menu list
 menuList = array (
-	"Examples" => array (
-	   "Layout" => array (
-	       "Pane Layout" => "example_layout1",
-	       "Table Layout" => "example_layout2",
-	       "Free Layout with action" => "example_layout3",
-	       "Pack Layout 1" => "example_layout4",
-	       "Pack Layout 2" => "example_layout5",
-	       "Free Layout with Input" => "example_layout6",
-	   ),
-	   "Cairo" => array (
-	       "Drawing with Cairo 1" => "example_cairo1",
-	       "Drawing with Cairo 2" => "example_cairo2",
-	       "Animation with Cairo" => "example_cairo3",
-	   ),
-	   "-",
-	   "Exit" => "gtk_main_quit"
-	),
-	"Info" => array (
-	   "About" => "show_gtk_version"
-	)
+  "Examples" => array (
+    "Layout" => array (
+      "Pane Layout" => "example_layout1",
+      "Table Layout" => "example_layout2",
+      "Free Layout with action" => "example_layout3",
+      "Pack Layout 1" => "example_layout4",
+      "Pack Layout 2" => "example_layout5",
+      "Free Layout with Input" => "example_layout6",
+    ),
+    "Dialog" => array (
+      "Simple Dialog" => "example_dialog1",
+      "File Dialog" => "example_dialog2",
+    ),
+    
+    "Complex" => array (
+      "Sidebar and Table" => "example_sidebar_table",
+      "Layouter" => "example_layouter",      
+    ),
+    
+    "Cairo" => array (
+      "Drawing with Cairo 1" => "example_cairo1",
+      "Drawing with Cairo 2" => "example_cairo2",
+      "Animation with Cairo" => "example_cairo3",
+    ),
+    "-",
+    "Exit" => "gtk_main_quit"
+  ),
+  "Info" => array (
+    "About" => "show_gtk_version"
+  )
 );
 
-function example_layout1 (window, mainLayout)
-{
-	global hDLLGTK;
-	gtk_window_set_title (window, WINDOW_TITLE.": Pane Layout");
 
-	hpanes = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
-	buttons[0] = gtk_button_new_with_label ("first");
-	buttons[1] = gtk_button_new_with_label ("second");
-	gtk_paned_add1 (hpanes, buttons[0]);
-	gtk_paned_add2 (hpanes, buttons[1]);
 
-	vpanes = gtk_paned_new (GTK_ORIENTATION_VERTICAL);
-	buttons[2] = gtk_button_new_with_label ("third");
-	gtk_paned_add1 (vpanes, buttons[2]);
-	gtk_paned_add2 (vpanes, hpanes);
+function example_layout1 (window, mainLayout) {
+  global hDLLGTK;
+  gtk_window_set_title (window, WINDOW_TITLE.": Pane Layout");
+    
 
-	gtk_container_add (mainLayout, vpanes);
-	gtk_widget_show_all (window);
-	return vpanes;
+  hpanes = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
+  buttons[0] = gtk_button_new_with_label ("first");
+  buttons[1] = gtk_button_new_with_label ("second");
+  gtk_paned_add1 (hpanes, buttons[0]);
+  gtk_paned_add2 (hpanes, buttons[1]);
+  
+  vpanes = gtk_paned_new (GTK_ORIENTATION_VERTICAL);
+  buttons[2] = gtk_button_new_with_label ("third");
+  gtk_paned_add1 (vpanes, buttons[2]);
+  gtk_paned_add2 (vpanes, hpanes);
+
+  gtk_container_add (mainLayout, vpanes);
+  gtk_widget_show_all (window);
+  return vpanes;
 }
 
 function change_homogenous (widget, table)
 {
-	/* change homogenous */
-	gtk_table_set_homogeneous (table, !gtk_table_get_homogeneous (table));
+  /* change homogenous */
+  gtk_table_set_homogeneous (table, !gtk_table_get_homogeneous (table));
 }
 
-function example_layout2 (window, mainLayout)
-{
-	global hDLLGTK;
-	gtk_window_set_title (window, WINDOW_TITLE.": Table Layout");
+function example_layout2 (window, mainLayout) {
+  global hDLLGTK;
+  gtk_window_set_title (window, WINDOW_TITLE.": Table Layout");
+  
+  /* table with 3 rows and 3 columns, unhomogenous size */
+  table = gtk_table_new (3, 3, false);
 
-	/* table with 3 rows and 3 columns, unhomogenous size */
-	table = gtk_table_new (3, 3, false);
-
-	/* insert buttons and labels */
-	buttons[0] = gtk_button_new_with_label ("0");
-	buttons[1] = gtk_button_new_with_label ("right top");
-	buttons[2] = gtk_button_new_with_label ("homogenous?");
-	g_signal_connect (buttons[2], "clicked", "change_homogenous", table);
-
-	buttons[3] = gtk_button_new_with_label ("0");
-	buttons[4] = gtk_button_new_with_label ("right bottom");
-	labels[0] = gtk_label_new ("N");
-	labels[1] = gtk_label_new ("W");
-	labels[2] = gtk_label_new ("O");
-	labels[3] = gtk_label_new ("S");
-
-	/* frist row */
-	gtk_table_attach_defaults (table, buttons[0], 0, 1, 0, 1);
-	gtk_table_attach_defaults (table, labels[0], 1, 2, 0, 1);
-	gtk_table_attach_defaults (table, buttons[1], 2, 3, 0, 1);
-
-	/* second row */
-	gtk_table_attach_defaults (table, labels[1], 0, 1, 1, 2);
-	gtk_table_attach_defaults (table, buttons[2], 1, 2, 1, 2);
-	gtk_table_attach_defaults (table, labels[2], 2, 3, 1, 2);
-
-	/* third row */
-	gtk_table_attach_defaults (table, buttons[3], 0, 1, 2, 3);
-	gtk_table_attach_defaults (table, labels[3], 1, 2, 2, 3);
-	gtk_table_attach_defaults (table, buttons[4], 2, 3, 2, 3);
-
-	gtk_container_add (mainLayout, table);
-	return table;
+  /* insert buttons and labels */
+  buttons[0] = gtk_button_new_with_label ("0");
+  buttons[1] = gtk_button_new_with_label ("right top");
+  buttons[2] = gtk_button_new_with_label ("homogenous?");
+  g_signal_connect (buttons[2], "clicked", "change_homogenous", table);
+  
+  buttons[3] = gtk_button_new_with_label ("0");
+  buttons[4] = gtk_button_new_with_label ("right bottom");
+  labels[0] = gtk_label_new ("N");
+  labels[1] = gtk_label_new ("W");
+  labels[2] = gtk_label_new ("O");
+  labels[3] = gtk_label_new ("S");
+  
+  /* frist row */
+  gtk_table_attach_defaults (table, buttons[0], 0, 1, 0, 1);
+  gtk_table_attach_defaults (table, labels[0], 1, 2, 0, 1);
+  gtk_table_attach_defaults (table, buttons[1], 2, 3, 0, 1);
+  
+  /* second row */
+  gtk_table_attach_defaults (table, labels[1], 0, 1, 1, 2);
+  gtk_table_attach_defaults (table, buttons[2], 1, 2, 1, 2);
+  gtk_table_attach_defaults (table, labels[2], 2, 3, 1, 2);
+  
+  /* third row */
+  gtk_table_attach_defaults (table, buttons[3], 0, 1, 2, 3);
+  gtk_table_attach_defaults (table, labels[3], 1, 2, 2, 3);
+  gtk_table_attach_defaults (table, buttons[4], 2, 3, 2, 3);
+  
+  gtk_container_add (mainLayout, table);
+  return table;
 }
 
 function move_button (button, layout)
 {
-	x = 0;
-	gtk_container_child_get (layout, button, "x", x, null);
-	y = 0;
-	gtk_container_child_get (layout, button, "y", y, null);
-	x = x % 100 + 10;
-
-	gtk_layout_move (layout, button, x, y);
+  x = 0;
+  gtk_container_child_get (layout, button, "x", x, null);
+  y = 0;
+  gtk_container_child_get (layout, button, "y", y, null);   
+  x = x % 100 + 10;
+  gtk_layout_move (layout, button, x, y);
 }
 
-function example_layout3 (window, mainLayout)
-{
-	gtk_window_set_title (window, WINDOW_TITLE.": Free Layout");
+function example_layout3 (window, mainLayout) {
+  gtk_window_set_title (window, WINDOW_TITLE.": Free Layout");
 
-	layout = gtk_layout_new (null, null);
+  layout = gtk_layout_new (null, null);
 
-	label = gtk_label_new ("Test");
-	button = gtk_button_new_with_label ("Press me!");
-
-	gtk_layout_put (layout, label, 10, 10);
-	gtk_layout_put (layout, button, 20, 100);
-	g_signal_connect (button, "clicked", "move_button", layout);
-
-	gtk_container_add (mainLayout, layout);
-	return layout;
+  label = gtk_label_new ("Test");
+  button = gtk_button_new_with_label ("Press me!");
+  
+  gtk_layout_put (layout, label, 10, 10);
+  gtk_layout_put (layout, button, 20, 100);
+  g_signal_connect (button, "clicked", "move_button", layout);
+  
+  gtk_container_add (mainLayout, layout);
+  return layout;
 }
 
-function example_layout4 (window, mainLayout)
-{
-	gtk_window_set_title (window, WINDOW_TITLE.": Pack Layout");
+function example_layout4 (window, mainLayout) {
+  gtk_window_set_title (window, WINDOW_TITLE.": Pack Layout");
 
-	vbox = gtk_vbox_new (false, 2);
+  vbox = gtk_vbox_new (false, 2);
+  
+  buttons[0] = gtk_button_new_with_label ("FALSE, FALSE");
+  gtk_box_pack_start (vbox, buttons[0], false, false, 0);
+  buttons[1] = gtk_button_new_with_label ("TRUE, FALSE");
+  gtk_box_pack_start (vbox, buttons[1], true, false, 0);
+  buttons[2] = gtk_button_new_with_label ("TRUE, TRUE");
+  gtk_box_pack_start (vbox, buttons[2], true, true, 0);
+  buttons[3] = gtk_button_new_with_label ("FALSE, TRUE");
+  gtk_box_pack_start (vbox, buttons[3], false, true, 0);
 
-	buttons[0] = gtk_button_new_with_label ("FALSE, FALSE");
-	gtk_box_pack_start (vbox, buttons[0], false, false, 0);
-	buttons[1] = gtk_button_new_with_label ("TRUE, FALSE");
-	gtk_box_pack_start (vbox, buttons[1], true, false, 0);
-	buttons[2] = gtk_button_new_with_label ("TRUE, TRUE");
-	gtk_box_pack_start (vbox, buttons[2], true, true, 0);
-	buttons[3] = gtk_button_new_with_label ("FALSE, TRUE");
-	gtk_box_pack_start (vbox, buttons[3], false, true, 0);
-
-	gtk_container_add (mainLayout, vbox);
-	return vbox;
+  gtk_container_add (mainLayout, vbox);
+  return vbox;
 }
 
-function example_layout5 (window, mainLayout)
-{
-	gtk_window_set_title (window, WINDOW_TITLE.": Pack Layout");
+function example_layout5 (window, mainLayout) {
+  gtk_window_set_title (window, WINDOW_TITLE.": Pack Layout");
 
-	vbox = gtk_vbox_new (false, 0);
+  vbox = gtk_vbox_new (false, 0);
+  
+  /* Top row */
+  buttons[0] = gtk_button_new_with_label ("Menu");
+  gtk_box_pack_start (vbox, buttons[0], false, false, 0);
 
-	/* Top row */
-	buttons[0] = gtk_button_new_with_label ("Menu");
-	gtk_box_pack_start (vbox, buttons[0], false, false, 0);
+  /* Middle row */
+  hbox = gtk_hbox_new (true, 0);
+  buttons[1] = gtk_button_new_with_label ("TRUE, TRUE");
+  gtk_box_pack_start (hbox, buttons[1], true, true, 0);
+  buttons[2] = gtk_button_new_with_label ("FALSE, FALSE");
+  gtk_box_pack_start (hbox, buttons[2], false, false, 0);
+  buttons[3] = gtk_button_new_with_label ("TRUE, TRUE");
+  gtk_box_pack_start (hbox, buttons[3], true, true, 0);
+  gtk_box_pack_start (vbox, hbox, true, true, 0);
 
-	/* Middle row */
-	hbox = gtk_hbox_new (true, 0);
-	buttons[1] = gtk_button_new_with_label ("TRUE, TRUE");
-	gtk_box_pack_start (hbox, buttons[1], true, true, 0);
-	buttons[2] = gtk_button_new_with_label ("FALSE, FALSE");
-	gtk_box_pack_start (hbox, buttons[2], false, false, 0);
-	buttons[3] = gtk_button_new_with_label ("TRUE, TRUE");
-	gtk_box_pack_start (hbox, buttons[3], true, true, 0);
-	gtk_box_pack_start (vbox, hbox, true, true, 0);
+  /* Bottom row */
+  buttons[4] = gtk_button_new_with_label ("Status");
+  gtk_box_pack_start (vbox, buttons[4], false, false, 0);
 
-	/* Bottom row */
-	buttons[4] = gtk_button_new_with_label ("Status");
-	gtk_box_pack_start (vbox, buttons[4], false, false, 0);
-
-	gtk_container_add (mainLayout, vbox);
-	return vbox;
+  gtk_container_add (mainLayout, vbox);
+  return vbox;
 }
 
+g_controls[0] = array ();
 
-
-function example_layout6_button_pressed (instance, entry)
-{
-	global window;
-	str = gtk_entry_get_text (entry);
-	gtkMessageBox (window, 'You inserted <b>'.str.'</b>');
+function example_layout6_button_pressed (instance, idx) {
+  global window, g_controls;
+  str = gtk_entry_get_text (g_controls[idx]["entry"]);
+  str2 = gtk_combo_box_text_get_active_text (g_controls[idx]["combo_box"]);
+	
+  gtkMessageBox (window, 'You inserted <b>'.str.'</b> Combox selection: <b>'.str2.'</b>');
 }
 
-function example_layout6 (window, mainLayout)
-{
-
+function example_layout6 (window, mainLayout) {
+	global g_controls;
 	gtk_window_set_title (window, WINDOW_TITLE.": Free Layout, Text and Message Box");
 
 	layout = gtk_layout_new (null, null);
 
 	label = gtk_label_new ("Insert your name:");
 	entry =  gtk_entry_new ();
-	initText = "";
-	buffer =  gtk_entry_buffer_new (initText, strlen (initText));
+	gtk_entry_set_activates_default (entry, true);
+
+	initText = "Hallo";
+	buffer = gtk_entry_buffer_new (initText, strlen (initText));
 	gtk_entry_set_buffer (entry, buffer);
 	button = gtk_button_new_with_label ("Submit");
 
+	combo_box = gtk_combo_box_text_new();
+	gtk_combo_box_text_append_text (combo_box, "First");
+	gtk_combo_box_text_append_text (combo_box, "Second");
+	gtk_combo_box_text_append_text (combo_box, "Third");
+	gtk_combo_box_set_active (combo_box, 0);
+	
 
 	gtk_layout_put (layout, label, 10, 10);
-	gtk_layout_put (layout, entry, 10, 30);
-	gtk_layout_put (layout, button, 10, 65);
-
-	g_signal_connect (button, "clicked", "example_layout6_button_pressed", entry);
+	gtk_layout_put (layout, entry, 10, 35);
+	gtk_layout_put (layout, combo_box, 10, 75);
+	gtk_layout_put (layout, button, 10, 130);
+	
+	gtk_widget_set_can_default (button, true);
+	gtk_widget_grab_default (button);
+	
+	g_controls[0]=array ("entry"=>entry,"combo_box"=>combo_box);
+	
+	g_signal_connect (entry, "activate", "example_layout6_button_pressed", 0); 
+	g_signal_connect (button, "clicked", "example_layout6_button_pressed", 0);  
 	gtk_widget_show (layout);
 	gtk_container_add (mainLayout, layout);
 
 	return layout;
 }
 
-function example_cairo1_draw (widget, cr, param)
+function example_cairo1_draw (widget, cr, param) 
 {
-	if (GTK_MAJOR_VERSION<3) {
-		// Get context only on older GTK version
-		cr = gdk_cairo_create (gtk_widget_get_window  (widget));
+  if (GTK_MAJOR_VERSION<3) {
+    // Get context only on older GTK version
+    cr = gdk_cairo_create (gtk_widget_get_window  (widget));
+  }
+  
+  w = gtk_widget_get_allocated_width (widget);
+  h = gtk_widget_get_allocated_height (widget);
+
+  cairo_set_source_rgb (cr, 0, 0, 1);
+  cairo_rectangle (cr, 0,  0, w, h);  
+  cairo_fill (cr);
+
+  cairo_set_source_rgb (cr, 1, 0, 1);
+  cairo_set_line_width (cr, 10);
+  cairo_move_to (cr, 0, 0);
+  cairo_line_to (cr, w, h);
+  cairo_move_to (cr, w, 0);
+  cairo_line_to (cr, 0, h);
+  cairo_stroke (cr);
+     
+  // Destroy context only on older GTK version
+  if (GTK_MAJOR_VERSION<3)
+    cairo_destroy (cr);
+}
+
+function example_cairo1 (window, mainLayout) 
+{
+  gtk_window_set_title (window, WINDOW_TITLE.": Drawing with Cairo 1");
+  drawArea =  gtk_drawing_area_new ();  
+  if (GTK_MAJOR_VERSION>=3)
+    g_signal_connect (drawArea, "draw", "example_cairo1_draw:3");
+  else
+    g_signal_connect (drawArea, "expose-event", "example_cairo1_draw:3");    
+    
+  gtk_container_add (mainLayout, drawArea);
+  return drawArea;
+}
+
+
+function example_cairo2_draw (widget, cr, param) 
+{
+  if (GTK_MAJOR_VERSION<3) {
+    // Get context only on older GTK version
+    cr = gdk_cairo_create (gtk_widget_get_window  (widget));
+  }
+  
+  w = gtk_widget_get_allocated_width (widget);
+  h = gtk_widget_get_allocated_height (widget);
+
+  cairo_set_source_rgb(cr, 1, 1, 1);
+  cairo_paint(cr);
+  cairo_set_source_rgb(cr, 0, 0, 0);
+  
+  w2 = w/2;
+  h2 = h/2;
+  for (i = 0; i <= 10000; i+=10) {
+    x = w2 + cos(2 * PI * i / 500) * 70 + cos(2 * PI * i / 10000) * 110;
+    y = h2 + sin(2 * PI * i / 500) * 70 + sin(2 * PI * i / 10000) * 110;
+    if (i == 0)
+        cairo_move_to(cr, x, y);
+    else
+        cairo_line_to(cr, x, y);
+  }
+  cairo_close_path(cr);
+  cairo_stroke(cr);  
+  
+  // Save as png
+  /*
+  s = cairo_surface_create_for_rectangle (cairo_get_target (cr), w2-200, h2-200, 400, 400);
+  cairo_surface_write_to_png (s, "surface.png");
+  cairo_surface_destroy (s);
+  */
+    
+  // Destroy context only on older GTK version
+  if (GTK_MAJOR_VERSION<3)
+    cairo_destroy (cr);
+}
+
+function example_cairo2 (window, mainLayout) 
+{
+  gtk_window_set_title (window, WINDOW_TITLE.": Drawing with Cairo 2");
+  drawArea =  gtk_drawing_area_new ();  
+  if (GTK_MAJOR_VERSION>=3)
+    g_signal_connect (drawArea, "draw", "example_cairo2_draw:3");
+  else
+    g_signal_connect (drawArea, "expose-event", "example_cairo2_draw:3");    
+    
+  gtk_container_add (mainLayout, drawArea);
+  return drawArea;
+}
+
+
+function example_cairo3_timer (param) 
+{
+  global cairoDrawArea, cairoAngle;
+  w = gtk_widget_get_allocated_width (cairoDrawArea);
+  h = gtk_widget_get_allocated_height (cairoDrawArea);
+
+  cairoAngle+=0.063;
+  gtk_widget_queue_draw (cairoDrawArea);
+  return true;
+}
+
+function example_cairo3_draw (widget, cr, param) 
+{
+  global cairoAngle, cairoText;
+  if (GTK_MAJOR_VERSION<3) {
+    // Get context only on older GTK version
+    cr = gdk_cairo_create (gtk_widget_get_window  (widget));
+  }
+  
+  w = gtk_widget_get_allocated_width (widget);
+  h = gtk_widget_get_allocated_height (widget);
+
+  cairo_set_source_rgb (cr, 1, 0, 0);
+  cairo_translate (cr, w / 2.0, h / 2.0);
+  cairo_set_font_size (cr, 50);
+  cairo_rotate (cr, cairoAngle);
+  ext = [];
+  cairo_text_extents (cr, cairoText, ext);
+  cairo_move_to (cr, -ext["width"] / 2.0, ext["height"] / 2.0);
+  cairo_show_text (cr, cairoText);
+    
+  // Destroy context only on older GTK version
+  if (GTK_MAJOR_VERSION<3)
+    cairo_destroy (cr);
+}
+
+function example_cairo3 (window, mainLayout) 
+{
+  global cairoTimer, cairoDrawArea; 
+  gtk_window_set_title (window, WINDOW_TITLE.": Animation with Cairo");
+  cairoDrawArea =  gtk_drawing_area_new ();  
+  if (GTK_MAJOR_VERSION>=3)
+    g_signal_connect (cairoDrawArea, "draw", "example_cairo3_draw:3");
+  else
+    g_signal_connect (cairoDrawArea, "expose-event", "example_cairo3_draw:3");    
+  gtk_container_add (mainLayout, cairoDrawArea);
+
+  if (cairoTimer) {
+    g_source_remove (cairoTimer);
+    cairoTimer = null;
+  }
+  cairoTimer = g_timeout_add (80, "example_cairo3_timer");
+  return cairoDrawArea;
+}
+
+
+function example_dialog1 (window, mainLayout) {
+  gtk_window_set_title (window, WINDOW_TITLE.": Simple Dialog");
+  d = gtk_dialog_new ();  
+  gtk_window_set_transient_for (d, window);
+  gtk_window_set_position (d, GTK_WIN_POS_CENTER_ON_PARENT);
+  gtk_window_set_title (d, "Modal Dialog");
+
+  area = gtk_dialog_get_content_area (d);
+  label = gtk_label_new ("Press any button");
+  gtk_container_add (area, label);
+
+
+  gtk_dialog_add_button (d, "Button 1", 1);
+  gtk_dialog_add_button (d, "Button 2", 2);
+  gtk_dialog_add_button (d, "Button 3", 3);
+  gtk_widget_show_all (d);
+
+  ret = gtk_dialog_run (d);
+  gtk_widget_destroy  (d);
+  if (ret>0)
+    gtkMessageBox (window, "You pressed the Button ".ret);
+  return 0;
+}
+
+
+
+function example_layouter (window, mainLayout) {
+  gtk_window_set_title (window, WINDOW_TITLE.": Layouter");
+  d = gtk_dialog_new ();  
+  gtk_window_set_icon_from_file (d, 'favicon.ico');
+  gtk_window_set_transient_for (d, window);
+  gtk_window_set_position (d, GTK_WIN_POS_CENTER_ON_PARENT);
+  gtk_window_set_title (d, "Complex Dialog");
+
+
+  layout = gtk_layout (
+    [
+      "notebook" => 
+      [             
+        "paned_v:1" => 
+        [   
+          "border-width" => 10,
+          "name" => "Tabulator 1",
+          
+          "pane-position" => 100,
+          /*
+          "hbox" =>  [
+            
+            "button:2" => ["text" => "Text 3", "pack"=>[true, true]],
+            "button:3" => ["text" => "Text 4", "pack"=>[true, true]],
+          ],
+          */
+          "button:2" => ["text" => "Text 3", "pack"=>[true, true]],
+          
+          "paned_h" => 
+          [
+            "pane-position" => 200,
+
+            'button:2' => ["text"=>"Press me!"],
+            'button:3',                
+          ]     
+        ],
+        
+       "hbox" => [
+          "border-width"=> 0,     
+          "col-spacings" => 0,     
+          "name" => "Tabulator 2",
+
+   
+           "alignment:1:0.5:0" => [
+           
+            // "size" => [400, 300],
+                    
+            "pack"=>[true, true, 0],
+
+            "attach"=>[0,1,0,1],
+                        
+            
+            "frame" => [
+             "name" => "Übersicht",            
+             "border-width"=> 10,     
+
+              "vbox" =>  [
+                "border-width"=> 10,
+                
+                "alignment:1:0:0:0:0" => [
+                  "label:2" => ["text" => "Firstname", "pack"=>[false, false, 3]],
+                ],
+                
+                "entry:2" => ["text" => "", "size"=>[300, 20], "pack"=>[true, true, 3]],
+                
+                "alignment:2:0:0:0:0" => [
+                  "label:3" => ["text" => "Lastname", "pack"=>[true, true, 3]],
+                ],     
+                                            
+                "entry:3" => ["text" => "Text 4", "pack"=>[true, true, 3]],
+              ],
+            ]
+            
+          ],
+
+          
+          "alignment:2:0.5:0" => [
+            
+            // "size" => [400, 300],
+                    
+            "pack"=>[true, true, 0],
+            
+             "frame" => [
+               "name" => "Übersicht",            
+               "border-width"=> 10,     
+  
+                "vbox" =>  [
+                  "border-width"=> 10,
+                  
+                  "alignment:1:0:0:0:0" => [
+                    "label:2" => ["text" => "Firstname", "pack"=>[false, false, 3]],
+                  ],
+                  
+                  "entry:2" => ["text" => "", "size"=>[300, 20], "pack"=>[true, true, 3]],
+                  
+                  "alignment:2:0:0:0:0" => [
+                    "label:3" => ["text" => "Lastname", "pack"=>[true, true, 3]],
+                  ],     
+                                              
+                  "entry:3" => ["text" => "Text 4", "pack"=>[true, true, 3]],
+                ],
+              ]
+            
+            
+          ],
+        
+        ],
+
+        
+        "hbox:2" => [
+          "name" => "Tabulator 3",
+
+          "vbox" => 
+          [
+            "border-width"=> 10,          
+            "name" => "Tabulator 3",
+            "pack"=>[true, true, 0],
+            
+            
+            "frame:1" => [
+                      
+              "pack"=>[false, false, 0],
+  
+              "attach"=>[0,0,0,0],
+                          
+              "name" => "Übersicht",            
+              
+              "vbox" =>  [
+                "border-width"=> 10,
+                
+                "alignment:1:0:0:0:0" => [
+                  "label:2" => ["text" => "Firstname", "pack"=>[false, false, 3]],
+                ],
+                
+                "entry:2" => ["text" => "", "pack"=>[true, true, 3]],
+                
+                "alignment:2:0:0:0:0" => [
+                  "label:3" => ["text" => "Lastname", "pack"=>[true, true, 3]],
+                ],     
+                                            
+                "entry:3" => ["text" => "Text 4", "pack"=>[true, true, 3]],
+              ],
+              
+            ],
+
+            "vbox:0:1" =>  ["size" => [0, 20], "hsep" ],
+
+            
+            "frame:2" => [
+            
+              "name" => "Übersicht 2",            
+  
+              "attach"=>[2,2,2,2],
+              
+              "vbox" =>  [
+                "border-width"=> 10,
+                
+                "entry:2" => ["text" => "Text 3", "pack"=>[true, true, 3]],
+                "entry:3" => ["text" => "Text 4", "pack"=>[true, true, 3]],
+              ],
+              
+            ],
+  
+            "vbox::1" =>  ["size" => [0, 20], /* "hsep" */ ],  
+            
+            'button:3'  => ["text"=>"Save"],    
+             
+          ], 
+          
+          
+        "vbox:2" => 
+          [
+            "border-width"=> 10,          
+            "name" => "Tabulator 3",
+            "pack"=>[true, true, 0],
+            
+            
+            "frame:1" => [
+                      
+              "pack"=>[false, false, 0],
+  
+              "attach"=>[0,0,0,0],
+                          
+              "name" => "Übersicht",            
+              
+              "vbox" =>  [
+                "border-width"=> 10,
+                
+                "alignment:1:0:0:0:0" => [
+                  "label:2" => ["text" => "Firstname", "pack"=>[false, false, 3]],
+                ],
+                
+                "entry:2" => ["text" => "", "pack"=>[true, true, 3]],
+                
+                "alignment:2:0:0:0:0" => [
+                  "label:3" => ["text" => "Lastname", "pack"=>[true, true, 3]],
+                ],     
+                                            
+                "entry:3" => ["text" => "Text 4", "pack"=>[true, true, 3]],
+              ],
+              
+            ],
+             
+            "vbox:0:1" =>  ["size" => [0, 20], "hsep" ],
+
+            
+            "frame:2" => [
+            
+              "name" => "Übersicht 2",            
+  
+              "attach"=>[2,2,2,2],
+              
+              "vbox" =>  [
+                "border-width"=> 10,
+                
+                "entry:2" => ["text" => "Text 3", "pack"=>[true, true, 3]],
+                "entry:3" => ["text" => "Text 4", "pack"=>[true, true, 3]],
+              ],
+              
+            ],
+  
+            "vbox::1" =>  ["size" => [0, 20], /* "hsep" */ ],
+
+  
+  
+            
+            'button:3'  => ["text"=>"Save"],    
+             
+          ],    
+          
+          
+                 
+        ],
+        
+        "layout" => 
+        [   
+          
+          "name" => "Tabulator 4",
+          "button:2" => ["text" => "Text 3", "size"=>[100, 100], "pos"=>[100, 100]],
+        ],        
+        
+        
+                
+      ]  
+    ]
+  );
+  
+  area = gtk_dialog_get_content_area (d);  
+	
+  gtk_container_add (area, layout);
+  gtk_widget_show_all (d);
+
+  ret = gtk_dialog_run (d);
+  gtk_widget_destroy  (d);
+  return 0;
+}
+
+
+  
+
+function example_dialog2 (window, mainLayout) {
+  gtk_window_set_title (window, WINDOW_TITLE.": File Dialog");
+  d = gtk_file_chooser_dialog_new ("File Dialog", window, GTK_FILE_CHOOSER_ACTION_OPEN);
+  ret = gtk_dialog_run (d);
+  if (ret == GTK_RESPONSE_OK) {
+    gtkMessageBox (window, "You selected ".gtk_file_chooser_get_filename (d));      
+  }
+  gtk_widget_destroy  (d);
+  return 0;
+}
+
+
+const COL_ID = 0;
+const COL_NAME = 1;
+const COL_AGE = 2;
+const NUM_COLS = 3;
+
+function populate_model(store) {
+    iter = "";
+	resize (iter, _ALIGN*4);
+
+    gtk_list_store_append(store, iter);
+	
+    gtk_list_store_set(store, iter, [COL_ID, 3, COL_NAME, "Anna Müller", COL_AGE, rand()%80, -1]);
+
+    gtk_list_store_append(store, iter);
+    gtk_list_store_set(store, iter, [COL_ID, 1, COL_NAME, "Bernd Schmidt", COL_AGE, rand()%80, -1]);
+
+    gtk_list_store_append(store, iter);
+    gtk_list_store_set(store, iter, [COL_ID, 4, COL_NAME, "Christian Weber", COL_AGE, rand()%80, -1]);
+
+    gtk_list_store_append(store, iter);
+    gtk_list_store_set(store, iter, [COL_ID, 2, COL_NAME, "Diana Fischer", COL_AGE, rand()%80, -1]);
+	
+}
+
+tree_view = null;
+
+function on_stack_visible_child_changed (stack, params, data) {
+	global tree_view;
+	widget =  gtk_stack_get_visible_child (stack);
+	name = gtk_stack_get_visible_child_name (stack);
+
+	if (tree_view) {
+		// gtk_container_remove (widget, tree_view);
+		gtk_widget_destroy (tree_view);
+		tree_view = null;
 	}
+	
+	// 1. GtkListStore mit den Datentypen der Spalten erstellen 
+	store = gtk_list_store_new(NUM_COLS, [G_TYPE_INT, G_TYPE_STRING, G_TYPE_INT]);
+	populate_model(store);
 
-	w = gtk_widget_get_allocated_width (widget);
-	h = gtk_widget_get_allocated_height (widget);
+	// 2. GtkTreeView mit dem Modell verknüpfen
+	tree_view = gtk_tree_view_new_with_model(store);
+	g_object_unref(store); 
 
-	cairo_set_source_rgb (cr, 0, 0, 1);
-	cairo_rectangle (cr, 0,  0, w, h);
-	cairo_fill (cr);
+	// Spalte 1: ID (Integer) 
+	renderer = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("ID", renderer, ["text", COL_ID, null]);
+	gtk_tree_view_column_set_min_width(column, 50);
+	gtk_tree_view_column_set_resizable(column, true);
+	gtk_tree_view_append_column(tree_view, column);
+	
+	// Sortier-ID zuweisen: Aktiviert das Klicken auf den Header 
+	gtk_tree_view_column_set_sort_column_id(column, COL_ID);
 
-	cairo_set_source_rgb (cr, 1, 0, 1);
-	cairo_set_line_width (cr, 10);
-	cairo_move_to (cr, 0, 0);
-	cairo_line_to (cr, w, h);
-	cairo_move_to (cr, w, 0);
-	cairo_line_to (cr, 0, h);
-	cairo_stroke (cr);
+	// Spalte 2: Name (String)
+	renderer = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("Name", renderer, ["text", COL_NAME, null]);
+	gtk_tree_view_column_set_resizable(column, true);
+	gtk_tree_view_append_column(tree_view, column);
+	gtk_tree_view_column_set_min_width(column, 200);
 
-	// Destroy context only on older GTK version
-	if (GTK_MAJOR_VERSION<3)
-		cairo_destroy (cr);
-}
+	gtk_tree_view_column_set_sort_column_id(column, COL_NAME);
 
-function example_cairo1 (window, mainLayout)
-{
-	gtk_window_set_title (window, WINDOW_TITLE.": Drawing with Cairo 1");
-	drawArea =  gtk_drawing_area_new ();
-	if (GTK_MAJOR_VERSION>=3)
-		g_signal_connect (drawArea, "draw", "example_cairo1_draw:3");
-	else
-		g_signal_connect (drawArea, "expose-event", "example_cairo1_draw:3");
+	// Spalte 3: Alter (Integer) 
+	renderer = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("Age", renderer, ["text", COL_AGE, null]);
+	gtk_tree_view_column_set_resizable(column, true);
 
-	gtk_container_add (mainLayout, drawArea);
-	return drawArea;
-}
+	
+	gtk_tree_view_append_column(tree_view, column);
+	gtk_tree_view_column_set_sort_column_id(column, COL_AGE);
+
+	// TreeView in das ScrolledWindow packen 
+	gtk_container_add(widget, tree_view);
+	gtk_widget_show_all (tree_view);
+	
+}	
 
 
-function example_cairo2_draw (widget, cr, param)
-{
-	if (GTK_MAJOR_VERSION<3) {
-		// Get context only on older GTK version
-		cr = gdk_cairo_create (gtk_widget_get_window  (widget));
-	}
+function example_sidebar_table (window, mainLayout) {
+	global hDLLGTK;
+	gtk_window_set_title (window, WINDOW_TITLE.": Sidebar with Table");
 
-	w = gtk_widget_get_allocated_width (widget);
-	h = gtk_widget_get_allocated_height (widget);
+	box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+	
+	// SIDEBAR
+	sidebar = gtk_stack_sidebar_new ();
+	gtk_widget_set_size_request(sidebar, 300, -1);
+	gtk_box_pack_start(box, sidebar, false, true, 0);
 
-	cairo_set_source_rgb(cr, 1, 1, 1);
-	cairo_paint(cr);
-	cairo_set_source_rgb(cr, 0, 0, 0);
+	stack = gtk_stack_new ();
+	gtk_widget_set_hexpand (stack, true);
+	gtk_widget_set_halign (stack, GTK_ALIGN_FILL);
+	
+	gtk_stack_set_transition_type (stack, GTK_STACK_TRANSITION_TYPE_SLIDE_UP_DOWN);
+	gtk_stack_sidebar_set_stack (sidebar, stack);	
+	gtk_box_pack_start(box, stack, false, true, 0);
 
-	w2 = w/2;
-	h2 = h/2;
-	for (i = 0; i <= 10000; i+=10) {
-		x = w2 + cos(2 * PI * i / 500) * 70 + cos(2 * PI * i / 10000) * 110;
-		y = h2 + sin(2 * PI * i / 500) * 70 + sin(2 * PI * i / 10000) * 110;
-		if (i == 0)
-			cairo_move_to(cr, x, y);
-		else
-			cairo_line_to(cr, x, y);
-	}
-	cairo_close_path(cr);
-	cairo_stroke(cr);
+	pages = array (
+		"PAGE 1",
+		"PAGE 2",
+		"PAGE 3",
+		"PAGE 4"	
+	);
+	foreach (pages as i => name) {		
+		widget = gtk_scrolled_window_new ();
+		gtk_stack_add_titled  (stack, widget, name, name);
+	}	
+	g_signal_connect(stack, "notify::visible-child", "on_stack_visible_child_changed:3", null);
 
-	// Save as png
-	/*
-	s = cairo_surface_create_for_rectangle (cairo_get_target (cr), w2-200, h2-200, 400, 400);
-	cairo_surface_write_to_png (s, "surface.png");
-	cairo_surface_destroy (s);
-	*/
-
-	// Destroy context only on older GTK version
-	if (GTK_MAJOR_VERSION<3)
-		cairo_destroy (cr);
-}
-
-function example_cairo2 (window, mainLayout)
-{
-	gtk_window_set_title (window, WINDOW_TITLE.": Drawing with Cairo 2");
-	drawArea =  gtk_drawing_area_new ();
-	if (GTK_MAJOR_VERSION>=3)
-		g_signal_connect (drawArea, "draw", "example_cairo2_draw:3");
-	else
-		g_signal_connect (drawArea, "expose-event", "example_cairo2_draw:3");
-
-	gtk_container_add (mainLayout, drawArea);
-	return drawArea;
+	gtk_container_add (mainLayout, box);
+	gtk_widget_show_all (window);
+	return box;
 }
 
 
-function example_cairo3_timer (param)
-{
-	global cairoDrawArea, cairoAngle;
-	w = gtk_widget_get_allocated_width (cairoDrawArea);
-	h = gtk_widget_get_allocated_height (cairoDrawArea);
-
-	cairoAngle+=0.063;
-	gtk_widget_queue_draw (cairoDrawArea);
-	return true;
+function show_gtk_version (window, mainLayout) {
+  global gtkLibName;
+  gtkMessageBox (window, "<b>This is a example of V1 Script for GTK to demonstrate how to work with GTK functions.</b>\r\n\r\nGTK Version: <b>".GTK_MAJOR_VERSION.".".GTK_MINOR_VERSION."</b> (".gtkLibName.")\r\n\r\nV1 Script Version: <b>".version ()."</b>\r\n\r\nhttps://v1-script.net");
+  return null;
 }
 
-function example_cairo3_draw (widget, cr, param)
-{
-	global cairoAngle, cairoText;
-	if (GTK_MAJOR_VERSION<3) {
-		// Get context only on older GTK version
-		cr = gdk_cairo_create (gtk_widget_get_window  (widget));
-	}
-
-	w = gtk_widget_get_allocated_width (widget);
-	h = gtk_widget_get_allocated_height (widget);
-
-	cairo_set_source_rgb (cr, 1, 0, 0);
-	cairo_translate (cr, w / 2.0, h / 2.0);
-	cairo_set_font_size (cr, 50);
-	cairo_rotate (cr, cairoAngle);
-	ext = [];
-	cairo_text_extents (cr, cairoText, ext);
-	cairo_move_to (cr, -ext["width"] / 2.0, ext["height"] / 2.0);
-	cairo_show_text (cr, cairoText);
-
-	// Destroy context only on older GTK version
-	if (GTK_MAJOR_VERSION<3)
-		cairo_destroy (cr);
+function createMenu (menu, list) {
+  global hDLLGTK;
+  foreach (list as name => data) {
+    if (data==="-") {
+      gtk_menu_shell_append (menu, gtk_separator_menu_item_new ());
+    }
+    else {    
+      menu_item = gtk_menu_item_new_with_label (name);
+      if (is_array (data)) {
+        subMenu = gtk_menu_new ();
+        createMenu (subMenu, data);
+        gtk_menu_item_set_submenu (menu_item, subMenu);
+      }
+      else
+      {
+        if (data=="gtk_main_quit")
+          g_signal_connect (menu_item, "activate", dlsym (hDLLGTK, "gtk_main_quit")); 
+        else
+          g_signal_connect (menu_item, "activate", "menu_item_pressed", data);
+      }
+      gtk_menu_shell_append (menu, menu_item);
+    }
+  }
 }
 
-function example_cairo3 (window, mainLayout)
-{
-	global cairoTimer, cairoDrawArea;
-	gtk_window_set_title (window, WINDOW_TITLE.": Animation with Cairo");
-	cairoDrawArea =  gtk_drawing_area_new ();
-	if (GTK_MAJOR_VERSION>=3)
-		g_signal_connect (cairoDrawArea, "draw", "example_cairo3_draw:3");
-	else
-		g_signal_connect (cairoDrawArea, "expose-event", "example_cairo3_draw:3");
-	gtk_container_add (mainLayout, cairoDrawArea);
+lastLayout = null;
+infobar = null;
+
+function on_infobar_response (info_bar, response_id, user_data)
+{	
+	global window, mainLayout, lastLayout, cairoTimer, infobar;
 
 	if (cairoTimer) {
 		g_source_remove (cairoTimer);
 		cairoTimer = null;
 	}
-	cairoTimer = g_timeout_add (80, "example_cairo3_timer");
-	return cairoDrawArea;
-}
+	if (lastLayout) {
+		gtk_widget_destroy (lastLayout);
+		lastLayout = null;
+	}
 
-function show_gtk_version (window, mainLayout)
-{
-	global gtkLibName;
-	gtkMessageBox (window, "<b>This is a example of V1 Script for GTK to demonstrate how to work with GTK functions.</b>\r\n\r\nGTK Version: <b>".GTK_MAJOR_VERSION.".".GTK_MINOR_VERSION."</b> (".gtkLibName.")\r\n\r\nV1 Script Version: <b>".version ()."</b>\r\n\r\nhttps://v1-script.net");
-	return null;
-}
-
-function createMenu (menu, list)
-{
-	global hDLLGTK;
-	foreach (list as name => data) {
-		if (data==="-") {
-			gtk_menu_shell_append (menu, gtk_separator_menu_item_new ());
-		}
-		else {
-			menu_item = gtk_menu_item_new_with_label (name);
-			if (is_array (data)) {
-				subMenu = gtk_menu_new ();
-				createMenu (subMenu, data);
-				gtk_menu_item_set_submenu (menu_item, subMenu);
-			}
-			else {
-				if (data=="gtk_main_quit")
-					g_signal_connect (menu_item, "activate", dlsym (hDLLGTK, "gtk_main_quit"));
-				else
-					g_signal_connect (menu_item, "activate", "menu_item_pressed", data);
-			}
-			gtk_menu_shell_append (menu, menu_item);
-		}
+	if (infobar) {
+		gtk_widget_destroy (infobar);
+		infobar = null;
 	}
 }
 
-lastLayout = null;
-function menu_item_pressed (instance, id)
-{
-	global window, mainLayout, lastLayout, cairoTimer;
+function menu_item_pressed (instance, id) {
+	global window, mainLayout, lastLayout, cairoTimer, infobar;
 
 	if (function_exists  (id)) {
 
-		if (substr (id, 0, 7)=="example") {
-			if (cairoTimer) {
-				g_source_remove (cairoTimer);
-				cairoTimer = null;
-			}
-			if (lastLayout) {
-				gtk_container_remove (mainLayout, lastLayout);
-				gtk_widget_destroy (lastLayout);
-			}
-			lastLayout = call_user_func (id, window, mainLayout);
-			gtk_widget_show_all (window);
+	if (substr (id, 0, 7)=="example") {
+		if (cairoTimer) {
+			g_source_remove (cairoTimer);
+			cairoTimer = null;
 		}
-		else {
-			call_user_func (id, window, mainLayout);
+		if (lastLayout) {
+			// gtk_container_remove (mainLayout, lastLayout);
+			gtk_widget_destroy (lastLayout);
+			lastLayout = null;
+		}      
+
+		if (infobar) {
+			gtk_widget_destroy (infobar);
+			infobar = null;
 		}
+
+		infobar = gtk_info_bar_new ();
+		message_label = gtk_label_new ("Topic");
+		gtk_label_set_markup (message_label, '<span size="x-large">V1 GTK Example '.id.'()</span>');
+		content_area = gtk_info_bar_get_content_area (infobar);
+		gtk_info_bar_set_message_type (infobar, 1);
+		g_signal_connect (infobar, "response", "on_infobar_response:3", null);  
+
+		gtk_container_add (content_area, message_label);
+		gtk_info_bar_add_button (infobar, "back", 1);	
+		gtk_box_pack_start(mainLayout, infobar, false, false, 0);	  
+		gtk_widget_show_all (window);
+		
+		lastLayout = call_user_func (id, window, mainLayout);
+		gtk_widget_show_all (window);
+	}
+	else {
+	  call_user_func (id, window, mainLayout);
+	}
 	}
 	else
-		gtkMessageBox (window, 'Example <b>'.id.'</b> is not implemented.');
+	gtkMessageBox (window, 'Example <b>'.id.'</b> is not implemented.');
 
 }
 
-///////////////////////
-// START
-///////////////////////
 
+///////////////////////
+// START 
+///////////////////////
 
 // Create main window
 window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-if (!window) {
-	print ("Cannot create GTK window.");
-	exit (1);
-}
 gtk_window_set_resizable (window, true);
 gtk_widget_set_size_request (window, WINDOW_WIDTH, WINDOW_HEIGHT);
-if (version(1)!='Windows')
-	gtk_window_set_position (window, GTK_WIN_POS_CENTER);
-gtk_window_set_icon_from_file (window, dirname (__FILE__).'/../editor/images/favicon.ico');
+gtk_window_set_position (window, GTK_WIN_POS_CENTER); 
+gtk_window_set_icon_from_file (window, 'favicon.ico');
 g_signal_connect (window, "destroy", dlsym (hDLLGTK, "gtk_main_quit"));
 
 // Main layout
@@ -461,9 +935,10 @@ mainLayout = gtk_vbox_new (false, 0);
 gtk_container_add (window, mainLayout);
 gtk_widget_show (mainLayout);
 
+
 // Append menu bar
 menu_bar = gtk_menu_bar_new ();
-gtk_box_pack_start (mainLayout, menu_bar, false, false, 0);
+gtk_box_pack_start (mainLayout, menu_bar, false, false, 2);
 gtk_widget_show (menu_bar);
 createMenu (menu_bar, menuList);
 
@@ -474,5 +949,5 @@ lastLayout = example_cairo3 (window, mainLayout);
 gtk_widget_show_all (window);
 
 gtk_main ();
-
+  
 ?>

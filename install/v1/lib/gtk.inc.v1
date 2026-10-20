@@ -13,11 +13,13 @@ require_once ("gdk.inc.v1");
 if (version(1)=='Windows')
 {
 	require_once ("win32.inc.v1");
-	gtkLibName = 'libgtk-win32-2.0-0.dll';
+	gtkLibName = 'libgtk-3-0.dll';
+	gtkObjectLibName = 'libgobject-2.0-0.dll';
 }
 else
 {
 	gtkLibName = 'libgtk-3.so.0';
+	gtkObjectLibName = "";
 }
 
 hDLLGTK = dl (gtkLibName, true);
@@ -26,7 +28,7 @@ if (!hDLLGTK)
 	// Search for GTK+ library
 	libList = explode ("\n", system ('/usr/bin/find /usr -name "libgtk-3*.so*"'));
 	if (!empty (libList[0])) {
-		hDLLGTK = dl (mySQLLibName = libList[0], true);
+		hDLLGTK = dl (gtkLibName = libList[0], true);
 		if (hDLLGTK) {
 			print ('Please replace for faster starting: gtkLibName="'.libList[0].'"; in '.__FILE__);
 		}
@@ -45,6 +47,13 @@ if (!hDLLGTK)
 	exit (1);
 }
 
+hDLLGTKObject = null;
+if (!empty (gtkObjectLibName)) {
+	hDLLGTKObject = dl (gtkObjectLibName, true);
+}
+
+if (!hDLLGTKObject)
+	hDLLGTKObject = hDLLGTK;
 
 // Init GTK
 argc = binformat (count (argv));
@@ -61,7 +70,7 @@ call (hDLLGTK, "gtk_init", [['r','p'],'i'], argc, argvPnt);
 setlocale (1, 'C');
 
 // Set correct connect function
-if (dlsym (hDLLGTK, "gtk_signal_connect_while_alive"))
+if (dlsym (hDLLGTKObject, "gtk_signal_connect_while_alive"))
 	const GTK_SIGNAL_CONNECT_FUNC = "gtk_signal_connect_while_alive";
 else
 	const GTK_SIGNAL_CONNECT_FUNC = "g_signal_connect_data";
@@ -99,6 +108,60 @@ const GTK_WIN_POS_CENTER_ON_PARENT = 4;
 const GTK_ORIENTATION_HORIZONTAL = 0;
 const GTK_ORIENTATION_VERTICAL = 1;
 
+const GTK_RESPONSE_NONE = -1;
+const GTK_RESPONSE_REJECT = -2;
+const GTK_RESPONSE_ACCEPT = -3;
+const GTK_RESPONSE_DELETE_EVENT = -4;
+const GTK_RESPONSE_OK = -5;
+const GTK_RESPONSE_CANCEL = -6;
+const GTK_RESPONSE_CLOSE = -7;
+const GTK_RESPONSE_YES = -8;
+const GTK_RESPONSE_NO = -9;
+const GTK_RESPONSE_APPLY = -10;
+const GTK_RESPONSE_HELP = -11;
+
+const GTK_FILE_CHOOSER_ACTION_OPEN  = 1;
+const GTK_FILE_CHOOSER_ACTION_SAVE  = 2;
+const GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER = 3;
+const GTK_FILE_CHOOSER_ACTION_CREATE_FOLDER = 4;
+
+const GTK_STACK_TRANSITION_TYPE_NONE = 0;
+const GTK_STACK_TRANSITION_TYPE_CROSSFADE = 1;
+const GTK_STACK_TRANSITION_TYPE_SLIDE_RIGHT = 2;
+const GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT = 3;
+const GTK_STACK_TRANSITION_TYPE_SLIDE_UP = 4;
+const GTK_STACK_TRANSITION_TYPE_SLIDE_DOWN = 5;
+const GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT_RIGHT = 6;
+const GTK_STACK_TRANSITION_TYPE_SLIDE_UP_DOWN = 7;
+const GTK_STACK_TRANSITION_TYPE_OVER_UP = 8;
+const GTK_STACK_TRANSITION_TYPE_OVER_DOWN  = 9;
+const GTK_STACK_TRANSITION_TYPE_OVER_LEFT = 10;
+const GTK_STACK_TRANSITION_TYPE_OVER_RIGHT = 11;
+const GTK_STACK_TRANSITION_TYPE_UNDER_UP = 12;
+const GTK_STACK_TRANSITION_TYPE_UNDER_DOWN = 13;
+const GTK_STACK_TRANSITION_TYPE_UNDER_LEFT = 14;
+const GTK_STACK_TRANSITION_TYPE_UNDER_RIGHT = 15;
+const GTK_STACK_TRANSITION_TYPE_OVER_UP_DOWN = 16;
+const GTK_STACK_TRANSITION_TYPE_OVER_DOWN_UP = 17;
+const GTK_STACK_TRANSITION_TYPE_OVER_LEFT_RIGHT = 18;
+const GTK_STACK_TRANSITION_TYPE_OVER_RIGHT_LEFT = 19;
+const GTK_STACK_TRANSITION_TYPE_ROTATE_LEFT = 20;
+const GTK_STACK_TRANSITION_TYPE_ROTATE_RIGHT = 21;
+const GTK_STACK_TRANSITION_TYPE_ROTATE_LEFT_RIGHT = 22;
+
+const G_TYPE_INT = 24;
+const G_TYPE_LONG = 32;
+const G_TYPE_FLOAT = 56;
+const G_TYPE_DOUBLE = 60;
+const G_TYPE_STRING = 64;
+
+const GTK_ALIGN_FILL  = 0;
+const GTK_ALIGN_START = 1;
+const GTK_ALIGN_END  = 2;
+const GTK_ALIGN_CENTER = 3;
+const GTK_ALIGN_BASELINE_FILL = 4;
+const GTK_ALIGN_BASELINE = 4;
+const GTK_ALIGN_BASELINE_CENTER = 5;
 
 // GTK functions
 // Note: Not all GTK functions are implemented there
@@ -118,7 +181,7 @@ function gtk_main ()
 
 function g_signal_connect (instance, name, handler, data=null)
 {
-	global hDLLGTK, glibCallbackList;
+	global hDLLGTKObject, glibCallbackList;
 	if (gettype (handler)=="string") {
 		assign (handlerName, args) = explode (":", handler);
 		id = crc32(handler.data);
@@ -130,20 +193,19 @@ function g_signal_connect (instance, name, handler, data=null)
 			handler = dlsym (null, "callbackA2");
 		data = id;
 	}
-
-	return call (hDLLGTK, GTK_SIGNAL_CONNECT_FUNC, [['p','s','p','p','p','i'],'i'], instance, name, handler, data, null, 0);
+	return call (hDLLGTKObject, GTK_SIGNAL_CONNECT_FUNC, [['p','s','p','p','p','i'],'i'], instance, name, handler, data, null, 0);
 }
 
 function g_signal_connect_data (instance, name, handler, data=null, destroy_data=null, connect_flags=0)
 {
-	global hDLLGTK, glibCallbackList;
+	global hDLLGTKObject, glibCallbackList;
 	if (gettype (handler)=="string") {
 		id = crc32(handler);
 		glibCallbackList[id]=["name" => handler, "data" => data];
 		handler = dlsym (null, "callbackA2");
 		data = id;
 	}
-	return call (hDLLGTK, GTK_SIGNAL_CONNECT_FUNC, [['p','s','p','p','p','p'],'i'], instance, name, handler, data, destroy_data, connect_flags);
+	return call (hDLLGTKObject, GTK_SIGNAL_CONNECT_FUNC, [['p','s','p','p','p','p'],'i'], instance, name, handler, data, destroy_data, connect_flags);
 }
 
 function gtk_container_add (container, child)
@@ -155,7 +217,7 @@ function gtk_container_add (container, child)
 function gtk_container_remove (container, child)
 {
 	global hDLLGTK;
-	call (hDLLGTK, 'gtk_container_remove ', [['p', 'p'],'p'], container, child);
+	call (hDLLGTK, 'gtk_container_remove', [['p', 'p'],'p'], container, child);
 }
 
 function gtk_container_child_get (container, child, first_prop_name, &value)
@@ -178,11 +240,23 @@ function gtk_window_new (type)
 	return  call (hDLLGTK, "gtk_window_new", [['i'],'p'], type);
 }
 
+function gtk_scrolled_window_new (hadjustment=null, vadjustment=null)
+{
+	global hDLLGTK;
+	return  call (hDLLGTK, "gtk_scrolled_window_new", 'pp:p', hadjustment, vadjustment);
+}
+
 function gtk_window_set_title (window, title)
 {
 	global hDLLGTK;
 	call (hDLLGTK, "gtk_window_set_title", [['p', 's'],'i'], window, title);
 }
+
+function gtk_window_set_titlebar (window, titlebar)
+{
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_window_set_titlebar", "pp:", window, titlebar);
+} 
 
 function gtk_window_set_icon_from_file (window, filename)
 {
@@ -202,6 +276,22 @@ function gtk_window_set_position (window, mode)
 	call (hDLLGTK, 'gtk_window_set_position', [['p', 'i'], 'i'], window, mode);
 }
 
+function gtk_window_get_size (window)
+{
+	global hDLLGTK;
+	w = h = "";
+	resize (w, 4);
+	resize (h, 4);
+	call (hDLLGTK, 'gtk_window_get_size',  "prr:", window, w, h);
+	return ([binparse (w,3,0,1), binparse (h,3,0,1)]);
+}
+
+function gtk_window_is_maximized (window)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_window_is_maximized', "p:i", window);
+}
+
 function gtk_widget_show_all (window)
 {
 	global hDLLGTK;
@@ -215,6 +305,11 @@ function gtk_widget_set_size_request (window, width, height)
 }
 
 /* Layout */
+
+function gtk_container_set_border_width  (container, width) {
+	global hDLLGTK;
+  call (hDLLGTK, "gtk_container_set_border_width", [['p', 'i'],'i'], container, width); 
+}
 
 function gtk_hbutton_box_new  ()
 {
@@ -256,6 +351,30 @@ function gtk_paned_add2  (paned, widget)
 {
 	global hDLLGTK;
 	call (hDLLGTK, "gtk_paned_add2", [['p', 'p'],'p'], paned, widget);
+}
+
+function gtk_paned_pack1  (paned, widget, resize=1, shrink=1)
+{
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_paned_pack1", "ppii", paned, widget, resize, shrink);
+}
+
+function gtk_paned_pack2  (paned, widget, resize=1, shrink=1)
+{
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_paned_pack2", "ppii", paned, widget, resize, shrink);
+}
+
+function gtk_paned_set_position (paned, position)
+{
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_paned_set_position", "pi:", paned, position);
+}
+
+function gtk_paned_get_position (paned)
+{
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_paned_get_position", "p:i", paned);
 }
 
 function gtk_table_new  (rows, columns, homogeneous)
@@ -300,6 +419,12 @@ function gtk_layout_move (layout, child_widget, x, y)
 	call (hDLLGTK, 'gtk_layout_move', [['p', 'p', 'i', 'i'],'p'], layout, child_widget, x, y);
 }
 
+function gtk_box_new (orientation, spacing)
+{
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_box_new', 'ii:p', orientation, spacing);
+}
+
 function gtk_vbox_new (homogeneous, spacing)
 {
 	global hDLLGTK;
@@ -317,6 +442,178 @@ function gtk_box_pack_start (box, child, expand, fill, padding)
 	global hDLLGTK;
 	call (hDLLGTK, 'gtk_box_pack_start', [['p', 'p', 'b', 'b', 'p'], 'p'], box, child, expand, fill, padding);
 }
+
+function gtk_box_append (box, widget)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_box_append', "pp:", box, widget);
+}
+
+/* Sidebar, Stack */
+
+function gtk_stack_sidebar_new  () {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_stack_sidebar_new', [[], 'p']);
+}
+
+function gtk_stack_new  () {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_stack_new', [[], 'p']);
+}
+
+function gtk_stack_set_transition_type (stack, type) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_stack_new', "pi:", stack, type);
+}
+
+function gtk_stack_sidebar_set_stack (sidebar, stack) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_stack_sidebar_set_stack', "pp:", sidebar, stack);
+}
+
+function gtk_stack_add_named (stack, child, name) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_stack_add_named', "pps:", stack, child, name);
+}
+
+function gtk_stack_add_titled (stack, child, name, title) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_stack_add_titled', "ppss:", stack, child, name, title);
+}
+
+function gtk_stack_get_page (stack, child) {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_stack_get_page', "pp:p", stack, child);
+} 
+
+function gtk_stack_get_visible_child (stack) {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_stack_get_visible_child', "p:p", stack);
+} 
+
+function gtk_stack_get_visible_child_name (stack) {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_stack_get_visible_child_name', "p:s", stack);
+} 
+
+ 
+/* Widget: Notebook */
+
+function gtk_notebook_new  () {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_notebook_new', [[], 'p']);
+}
+
+function gtk_notebook_append_page  (notebook, child, label) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_notebook_append_page', [['p','p', 'p'], 'i'], notebook, child, label);
+}
+
+
+/* Widget Headerbar */
+
+function gtk_header_bar_new () {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_header_bar_new', ":p");
+}
+
+function gtk_header_bar_set_title (header, title) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_header_bar_set_title', "ps:", header, title);
+}
+
+function gtk_header_bar_set_subtitle (header, subtitle) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_header_bar_set_subtitle', "ps:", header, subtitle);
+}
+
+function gtk_header_bar_set_show_close_button (header, on) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_header_bar_set_show_close_button', "pb:", header, on);
+}
+
+/* Widget Infobar */
+
+function gtk_info_bar_new () {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_info_bar_new', ":p");
+}
+
+function gtk_info_bar_add_button (info_bar, button_text, response_id) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_info_bar_add_button', "psi:", info_bar, button_text, response_id);
+} 
+
+function gtk_info_bar_get_content_area (info_bar) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_info_bar_get_content_area', "p:p", info_bar);
+}
+
+function gtk_info_bar_set_message_type (info_bar, message_type) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_info_bar_set_message_type', "pi:", info_bar, message_type);
+}
+
+
+/* Store */
+
+function gtk_list_store_new (num_cols, &params) {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_list_store_new', "iz:p", num_cols, params);
+}
+
+function gtk_list_store_append (store, &iter) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_list_store_append', "pr:", store, iter);
+}
+
+function gtk_list_store_set (store, &iter, &params) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_list_store_set', "prz:", store, iter, params);
+}
+
+/* Treeview, Tables */
+
+function gtk_tree_view_new_with_model (model) {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_tree_view_new_with_model', "p:p", model);
+}
+
+function gtk_cell_renderer_text_new () {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_cell_renderer_text_new', ":p");
+}
+
+function gtk_tree_view_column_new_with_attributes (title, cell, &params) {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_tree_view_column_new_with_attributes', "spz:p", title, cell, params);
+}
+
+function gtk_tree_view_append_column (tree_view, column) {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_tree_view_append_column', "pp:i", tree_view, column);
+}
+
+function gtk_tree_view_column_set_sort_column_id (colmn, id) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_tree_view_column_set_sort_column_id', "pi:i", colmn, id);
+}
+
+function gtk_tree_view_column_set_min_width (colmn, width) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_tree_view_column_set_min_width', "pi:", colmn, width);
+}
+
+function gtk_tree_view_column_set_expand (colmn, expand) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_tree_view_column_set_expand', "pb:", colmn, expand);
+}
+
+function gtk_tree_view_column_set_resizable (colmn, resizeable) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_tree_view_column_set_resizable', "pb:", colmn, resizeable);
+}
+
 
 /* Widgets */
 
@@ -342,6 +639,18 @@ function gtk_widget_hide (widget)
 {
 	global hDLLGTK;
 	call (hDLLGTK, 'gtk_widget_hide', [['p'],'i'], widget);
+}
+
+function gtk_widget_set_halign (widget, halign)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_widget_set_halign', "pi:", widget, halign);
+}
+
+function gtk_widget_set_valign (widget, valign)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_widget_set_valign', "pi:", widget, valign);
 }
 
 function gtk_widget_queue_draw (widget)
@@ -383,7 +692,13 @@ function gtk_widget_set_app_paintable (widget, on)
 function gtk_widget_set_visible (widget, on)
 {
 	global hDLLGTK;
-	call (hDLLGTK, "gtk_widget_set_visible", [['p', 'b'],'p'], widget, on);
+	call (hDLLGTK, "gtk_widget_set_visible", "pb:", widget, on);
+}
+
+function gtk_widget_get_visible (widget)
+{
+	global hDLLGTK;
+	return call (hDLLGTK, "gtk_widget_set_visible", "p:b", widget);
 }
 
 function gtk_widget_get_allocation (widget, &rect)
@@ -405,7 +720,7 @@ function gtk_widget_size_allocate (widget, rect)
 {
 	global hDLLGTK;
 	binRect = binformat (rect["x"]).binformat (rect["y"]).binformat (rect["width"]).binformat (rect["height"]);
-	call (hDLLGTK, 'gtk_widget_size_allocate ', [['p', 'r'],'i'], widget, binRect);
+	call (hDLLGTK, 'gtk_widget_size_allocate', [['p', 'r'],'i'], widget, binRect);
 }
 
 if (dlsym (hDLLGTK, "gtk_widget_get_allocated_width"))
@@ -449,6 +764,18 @@ function gtk_widget_grab_default (widget)
 	call (hDLLGTK, "gtk_widget_grab_default", [['p'],'i'], widget);
 }
 
+function gtk_widget_set_hexpand (widget, expand)
+{
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_widget_set_hexpand", "pb:", widget, expand);
+}
+
+function gtk_widget_set_vexpand (widget, expand)
+{
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_widget_set_vexpand", "pb:", widget, expand);
+}
+
 function gtk_entry_new ()
 {
 	global hDLLGTK;
@@ -479,6 +806,12 @@ function gtk_entry_get_text (entry)
 	return call (hDLLGTK, 'gtk_entry_get_text', [['p'], 's'], entry);
 }
 
+function gtk_entry_set_activates_default (entry, on)
+{
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_entry_set_activates_default', [['p', 'i'], 'i'], entry, on);
+}
+
 function gtk_button_new_with_label (str)
 {
 	global hDLLGTK;
@@ -488,7 +821,13 @@ function gtk_button_new_with_label (str)
 function gtk_label_new (str)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, 'gtk_label_new', [['s'],'p'], str);
+	return call (hDLLGTK, 'gtk_label_new', "s:p", str);
+}
+
+function gtk_label_set_markup (label, markup)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_label_set_markup', "ps:", label, markup);
 }
 
 function gtk_label_set_text  (label, str)
@@ -497,11 +836,45 @@ function gtk_label_set_text  (label, str)
 	return call (hDLLGTK, 'gtk_label_set_text', [['p', 's'],'p'], label, str);
 }
 
-function gtk_combo_box_new ()
+/* Combobox */
+
+function gtk_combo_box_text_new ()
 {
 	global hDLLGTK;
-	return call (hDLLGTK, 'gtk_combo_box_new', [[], 'p']);
+	return call (hDLLGTK, 'gtk_combo_box_text_new', ':p');
 }
+
+function gtk_combo_box_text_new_with_entry ()
+{
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_combo_box_text_new_with_entry', ':p');
+}
+
+function gtk_combo_box_text_append_text (combo_box, text)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_combo_box_text_append_text', 'ps:', combo_box, text);
+}
+
+function gtk_combo_box_set_active (combo_box, index)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_combo_box_set_active', 'pi:', combo_box, index);
+}
+
+function gtk_combo_box_text_get_active_text (combo_box)
+{
+	global hDLLGTK;
+	ptr = call (hDLLGTK, 'gtk_combo_box_text_get_active_text', 'p:p', combo_box);
+	str = "";
+	if (ptr) {
+		str = memat  (ptr);
+		g_free (ptr);
+	}
+	return str;
+}
+
+/* Drawing area */
 
 function gtk_drawing_area_new ()
 {
@@ -512,7 +885,7 @@ function gtk_drawing_area_new ()
 function gtk_drawing_area_size  (widget, width, height)
 {
 	global hDLLGTK;
-	return call (hDLLGTK, 'gtk_drawing_area_size ', [['p','i','i'], 'p'], widget, width, height);
+	return call (hDLLGTK, 'gtk_drawing_area_size', [['p','i','i'], 'p'], widget, width, height);
 }
 
 /* Menu */
@@ -551,5 +924,69 @@ function gtk_menu_bar_new  ()
 	global hDLLGTK;
 	return call (hDLLGTK, 'gtk_menu_bar_new', [[], 'p']);
 }
+
+
+/* Dialog */
+function gtk_dialog_new () {
+  global hDLLGTK;
+  return call (hDLLGTK, 'gtk_dialog_new', [[], 'p']);
+}
+
+function gtk_dialog_run (d) {
+  global hDLLGTK;
+  return call (hDLLGTK, 'gtk_dialog_run', [['p'], 'i'], d);
+}
+
+function gtk_dialog_add_button (d, text, id) {
+  global hDLLGTK;
+  return call (hDLLGTK, 'gtk_dialog_add_button', [['p', 's', 'i'], 'p'], d, text, id);
+}
+
+function gtk_window_set_transient_for (d, w) {
+  global hDLLGTK;
+  return call (hDLLGTK, 'gtk_window_set_transient_for', [['p', 'p'], 'i'], d, w);
+}
+
+function gtk_dialog_get_content_area  (d) {
+  global hDLLGTK;
+  return call (hDLLGTK, 'gtk_dialog_get_content_area', [['p'], 'p'], d);
+}
+
+function gtk_window_set_modal (d, on) {
+  global hDLLGTK;
+  call (hDLLGTK, 'gtk_window_set_modal', [['p', 'i'], 'i'], d, on);
+}
+
+function gtk_window_set_destroy_with_parent (d, on) {
+  global hDLLGTK;
+  call (hDLLGTK, 'gtk_window_set_destroy_with_parent', [['p', 'i'], 'i'], d, on);
+}
+
+function gtk_window_set_default_widget (window, widget) {
+  global hDLLGTK;
+  call (hDLLGTK, 'gtk_window_set_default_widget ', [['p', 'p', 'i'], 'i'], window, widget);
+}
+
+function gtk_window_set_child (window, widget) {
+  global hDLLGTK;
+  call (hDLLGTK, 'gtk_window_set_child', [['p', 'p', 'i'], 'i'], window, widget);
+}
+
+function gtk_scrolled_window_set_child (window, widget) {
+  global hDLLGTK;
+  call (hDLLGTK, 'gtk_scrolled_window_set_child', [['p', 'p', 'i'], 'i'], window, widget);
+}
+
+/* File chooser */
+function gtk_file_chooser_dialog_new (title, parent, action=GTK_FILE_CHOOSER_ACTION_OPEN, button1_text="Open", button1_id=GTK_RESPONSE_OK) {
+  global hDLLGTK;
+  return call (hDLLGTK, 'gtk_file_chooser_dialog_new',[['s', 'p', 'i', 's', 'i', 'p'], 'p'], title, parent, action,  button1_text, button1_id, null);
+}
+
+function gtk_file_chooser_get_filename  (d) {
+  global hDLLGTK;
+  return call (hDLLGTK, 'gtk_file_chooser_get_filename', [['p'], 's'], d);
+}
+
 
 ?>
