@@ -61,11 +61,9 @@ MAIN_DEFINES        = -D_REENTRANT -D_LINUX -D_GNU_SOURCE -std=c++0x -Wall -fPIC
 DEFINES             = $(MAIN_DEFINES) 
 
 ifeq (x86_64,$(ARCH))
-EXTRA_FLAGS         = -mpreferred-stack-boundary=4
-DYNCALL_OBJECTS     =
-EXTRA_FLAGS         = -I$(DYNCALL_DIR)
-# DYNCALL_OBJECTS  := $(DYNCALL_OBJECTS) dyncall_call_x64.o
-# EXTRA_FLAGS       = -I$(DYNCALL_DIR) -D_WITH_DYNCALL 
+# EXTRA_FLAGS       = -mpreferred-stack-boundary=4
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_x64.o
+EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (i686,$(ARCH))
 DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_x86.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX

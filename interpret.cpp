@@ -5748,6 +5748,8 @@ void WScriptThread::run()
 #define CALL_TYPE_STRING 6
 #define CALL_TYPE_REFERENCE 7
 #define CALL_TYPE_INT_ARRAY 20
+#define CALL_TYPE_PARAM_ARRAY 21
+
 /*
 double testfunc (int a, int b, double c, WCSTR d, float e) {
 
@@ -5759,321 +5761,205 @@ double testfunc (int a, int b, double c, WCSTR d, float e) {
 */
 
 #ifdef _WITH_DYNCALL
+
 #include <dyncall.h>
-#endif
 
 int func_universal_call(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx, void *func, const int *paramDef, unsigned int paramCnt = 0, int retDef = 0)
 {
 	// func = (void*) testfunc;
 	// ctx.warnInterprete ("Native function calling not implemented on this architecture.");
-	int arrayParamIdx = -1;
-	int x2 = 0;
+	int intArrayIdx = 0;
+	int *intArray[5];
+	unsigned int intArraySize[5];
+
 	for (unsigned int i = 3; i < (paramCnt + 3); i++) {
-		x2++;
+
 		int type = paramDef[i - 3];
 		if (type == CALL_TYPE_STRING || type == CALL_TYPE_REFERENCE) {
 			if (argvalues.size() < (i + 1) || argvalues[i]->datatype > DataValue::DATATYPE_STR || argvalues[i]->datatype == DataValue::DATATYPE_NO_PARAM) {
-				return ((i + 1) << 8) | WSCRIPT_RET_STR_REQUIRED;
+				return ((i - 2) << 8) | WSCRIPT_RET_STR_REQUIRED;
 			}
 			if (type == CALL_TYPE_REFERENCE && argvalues[i]->refPnt == NULL) {
 				ctx.warnInterprete("No reference pointer found.");
-				return ((i + 1) << 8) | WSCRIPT_RET_STR_REQUIRED;
+				return ((i - 2) << 8) | WSCRIPT_RET_STR_REQUIRED;
 			}
 			argvalues[i]->toString();
 		}
 		else if ((type >= CALL_TYPE_BOOL) && (type <= CALL_TYPE_POINTER)) {
 			if (argvalues.size() < (i + 1) || argvalues[i]->datatype > DataValue::DATATYPE_STR || argvalues[i]->datatype == DataValue::DATATYPE_NO_PARAM) {
-				return ((i + 1) << 8) | WSCRIPT_RET_NUM_REQUIRED;
+				return ((i - 2) << 8) | WSCRIPT_RET_NUM_REQUIRED;
 			}
 		}
 		else if (argvalues.size() < (i + 1) || argvalues[i]->datatype < DataValue::DATATYPE_ARRAY) {
-			return ((i + 1) << 8) | WSCRIPT_RET_ARRAY_REQUIRED;
+			return ((i - 2) << 8) | WSCRIPT_RET_ARRAY_REQUIRED;
 		}
 		else {
-			arrayParamIdx = i;
-			if (type == CALL_TYPE_INT_ARRAY)
-				x2++;
+
+			if (type == CALL_TYPE_INT_ARRAY) {
+				if (intArrayIdx==sizeof (intArraySize)/sizeof (unsigned int)) {
+					for (int j=0;i<intArrayIdx;j++) {
+						if (intArray[j])
+							delete[] intArray[j];
+					}
+					ctx.warnInterprete("Max. 5 int arrays allowed.");
+					return ((i - 2) << 8) | WSCRIPT_RET_ARRAY_REQUIRED;					
+				}
+				else {
+					int arraySize = argvalues[i]->arrayList.size();
+					intArraySize[intArrayIdx] = arraySize;
+					if (arraySize) {
+						intArray[intArrayIdx] = new int[arraySize];
+						memset(intArray[intArrayIdx], 0, sizeof(int) * arraySize);
+						unsigned int j = 0;
+						argvalues[i]->arrayList.reset();
+						while (argvalues[i]->arrayList.hasMoreElements() && j < arraySize) {
+							intArray[intArrayIdx][j++] = (int)argvalues[i]->arrayList.nextValue();
+						}						
+					}
+					else {
+						intArray[intArrayIdx] = NULL;
+					}
+					intArrayIdx++;				
+				}
+			}
 		}
 	}
-#ifndef _WITH_DYNCALL
-	void *v;
-	double v2;
-#else
 	DCCallVM *vm = dcNewCallVM(4096);
 	dcMode(vm, DC_CALL_C_DEFAULT);
 	dcReset(vm);
-#endif
-	int *array1 = NULL;
-	unsigned int arraySize = 0;
-	if (arrayParamIdx != -1) {
 
-		if (paramDef[arrayParamIdx] == CALL_TYPE_INT_ARRAY) {
-			arraySize = argvalues[arrayParamIdx]->arrayList.size();
-		}
-
-		if (arraySize) {
-			array1 = new int[arraySize];
-			memset(array1, 0, sizeof(int) * arraySize);
-			unsigned int i = 0;
-			argvalues[arrayParamIdx]->arrayList.reset();
-			while (argvalues[arrayParamIdx]->arrayList.hasMoreElements() && i < arraySize) {
-				array1[i++] = (int)argvalues[arrayParamIdx]->arrayList.nextValue();
-			}
-		}
-	}
-#ifndef _WITH_DYNCALL
-	void *voidList[20 + 1];
-	memset(voidList, 0, sizeof(voidList));
-	int mmxReg = 0;
-	int x3 asm("r7") = x2;
-#endif
-	x2 = 0;
-	for (int x = 0; x < paramCnt; x++ && x2 < 20) {
+	intArrayIdx = 0;
+	for (int x = 0; x < paramCnt; x++) {
 
 		int type = paramDef[x];
 		if (type == CALL_TYPE_REFERENCE) {
-#ifndef _WITH_DYNCALL
-			v = (void *)argvalues[x + 3]->refPnt->value.c_str();
-			voidList[x2++] = v;
-#else
 			dcArgPointer(vm, (DCpointer)argvalues[x + 3]->refPnt->value.c_str());
-#endif
 		}
 		else if (type == CALL_TYPE_POINTER) {
-#ifndef _WITH_DYNCALL
-			v = (void *)(uint64_t)argvalues[x + 3]->numvalue;
-			voidList[x2++] = v;
-#else
-			dcArgPointer(vm, (DCpointer)(SYS_UINT)argvalues[x + 3]->numvalue);
-#endif
+			argvalues[x + 3]->toString ();
+			dcArgPointer(vm, (DCpointer) (SYS_UINT) *argvalues[x + 3]);
 		}
 		else if (type == CALL_TYPE_INT) {
-#ifndef _WITH_DYNCALL
-			v = (void *)(int)argvalues[x + 3]->numvalue;
-			voidList[x2++] = v;
-#else
 			dcArgInt(vm, (DCint)(int)argvalues[x + 3]->numvalue);
-#endif
 		}
 		else if (type == CALL_TYPE_FLOAT) {
-#ifndef _WITH_DYNCALL
-			switch (mmxReg) {
-				case 0:
-					__asm__ __volatile__("movsd %0,%%xmm0;cvtpd2ps %%xmm0, %%xmm0" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 1:
-					__asm__ __volatile__("movsd %0,%%xmm1;cvtpd2ps %%xmm1, %%xmm1" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 2:
-					__asm__ __volatile__("movsd %0,%%xmm2;cvtpd2ps %%xmm2, %%xmm2" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 3:
-					__asm__ __volatile__("movsd %0,%%xmm3;cvtpd2ps %%xmm3, %%xmm3" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 4:
-					__asm__ __volatile__("movsd %0,%%xmm4;cvtpd2ps %%xmm4, %%xmm4" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 5:
-					__asm__ __volatile__("movsd %0,%%xmm5;cvtpd2ps %%xmm5, %%xmm5" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 6:
-					__asm__ __volatile__("movsd %0,%%xmm6;cvtpd2ps %%xmm6, %%xmm6" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 7:
-					__asm__ __volatile__("movsd %0,%%xmm7;cvtpd2ps %%xmm7, %%xmm7" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				default:
-					ctx.abortInterprete("Too many floating point parameters (8 allowed)");
-					return 0;
-					break;
-			}
-			mmxReg++;
-#else
 			dcArgFloat(vm, (DCfloat)argvalues[x + 3]->numvalue);
-#endif
 		}
 		else if (type == CALL_TYPE_DOUBLE) {
-#ifndef _WITH_DYNCALL
-			switch (mmxReg) {
-				case 0:
-					__asm__ __volatile__("movsd %0,%%xmm0" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 1:
-					__asm__ __volatile__("movsd %0,%%xmm1" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 2:
-					__asm__ __volatile__("movsd %0,%%xmm2" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 3:
-					__asm__ __volatile__("movsd %0,%%xmm3" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 4:
-					__asm__ __volatile__("movsd %0,%%xmm4" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 5:
-					__asm__ __volatile__("movsd %0,%%xmm5" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 6:
-					__asm__ __volatile__("movsd %0,%%xmm6" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				case 7:
-					__asm__ __volatile__("movsd %0,%%xmm7" ::"m"(argvalues[x + 3]->numvalue)
-					                     :);
-					break;
-				default:
-					ctx.abortInterprete("Too many floating point parameters (8 allowed)");
-					return 0;
-					break;
-			}
-			mmxReg++;
-#else
 			dcArgDouble(vm, (DCdouble)argvalues[x + 3]->numvalue);
-#endif
 		}
 		else if (type == CALL_TYPE_STRING) {
-#ifndef _WITH_DYNCALL
-			v = argvalues[x+3]->datatype==0 ? NULL : (void*) argvalues[x+3]->value.c_str ();
-			voidList[x2++] = v;
-#else
 			dcArgPointer(vm, argvalues[x+3]->datatype==0 ? (DCpointer) NULL : (DCpointer) argvalues[x + 3]->value.c_str());
-#endif
+		}
+		else if (type == CALL_TYPE_PARAM_ARRAY) {
+			
+			while (argvalues[x+3]->arrayList.hasMoreElements()) {
+				DataValue* v = argvalues[x+3]->arrayList.nextValuePnt();
+				if (v->datatype >= DataValue::DATATYPE_ARRAY) {
+					// type, value
+					DataValue* v2;
+					int type2;
+					int idx = 0;
+					while (v->arrayList.hasMoreElements () && idx<2) {
+						v2 = v->arrayList.nextValuePnt ();
+						if (!idx) {
+							switch (v2->value[0]) {
+								case 'f': type2 = CALL_TYPE_FLOAT; break;
+								case 'd': type2 = CALL_TYPE_DOUBLE; break;
+								case 's': type2 = CALL_TYPE_STRING; break;
+								case 'p': type2 = CALL_TYPE_POINTER; break;
+								case 'r': type2 = CALL_TYPE_REFERENCE; break;
+								default:
+									type2 = CALL_TYPE_INT;
+									break;
+							}							
+						}
+						else {
+							if (type2 == CALL_TYPE_REFERENCE) {
+								dcArgPointer(vm, (DCpointer)v2->refPnt->value.c_str());
+							}
+							else if (type2 == CALL_TYPE_POINTER) {
+								argvalues[x + 3]->toString ();
+								dcArgPointer(vm, (DCpointer) (SYS_UINT) *v2);
+							}
+							else if (type2 == CALL_TYPE_INT) {
+								dcArgInt(vm, (DCint)(int) v2->numvalue);
+							}
+							else if (type2 == CALL_TYPE_FLOAT) {
+								dcArgFloat(vm, (DCfloat)v2->numvalue);
+							}
+							else if (type2 == CALL_TYPE_DOUBLE) {
+								dcArgDouble(vm, (DCdouble)v2->numvalue);
+							}
+							else if (type2 == CALL_TYPE_STRING) {
+								dcArgPointer(vm, v2->datatype==0 ? (DCpointer) NULL : (DCpointer) v2->value.c_str());
+							}
+						}
+						idx++;
+					}
+				}
+				else				
+				if (v->datatype==DataValue::DATATYPE_STR) {
+					dcArgPointer(vm, (DCpointer) v->value.c_str());
+				}
+				else
+				if (v->datatype==0) 
+					dcArgPointer(vm, (DCpointer) NULL);					
+				else
+					dcArgInt(vm, (DCint)(int)v->numvalue);
+			}
 		}
 		else if (type >= CALL_TYPE_INT_ARRAY) {
-
-#ifndef _WITH_DYNCALL
-			voidList[x2++] = array1;
-			if (type == CALL_TYPE_INT_ARRAY) {
-				voidList[x2++] = (void *)arraySize;
-			}
-#else
-			dcArgPointer(vm, (DCpointer)array1);
-			if (type == CALL_TYPE_INT_ARRAY) {
-				dcArgInt(vm, (DCint)arraySize);
-			}
-#endif
+			dcArgPointer(vm, (DCpointer)intArray[intArrayIdx]);
+			dcArgInt(vm, (DCint)intArraySize[intArrayIdx]);
+			intArrayIdx++;
 		}
 	}
-#ifndef _WITH_DYNCALL
-	// Fill parameter registers and stack for X86 64 Bit
-	__asm__ __volatile__("movq %0, %%rdi" ::"r"(voidList[0])
-	                     : "rdi");
-	__asm__ __volatile__("movq %0, %%rsi" ::"r"(voidList[1])
-	                     : "rsi");
-	__asm__ __volatile__("movq %0, %%rdx" ::"r"(voidList[2])
-	                     : "rdx");
-	__asm__ __volatile__("movq %0, %%rcx" ::"r"(voidList[3])
-	                     : "rcx");
-	__asm__ __volatile__("movq %0, %%r8" ::"r"(voidList[4])
-	                     : "r8");
-	__asm__ __volatile__("movq %0, %%r9" ::"r"(voidList[5])
-	                     : "r9");
 
-	if (x3 >= 7) {
-		__asm__ __volatile__("movq %0,%%rax\r\nmovq %%rax, (%%rsp)" ::"r"(voidList[6])
-		                     : "rdi", "rsi", "rdx", "rcx", "r8", "r9");
-	}
-	if (x3 >= 8) {
-		__asm__ __volatile__("movq %0,%%rax\r\nmovq %%rax, 8(%%rsp)" ::"r"(voidList[7])
-		                     : "rdi", "rsi", "rdx", "rcx", "r8", "r9");
-	}
-	if (x3 >= 9) {
-		__asm__ __volatile__("movq %0,%%rax\r\nmovq %%rax, 16(%%rsp)" ::"r"(voidList[8])
-		                     : "rdi", "rsi", "rdx", "rcx", "r8", "r9");
-	}
-	if (x3 >= 10) {
-		__asm__ __volatile__("movq %0,%%rax\r\nmovq %%rax, 24(%%rsp)" ::"r"(voidList[9])
-		                     : "rdi", "rsi", "rdx", "rcx", "r8", "r9");
-	}
-	if (x3 >= 11) {
-		__asm__ __volatile__("movq %0,%%rax\r\nmovq %%rax, 32(%%rsp)" ::"r"(voidList[10])
-		                     : "rdi", "rsi", "rdx", "rcx", "r8", "r9");
-	}
-
-	SYS_UINT v3;
-	__asm__ __volatile__("call *%0"
-	                     : "=a"(v3)
-	                     : "0"(func)
-	                     : "memory");
 	if (retDef == CALL_TYPE_INT) {
-		ret = (int)v3;
-	}
-	else if (retDef == CALL_TYPE_BOOL) {
-		ret = (bool)(v3 != 0);
-	}
-	else if (retDef == CALL_TYPE_STRING) {
-		if (!v3)
-			ret.initialize (); // NULL	
-		else
-			ret = (WCSTR)v3;
+		ret = (double) dcCallInt (vm, (DCpointer)func);
 	}
 	else if (retDef == CALL_TYPE_POINTER) {
-		if (!v3)
-			ret.initialize (); // NULL	
-		else
-			ret = (double)v3;
-	}
-	else if (retDef == CALL_TYPE_FLOAT) {
-		float f;
-		__asm__ __volatile__("movss %%xmm0,%0"
-		                     : "=m"(f)::);
-		ret = (double)f;
+		ret = (SYS_UINT) dcCallPointer (vm, (DCpointer)func);
 	}
 	else if (retDef == CALL_TYPE_DOUBLE) {
-		__asm__ __volatile__("movq %%xmm0, %0"
-		                     : "=r"(v2)
-		                     :);
-		ret = (double)v2;
+		ret = (double) dcCallDouble (vm, (DCpointer)func);
 	}
-	else {
-		ret = true;
-	}
-#else
-	if (retDef == CALL_TYPE_INT) {
-		ret = (int)dcCallInt(vm, (DCpointer)func);
+	else if (retDef == CALL_TYPE_FLOAT) {
+		ret = (double) dcCallFloat (vm, (DCpointer)func);
 	}
 	else if (retDef == CALL_TYPE_BOOL) {
-		ret = (bool)dcCallInt(vm, (DCpointer)func) != 0;
+		ret = (bool) dcCallInt (vm, (DCpointer)func) != 0;
 	}
 	else if (retDef == CALL_TYPE_STRING) {
-		ret = (WCSTR)dcCallPointer(vm, (DCpointer)func);
-	}
-	else if (retDef == CALL_TYPE_POINTER) {
-		ret = (double)(SYS_UINT)dcCallPointer(vm, (DCpointer)func);
-	}
-	else if (retDef == CALL_TYPE_FLOAT) {
-		ret = (double)dcCallFloat(vm, (DCpointer)func);
-	}
-	else if (retDef == CALL_TYPE_DOUBLE) {
-		ret = (double)dcCallDouble(vm, (DCpointer)func);
-		;
+		void* pnt = dcCallPointer (vm, (DCpointer)func);
+		if (pnt)
+			ret = (WCSTR) pnt;
+		else
+			ret.initialize (); // NULL
 	}
 	else {
-		dcCallInt(vm, (DCpointer)func);
+		dcCallInt (vm, (DCpointer)func);
 		ret = true;
 	}
 	dcFree(vm);
-#endif
-	if (array1) {
-		delete[] array1;
-		array1 = NULL;
+
+	if (intArrayIdx) {
+		for (int i=0;i<intArrayIdx;i++) {
+			if (intArray[i])
+				delete[] intArray[i];
+		}
 	}
 	return 0;
 }
+
+#else
+int func_universal_call(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx, void *func, const int *paramDef, unsigned int paramCnt = 0, int retDef = 0)
+{
+	ctx.warnInterprete ("Native function calling not implemented on this architecture.");
+	return 0:
+}	
+#endif
 
 int func_dlsym(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
 {
@@ -6111,83 +5997,61 @@ int func_dlsym(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 	return 0;
 }
 
-int func_call(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
-{
+int func_call (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 
 	if (PARAM1_NOSTR) {
-		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_NUM_REQUIRED;
+		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_NUM_REQUIRED;
+	}
+	HMODULE hDLL = (HMODULE) (SYS_UINT) argvalues[0]->numvalue;
+	if (argvalues.size ()<2 || argvalues[1]->datatype>DataValue::DATATYPE_STR) {
+		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_STR_REQUIRED;
 	}
 
-	HMODULE hDLL = (void*) (SYS_UINT) argvalues[0]->numvalue;
-	if (argvalues.size() < 2 || argvalues[1]->datatype > DataValue::DATATYPE_STR) {
-		return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_STR_REQUIRED;
-	}
-
-	ret = false;
-	void *procAddr;
-	if (argvalues[1]->datatype == 2) {
+	void* procAddr;
+	if (argvalues[1]->datatype==2) {
 		procAddr = (void*) (SYS_UINT) argvalues[1]->numvalue;
-		argvalues[1]->toString();
+		argvalues[1]->toString ();		
 	}
 	else {
-		procAddr = dlsym(hDLL, argvalues[1]->value.c_str());
+		procAddr =  GetProcAddress (hDLL, argvalues[1]->value.c_str());
 	}
+
 	if (!procAddr) {
-		ctx.warnInterprete(WFormattedString("Symbol %s not found.", argvalues[1]->value.c_str()));
+		ctx.warnInterprete (WFormattedString ("Symbol %s not found.", argvalues[1]->value.c_str ()));
+		ret = false;
 		return 0;
 	}
 
 	int retDef = CALL_TYPE_VOID;
-	int paramDef[20];
+	int paramDef[20]; 
 	int paramCnt = 0;
-	if (argvalues.size() > 2) {
-		if (argvalues[2]->datatype <= DataValue::DATATYPE_STR) {
-			argvalues[2]->toString();
+	if (argvalues.size ()>2) {
+		if (argvalues[2]->datatype<=DataValue::DATATYPE_STR)
+		{
+			argvalues[2]->toString ();
 			// Parameter definition as string
-			const char *c = argvalues[2]->value.c_str();
-			while (*c != 0 && paramCnt < (sizeof(paramDef) / sizeof(int))) {
-				if (*c == ':') {
-					switch (*(c + 1)) {
-						case 'i':
-							retDef = CALL_TYPE_INT;
-							break;
-						case 'b':
-							retDef = CALL_TYPE_BOOL;
-							break;
-						case 'f':
-							retDef = CALL_TYPE_FLOAT;
-							break;
-						case 'd':
-							retDef = CALL_TYPE_DOUBLE;
-							break;
-						case 's':
-							retDef = CALL_TYPE_STRING;
-							break;
-						case 'p':
-							retDef = CALL_TYPE_POINTER;
-							break;
+			const char*c = argvalues[2]->value.c_str();
+			while (*c!=0 && paramCnt<(sizeof(paramDef)/sizeof(int))) {
+				if (*c==':')
+				{
+					switch (*(c+1)) {
+						case 'i': retDef = CALL_TYPE_INT; break;
+						case 'b': retDef = CALL_TYPE_BOOL; break;
+						case 'f': retDef = CALL_TYPE_FLOAT; break;					
+						case 'd': retDef = CALL_TYPE_DOUBLE; break;					
+						case 's': retDef = CALL_TYPE_STRING; break;
+						case 'p': retDef = CALL_TYPE_POINTER; break;
 					}
 					break;
 				}
 				switch (*c) {
-					case 'f':
-						paramDef[paramCnt++] = CALL_TYPE_FLOAT;
-						break;
-					case 'd':
-						paramDef[paramCnt++] = CALL_TYPE_DOUBLE;
-						break;
-					case 's':
-						paramDef[paramCnt++] = CALL_TYPE_STRING;
-						break;
-					case 'p':
-						paramDef[paramCnt++] = CALL_TYPE_POINTER;
-						break;
-					case 'r':
-						paramDef[paramCnt++] = CALL_TYPE_REFERENCE;
-						break;
-					case 'a':
-						paramDef[paramCnt++] = CALL_TYPE_INT_ARRAY;
-						break;
+					case 'f': paramDef[paramCnt++] = CALL_TYPE_FLOAT; break;
+					case 'd': paramDef[paramCnt++] = CALL_TYPE_DOUBLE; break;
+					case 's': paramDef[paramCnt++] = CALL_TYPE_STRING; break;
+					case 'p': paramDef[paramCnt++] = CALL_TYPE_POINTER; break;
+					case 'r': paramDef[paramCnt++] = CALL_TYPE_REFERENCE; break;
+					case 'a': paramDef[paramCnt++] = CALL_TYPE_INT_ARRAY; break;
+					case 'z': paramDef[paramCnt++] = CALL_TYPE_PARAM_ARRAY; break;
 					default:
 						paramDef[paramCnt++] = CALL_TYPE_INT;
 						break;
@@ -6196,78 +6060,62 @@ int func_call(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext
 			}
 		}
 		else {
+			// Parameter definition as array
+			if (argvalues[2]->datatype<DataValue::DATATYPE_ARRAY)
+				return WSCRIPT_RET_PARAM3|WSCRIPT_RET_ARRAY_REQUIRED;
 
-			if (argvalues[2]->datatype < DataValue::DATATYPE_ARRAY)
-				return WSCRIPT_RET_PARAM3 | WSCRIPT_RET_ARRAY_REQUIRED;
-			if (argvalues[2]->arrayList.size() < 2) {
-				ctx.warnInterprete("Parameter array need 2 entries (1=params, 2=return type)");
+			if (argvalues[2]->arrayList.size ()<2) {
+				ctx.warnInterprete ("Parameter array need 2 entries (1=params, 2=return type)");
+				ret = false;
 				return 0;
 			}
 			int i = 0;
-			argvalues[2]->arrayList.reset();
-			while (argvalues[2]->arrayList.hasMoreElements() && (paramCnt < sizeof(paramDef) / sizeof(int))) {
-				DataValue *entry = argvalues[2]->arrayList.nextValuePnt();
-				if (i == 0) {
-					entry->arrayList.reset();
+			argvalues[2]->arrayList.reset ();
+			while (argvalues[2]->arrayList.hasMoreElements () && (paramCnt<sizeof(paramDef)/sizeof(int))) {
+				DataValue* entry = argvalues[2]->arrayList.nextValuePnt ();
+				if (i==0) {
+					entry->arrayList.reset ();
 
-					while (entry->arrayList.hasMoreElements()) {
-						DataValue *param = entry->arrayList.nextValuePnt();
+					while (entry->arrayList.hasMoreElements ()) {
+						DataValue* param = entry->arrayList.nextValuePnt ();
 						char c = param->value.c_str()[0];
 						switch (c) {
-							case 'f':
-								paramDef[paramCnt++] = CALL_TYPE_FLOAT;
-								break;
-							case 'd':
-								paramDef[paramCnt++] = CALL_TYPE_DOUBLE;
-								break;
-							case 's':
-								paramDef[paramCnt++] = CALL_TYPE_STRING;
-								break;
-							case 'r':
-								paramDef[paramCnt++] = CALL_TYPE_REFERENCE;
-								break;
-							case 'p':
-								paramDef[paramCnt++] = CALL_TYPE_POINTER;
-								break;
-							case 'a':
-								paramDef[paramCnt++] = CALL_TYPE_INT_ARRAY;
-								break;
+
+							case 'f': paramDef[paramCnt++] = CALL_TYPE_FLOAT; break;
+							case 'd': paramDef[paramCnt++] = CALL_TYPE_DOUBLE; break;
+							case 's': paramDef[paramCnt++] = CALL_TYPE_STRING; break;
+							case 'p': paramDef[paramCnt++] = CALL_TYPE_POINTER; break;
+							case 'r': paramDef[paramCnt++] = CALL_TYPE_REFERENCE; break;
+							case 'a': paramDef[paramCnt++] = CALL_TYPE_INT_ARRAY; break;
+							case 'z': paramDef[paramCnt++] = CALL_TYPE_PARAM_ARRAY; break;
 							default:
 								paramDef[paramCnt++] = CALL_TYPE_INT;
 								break;
 						}
 					}
 				}
-				else if (i == 1) {
+				else 
+				if (i==1)
+				{
 					char c = entry->value.c_str()[0];
 					switch (c) {
-						case 'i':
-							retDef = CALL_TYPE_INT;
-							break;
-						case 'b':
-							retDef = CALL_TYPE_BOOL;
-							break;
-						case 'f':
-							retDef = CALL_TYPE_FLOAT;
-							break;
-						case 'd':
-							retDef = CALL_TYPE_DOUBLE;
-							break;
-						case 's':
-							retDef = CALL_TYPE_STRING;
-							break;
-						case 'p':
-							retDef = CALL_TYPE_POINTER;
-							break;
+						case 'i': retDef = CALL_TYPE_INT; break;
+						case 'b': retDef = CALL_TYPE_BOOL; break;
+						case 'f': retDef = CALL_TYPE_FLOAT; break;					
+						case 'd': retDef = CALL_TYPE_DOUBLE; break;					
+						case 's': retDef = CALL_TYPE_STRING; break;
+						case 'p': retDef = CALL_TYPE_POINTER; break;
+
 					}
 				}
 				i++;
 			}
 		}
 	}
-
-	int retCode = func_universal_call(argvalues, ret, ctx, procAddr, paramDef, paramCnt, retDef);
+			
+	int retCode = func_universal_call (argvalues, ret, ctx, procAddr, paramDef, paramCnt, retDef);
 	return retCode;
+
 }
 
 int func_dl(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContext &ctx)
