@@ -310,14 +310,21 @@ public:
 		datatype=DATATYPE_NUM;
 		numvalue = d;
 	}
-
+	/*
 	DataValue (W32 d)
 	{
 		initialize ();
 		datatype=DATATYPE_NUM;
 		numvalue = d;
 	}
-
+	*/
+	DataValue (SYS_UINT p) {
+		initialize ();
+		datatype = DATATYPE_NUM;		
+		numvalue = (double) p;
+		*((SYS_UINT*) &hvalue) = p; // Store value without loss of data
+	}
+	
 	DataValue (double d)
 	{
 		initialize ();
@@ -332,12 +339,6 @@ public:
 		hvalue = h; // Save value without loss of data
 	}
 
-	DataValue (SYS_UINT p) {
-		initialize ();
-		datatype = DATATYPE_NUM;		
-		numvalue = (double) p;
-		*((SYS_UINT*) &hvalue) = p; // Store value without loss of data
-	}
 
 	mutable string value; // string
 	double numvalue; // number
