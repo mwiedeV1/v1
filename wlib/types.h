@@ -11,6 +11,33 @@ Licence: GPL V3
 #include <inttypes.h>
 #include <time.h>
 
+// Check windows
+#if _WIN32 || _WIN64
+#if _WIN64
+#define ENVIRONMENT64
+#else
+#define ENVIRONMENT32
+#endif
+#endif
+
+// Check GCC
+#if __GNUC__
+#if __x86_64__ || __ppc64__ || __aarch64__
+#define ENVIRONMENT64
+#else
+#define ENVIRONMENT32
+#endif
+#endif
+
+#ifdef ENVIRONMENT64
+#define SYS_UINT uint64_t
+#define SYS_INT int64_t
+#else
+#define SYS_UINT uint32_t
+#define SYS_INT int32_t
+#endif
+
+
 #ifndef FALSE
 #define FALSE false
 #endif
