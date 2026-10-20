@@ -53,7 +53,7 @@ LIBWEBP             =
 
 # DynCall dependencies
 DYNCALL_DIR         = dep/dyncall-1.2/dyncall
-DYNCALL_OBJECTS     = dyncall_api.o dyncall_callvm.o dyncall_callvm_x64.o dyncall_vector.o dyncall_callf.o dyncall_callvm_base.o
+DYNCALL_OBJECTS     = dyncall_api.o dyncall_callvm.o dyncall_vector.o dyncall_callf.o dyncall_callvm_base.o
 
 # Main definitions
 INST_DIR            = install
@@ -61,7 +61,7 @@ MAIN_DEFINES        = -D_REENTRANT -D_LINUX -D_GNU_SOURCE -std=c++0x -Wall -fPIC
 DEFINES             = $(MAIN_DEFINES) 
 
 ifeq (x86_64,$(ARCH))
-EXTRA_FLAGS         = -mpreferred-stack-boundary=4
+EXTRA_FLAGS  	    = -mpreferred-stack-boundary=4
 DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_x64.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (i686,$(ARCH))
@@ -145,8 +145,6 @@ dyncall_callvm_base.o: $(DYNCALL_DIR)/dyncall_callvm_base.c
 	$(CC) -c $(C_FLAGS) $<
 dyncall_callvm.o: $(DYNCALL_DIR)/dyncall_callvm.c
 	$(CC) -c $(C_FLAGS) $<
-dyncall_callvm_x64.o: $(DYNCALL_DIR)/dyncall_callvm_x64.c
-	$(CC) -c $(C_FLAGS) $<	
 dyncall_vector.o: $(DYNCALL_DIR)/dyncall_vector.c
 	$(CC) -c $(C_FLAGS) $<
 dyncall_callf.o: $(DYNCALL_DIR)/dyncall_callf.c
