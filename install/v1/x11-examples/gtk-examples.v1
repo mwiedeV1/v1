@@ -15,7 +15,7 @@
 
 error_reporting (0);
 
-const V1_LIB_PATH = "../../lib";
+const V1_LIB_PATH = "../lib";
 
 require_once (V1_LIB_PATH."/gtk_layout.inc.v1");
 require_once (V1_LIB_PATH."/cairo.inc.v1");
