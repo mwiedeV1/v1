@@ -5974,27 +5974,29 @@ int func_dlsym(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 int func_call (vector<DataValue*>& argvalues, DataValue& ret, InterpreterContext& ctx) {
 
 	if (PARAM1_NOSTR) {
-		return WSCRIPT_RET_PARAM1|WSCRIPT_RET_NUM_REQUIRED;
-	}
-	HMODULE hDLL = (HMODULE) (SYS_UINT) argvalues[0]->numvalue;
-	if (argvalues.size ()<2 || argvalues[1]->datatype>DataValue::DATATYPE_STR) {
-		return WSCRIPT_RET_PARAM2|WSCRIPT_RET_STR_REQUIRED;
+		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_NUM_REQUIRED;
 	}
 
-	void* procAddr;
-	if (argvalues[1]->datatype==2) {
+	HMODULE hDLL = (void*) (SYS_UINT) argvalues[0]->numvalue;
+	if (argvalues.size() < 2 || argvalues[1]->datatype > DataValue::DATATYPE_STR) {
+		return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_STR_REQUIRED;
+	}
+
+	ret = false;
+	void *procAddr;
+	if (argvalues[1]->datatype == 2) {
 		procAddr = (void*) (SYS_UINT) argvalues[1]->numvalue;
-		argvalues[1]->toString ();		
+		argvalues[1]->toString();
 	}
 	else {
-		procAddr =  GetProcAddress (hDLL, argvalues[1]->value.c_str());
+		procAddr = dlsym(hDLL, argvalues[1]->value.c_str());
 	}
-
 	if (!procAddr) {
-		ctx.warnInterprete (WFormattedString ("Symbol %s not found.", argvalues[1]->value.c_str ()));
+		ctx.warnInterprete(WFormattedString("Symbol %s not found.", argvalues[1]->value.c_str()));
 		ret = false;
 		return 0;
 	}
+
 
 	int retDef = CALL_TYPE_VOID;
 	int paramDef[20]; 
