@@ -1,0 +1,234 @@
+<?v1
+/*
+  On Windows you can install GTK Runtime Environment (32 Bit) 
+  with following link: https://sourceforge.net/projects/gtk-win/    
+  
+  On Linux you can install it manually like this:
+  apt-get install libgtk-3-dev
+*/
+
+require_once ("gtk.inc.v1");
+
+function gtk_default_props (w, &v) {
+  global hDLLGTK;
+  if (isset (v["border-width"])) {
+    gtk_container_set_border_width (w, v["border-width"]);
+    unset (v["border-width"]);            
+  }
+  
+  if (isset (v["size"])) {
+    if (GTK_MAJOR_VERSION<3) 
+    	call (hDLLGTK, 'gtk_widget_set_usize', [['p','i','i'], 'i'],  w, v["size"][0], v["size"][1]); 
+    else
+    	call (hDLLGTK, 'gtk_widget_set_size_request', [['p','i','i'], 'i'],  w, v["size"][0], v["size"][1]); 
+    unset (v["size"]);         
+  }
+  
+  if (isset (v["pane-position"])) {
+    call (hDLLGTK, 'gtk_paned_set_position', [['p','i'], 'i'],  w, v["pane-position"]); 
+    unset (v["pane-position"]);         
+  }
+  
+  if (isset (v["col-spacings"])) {
+    call (hDLLGTK, 'gtk_table_set_col_spacings', [['p','i'], 'i'], w, v["col-spacings"]);  
+    unset (v["col-spacings"]);         
+  }
+  
+  if (isset (v["col-spacing"])) {
+    foreach (v["col-spacing"] as col => spacing)
+      call (hDLLGTK, 'gtk_table_set_col_spacing', [['p','i','i'], 'i'], w, col, spacing);
+    unset (v["col-spacing"]);         
+  }
+  
+  if (isset (v["row-spacing"])) {
+    foreach (v["row-spacing"] as row => spacing)
+      call (hDLLGTK, 'gtk_table_set_row_spacing', [['p','i','i'], 'i'], w, row, spacing);
+    unset (v["row-spacing"]);         
+  }
+  
+  if (isset (v["margin-top"])) {
+    call (hDLLGTK, 'gtk_widget_set_margin_top', [['p','i'],'i'], w, v["margin-top"]);
+    unset (v["margin-top"]);         
+  }
+
+  if (isset (v["margin-bottom"])) {
+    call (hDLLGTK, 'gtk_widget_set_margin_bottom', [['p','i'],'i'], w, v["margin-bottom"]);
+    unset (v["margin-bottom"]);         
+  }  
+
+  if (isset (v["hexpand"])) {
+    call (hDLLGTK, 'gtk_widget_set_hexpand', [['p','i'],'i'], w, v["hexpand"]);
+    unset (v["hexpand"]);         
+  }  
+   
+  unset (v["name"], v["pack"], v["attach"]);
+  return w;
+}
+
+function gtk_layout (list) 
+{
+  global hDLLGTK;  
+  if (!is_array (list)) {
+    list2 = array ();
+    list2[list]=1;
+    list = list2;
+  } 
+  w = null;
+  foreach (list as k => v) {
+    if (!is_array (v)) {
+      v = array ();
+    }
+    w = null;  
+    assign (t,id,p1,p2,p3,p4,p5) = explode (':', k);
+
+    switch (t) {
+      case "entry":
+        w = gtk_entry_new ();
+        buffer =  gtk_entry_buffer_new (v["text"], strlen (v["text"]));
+        gtk_entry_set_buffer (w, buffer);
+        return gtk_default_props (w, v);
+        break;
+
+      case "label":
+        return gtk_default_props (gtk_label_new (v["text"]), v);
+        break;
+        
+      case 'button':
+        return gtk_default_props (gtk_button_new_with_label (v["text"]), v);
+        break;
+                  
+      case "hsep":
+        return gtk_default_props (call (hDLLGTK, 'gtk_hseparator_new', ":p"), v);   
+        break;
+
+      case "vsep":
+        return gtk_default_props (call (hDLLGTK, 'gtk_vseparator_new', ":p"), v1);   
+        break;
+
+      case "paned_h":
+        w = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
+
+      case "paned_v":
+        if (!w)
+          w = gtk_paned_new (GTK_ORIENTATION_VERTICAL);
+        gtk_default_props (w, v);
+        i = 1;
+        foreach (v as k2 => v2) {
+          if (is_array (v2)) 
+            v2 = array (k2 => v2);          
+          if (i==1) {
+            gtk_paned_add1 (w, gtk_layout (v2));
+          }
+          else {
+            gtk_paned_add2 (w, gtk_layout (v2));
+            break;
+          }
+          i++;
+        }
+        return w;
+        break;
+
+      case "hbox":        
+         w = gtk_hbox_new (p1, p2);
+         
+      case "vbox":
+        if (!w)
+          w = gtk_vbox_new (p1, p2);
+        gtk_default_props (w, v);
+        foreach (v as k2 => v2) {          
+          pack = array ();          
+          if (is_array (v2)) {    
+            if (isset (v2["pack"]))
+              pack = v2["pack"];
+            v2 = array (k2 => v2);
+          }
+          gtk_box_pack_start (w, gtk_layout (v2), pack[0], pack[1], pack[2]);
+        }
+        return w;
+        break;
+        
+      case "layout":
+        w = gtk_layout_new (p1, p2);
+        gtk_default_props (w, v);
+        gtk_container_set_border_width (w, 10);
+        foreach (v as k2 => v2) {          
+          pos = array ();          
+          if (is_array (v2)) {    
+            if (isset (v2["pos"]))
+              pos = v2["pos"];
+            v2 = array (k2 => v2);
+          }
+          gtk_layout_put (w, gtk_layout (v2), pos[0], pos[1]);
+        }
+        return w;
+        break;
+
+      case "notebook":
+        w = gtk_notebook_new ();				
+        gtk_default_props (w, v);        
+        i=1;
+        foreach (v as k2 => v2) {                   
+          name = "Tab ".i;
+          if (is_array (v2)) {    
+            if (isset (v2["name"])) {
+              name = v2["name"];
+              unset (v2["name"]);
+            }
+            v2 = array (k2 => v2);
+          }
+          gtk_notebook_append_page (w, gtk_layout (v2), gtk_label_new (name));
+          i++;
+        }
+        return w;
+        break;
+
+     case "frame":
+        w = call (hDLLGTK, 'gtk_frame_new', [['s'], 'p'],  v["name"]);     
+        gtk_default_props (w, v);
+        foreach (v as k2 => v2) {
+          if (is_array (v2)) { 
+            v2 = array (k2 => v2);
+          }
+          gtk_container_add  (w, gtk_layout (v2));
+        }
+        return w;
+        break;
+        
+      case "alignment":
+        w = call (hDLLGTK, 'gtk_alignment_new', [['f','f','f','f'], 'p'],  p1, p2, p3, p4);     
+        gtk_default_props (w, v);
+        foreach (v as k2 => v2) {
+          if (is_array (v2)) { 
+            v2 = array (k2 => v2);
+          }
+          gtk_container_add  (w, gtk_layout (v2));
+        }
+        return w;
+        break;
+        
+      case "table":
+        w = gtk_table_new (p1, p2, p3);
+        gtk_default_props (w, v);
+                                
+        foreach (v as k2 => v2) {
+          attach = array ();          
+          if (is_array (v2)) {
+            if (isset (v2["attach"])) {
+              attach = v2["attach"];
+              unset (v2["attach"]);
+            }
+            v2 = array (k2 => v2);
+          }
+          if (!isset (attach[4]))
+            gtk_table_attach_defaults  (w, gtk_layout (v2), attach[0], attach[1], attach[2], attach[3]);
+          else
+            call (hDLLGTK, 'gtk_table_attach', [['p', 'p', 'i', 'i', 'i', 'i', 'i', 'i', 'i', 'i'],'i'], w, gtk_layout (v2),  attach[0], attach[1], attach[2], attach[3], attach[4], attach[5], attach[6], attach[7]);
+        }
+        return w;
+        break;
+    }  
+  }
+  return w;
+}
+
+?>
