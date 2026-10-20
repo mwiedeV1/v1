@@ -53,7 +53,7 @@ LIBWEBP             =
 
 # DynCall dependencies
 DYNCALL_DIR         = dep/dyncall-1.2/dyncall
-DYNCALL_OBJECTS     = dyncall_api.o dyncall_callvm.o dyncall_vector.o dyncall_callf.o dyncall_callvm_base.o dyncall_struct.o
+DYNCALL_OBJECTS     = dyncall_api.o dyncall_vector.o dyncall_callf.o dyncall_callvm_base.o dyncall_struct.o
 
 # Main definitions
 INST_DIR            = install
@@ -62,23 +62,23 @@ DEFINES             = $(MAIN_DEFINES)
 
 ifeq (x86_64,$(ARCH))
 EXTRA_FLAGS  	    = -mpreferred-stack-boundary=4
-DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_x64.o
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_callvm_x64.o dyncall_call_x64.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (i686,$(ARCH))
-DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_x86.o
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_callvm.o dyncall_call_x86.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (i386,$(ARCH))
-DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_x86.o
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_callvm.o dyncall_call_x86.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (armv7l,$(ARCH))
-DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_arm32_arm_armhf.o
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_callvm.o dyncall_call_arm32_arm_armhf.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (armv6l,$(ARCH))
-DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_arm32_arm_armhf.o
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_callvm.o dyncall_call_arm32_arm_armhf.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (aarch64,$(ARCH))
 EXTRA_FLAGS         = -mpreferred-stack-boundary=4
-DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_arm64.o
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_callvm.o dyncall_call_arm64.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL
