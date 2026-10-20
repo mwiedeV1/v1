@@ -433,7 +433,7 @@ function example_dialog1 (window, mainLayout) {
 function example_layouter (window, mainLayout) {
   gtk_window_set_title (window, WINDOW_TITLE.": Layouter");
   d = gtk_dialog_new ();  
-  gtk_window_set_icon_from_file (d, 'favicon.ico');
+  gtk_window_set_icon_from_file (d, '../doc/images/favicon.ico');
   gtk_window_set_transient_for (d, window);
   gtk_window_set_position (d, GTK_WIN_POS_CENTER_ON_PARENT);
   gtk_window_set_title (d, "Complex Dialog");
@@ -882,16 +882,17 @@ function menu_item_pressed (instance, id) {
 			g_source_remove (cairoTimer);
 			cairoTimer = null;
 		}
-		if (lastLayout) {
-			// gtk_container_remove (mainLayout, lastLayout);
-			gtk_widget_destroy (lastLayout);
-			lastLayout = null;
-		}      
 
 		if (infobar) {
 			gtk_widget_destroy (infobar);
 			infobar = null;
 		}
+
+		if (lastLayout) {
+			// gtk_container_remove (mainLayout, lastLayout);
+			gtk_widget_destroy (lastLayout);
+			lastLayout = null;
+		}      
 
 		infobar = gtk_info_bar_new ();
 		message_label = gtk_label_new ("Topic");
@@ -927,7 +928,7 @@ window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 gtk_window_set_resizable (window, true);
 gtk_widget_set_size_request (window, WINDOW_WIDTH, WINDOW_HEIGHT);
 gtk_window_set_position (window, GTK_WIN_POS_CENTER); 
-gtk_window_set_icon_from_file (window, 'favicon.ico');
+gtk_window_set_icon_from_file (window, '../doc/images/favicon.ico');
 g_signal_connect (window, "destroy", dlsym (hDLLGTK, "gtk_main_quit"));
 
 // Main layout
