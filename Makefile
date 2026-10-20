@@ -62,7 +62,7 @@ DEFINES             = $(MAIN_DEFINES)
 
 ifeq (x86_64,$(ARCH))
 EXTRA_FLAGS  	    = -mpreferred-stack-boundary=4
-DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_x64.o
+DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_callvm_x64.o
 EXTRA_FLAGS         = -I$(DYNCALL_DIR) -D_WITH_DYNCALL -DDC_UNIX
 else ifeq (i686,$(ARCH))
 DYNCALL_OBJECTS    := $(DYNCALL_OBJECTS) dyncall_call_x86.o
@@ -144,6 +144,8 @@ dyncall_api.o: $(DYNCALL_DIR)/dyncall_api.c
 dyncall_callvm_base.o: $(DYNCALL_DIR)/dyncall_callvm_base.c
 	$(CC) -c $(C_FLAGS) $<
 dyncall_callvm.o: $(DYNCALL_DIR)/dyncall_callvm.c
+	$(CC) -c $(C_FLAGS) $<
+dyncall_callvm_x64.o: $(DYNCALL_DIR)/dyncall_callvm_x64.c
 	$(CC) -c $(C_FLAGS) $<
 dyncall_vector.o: $(DYNCALL_DIR)/dyncall_vector.c
 	$(CC) -c $(C_FLAGS) $<
