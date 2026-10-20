@@ -30,11 +30,11 @@ Licence: GPL V3
 #endif
 
 #ifdef ENVIRONMENT64
-#define SYS_UINT uint64_t
-#define SYS_INT int64_t
+typedef SYS_UINT uint64_t
+typedef SYS_INT int64_t
 #else
-#define SYS_UINT uint32_t
-#define SYS_INT int32_t
+typedef SYS_UINT uint32_t
+typedef SYS_INT int32_t
 #endif
 
 
