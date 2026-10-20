@@ -12,6 +12,32 @@ Licence: GPL V3
 #include "WSocket.h"
 #include "WThread.h"
 
+// Check windows
+#if _WIN32 || _WIN64
+#if _WIN64
+#define ENVIRONMENT64
+#else
+#define ENVIRONMENT32
+#endif
+#endif
+
+// Check GCC
+#if __GNUC__
+#if __x86_64__ || __ppc64__ || __aarch64__
+#define ENVIRONMENT64
+#else
+#define ENVIRONMENT32
+#endif
+#endif
+
+#ifdef ENVIRONMENT64
+#define SYS_UINT uint64_t
+#define SYS_INT int64_t
+#else
+#define SYS_UINT uint32_t
+#define SYS_INT int32_t
+#endif
+
 
 class AbortException : public WException {
 public:
@@ -326,13 +352,18 @@ public:
 		numvalue = d;
 	}
 
-	DataValue (Handle* h)
-	{
+	DataValue (Handle* h) {
 		initialize ();
-		datatype = DATATYPE_HANDLE;
-		// Store a handle also in number value for comparations!
-		numvalue = (double) (uint64_t) h;
-		hvalue = h;
+		datatype = DATATYPE_HANDLE;		
+		numvalue = (double) (SYS_UINT) h; // Store a handle also in number value for comparations!
+		hvalue = h; // Save value without loss of data
+	}
+
+	DataValue (SYS_UINT p) {
+		initialize ();
+		datatype = DATATYPE_NUM;		
+		numvalue = (double) p;
+		*((SYS_UINT*) &hvalue) = p; // Store value without loss of data
 	}
 
 	mutable string value; // string
@@ -395,6 +426,12 @@ public:
 	inline operator void* () const
 	{
 		return hvalue;
+	};
+
+	inline operator SYS_UINT () const {
+		if (hvalue==NULL)
+			return numvalue;
+		return *((SYS_UINT*) &hvalue);
 	};
 
 	const char* describeDataType (int ownType=-1) const
