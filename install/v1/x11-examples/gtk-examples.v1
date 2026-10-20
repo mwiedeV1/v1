@@ -222,7 +222,6 @@ function example_layout6 (window, mainLayout) {
 
 	label = gtk_label_new ("Insert your name:");
 	entry =  gtk_entry_new ();
-	gtk_entry_set_activates_default (entry, true);
 
 	initText = "Hallo";
 	buffer = gtk_entry_buffer_new (initText, strlen (initText));
@@ -240,19 +239,18 @@ function example_layout6 (window, mainLayout) {
 	gtk_layout_put (layout, entry, 10, 35);
 	gtk_layout_put (layout, combo_box, 10, 75);
 	gtk_layout_put (layout, button, 10, 130);
-	
+
 	gtk_widget_set_can_default (button, true);
-	gtk_widget_grab_default (button);
+	gtk_entry_set_activates_default (entry, true);	
 	
 	g_controls[0]=array ("entry"=>entry,"combo_box"=>combo_box);
 	
 	g_signal_connect (entry, "activate", "example_layout6_button_pressed", 0); 
 	g_signal_connect (button, "clicked", "example_layout6_button_pressed", 0);  
-	gtk_widget_show (layout);
 	gtk_container_add (mainLayout, layout);
-
 	return layout;
 }
+
 
 function example_cairo1_draw (widget, cr, param) 
 {
@@ -469,7 +467,7 @@ function example_layouter (window, mainLayout) {
         
        "hbox" => [
           "border-width"=> 0,     
-          "col-spacings" => 0,     
+             
           "name" => "Tabulator 2",
 
    
