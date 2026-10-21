@@ -5942,7 +5942,7 @@ int func_dlsym(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 		return WSCRIPT_RET_PARAM1 | WSCRIPT_RET_NUM_REQUIRED;
 	}
 
-	HMODULE hDLL = (void *)(SYS_UINT)argvalues[0]->numvalue;
+	HMODULE hDLL = (void *) (SYS_UINT) *argvalues[0];
 	if (argvalues.size() < 2 || argvalues[1]->datatype > DataValue::DATATYPE_STR) {
 		return WSCRIPT_RET_PARAM2 | WSCRIPT_RET_STR_REQUIRED;
 	}
@@ -5954,7 +5954,7 @@ int func_dlsym(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 		// Internal callback proc
 		for (int i = 0; i < sizeof(g_callbackList) / sizeof(SCallbackProc); i++) {
 			if (argvalues[1]->value == g_callbackList[i].name) {
-				ret = (double) (SYS_UINT) g_callbackList[i].procPtr;
+				ret = (SYS_UINT) g_callbackList[i].procPtr;
 				break;
 			}
 		}
@@ -5965,7 +5965,7 @@ int func_dlsym(vector<DataValue *> &argvalues, DataValue &ret, InterpreterContex
 
 	void *procAddr = dlsym(hDLL, argvalues[1]->value.c_str());
 	if (procAddr)
-		ret = (double)*(SYS_UINT*)&procAddr;
+		ret = (SYS_UINT) procAddr;
 	else
 		ctx.warnInterprete(WFormattedString("%s not found.", argvalues[1]->value.c_str()));
 	return 0;

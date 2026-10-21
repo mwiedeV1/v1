@@ -29,8 +29,7 @@ make
 
 4. Compile GDLib
 
-a) Install libPNG, libJPEG, libTIFF
-Note! libgd require other libraries such as libjpeg, libpng ... you have to install manually on your system.
+a) Note! libgd require other libraries such as libjpeg, libpng ... you have to install manually on your system.
 
 On Debian/Ubuntu:
 

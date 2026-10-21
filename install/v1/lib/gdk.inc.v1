@@ -18,7 +18,7 @@ if (!hDLLGDK)
 	// Search for GDK library
 	libList = explode ("\n", system ('/usr/bin/find /usr -name "libgdk-3*.so*"'));
 	if (!empty (libList[0])) {
-		hDLLGDK = dl (mySQLLibName = libList[0], true);
+		hDLLGDK = dl (gdkLibName = libList[0], true);
 		if (hDLLGDK) {
 			print ('Please replace for faster starting: gdkLibName="'.libList[0].'"; in '.__FILE__);
 		}
