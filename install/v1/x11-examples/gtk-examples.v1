@@ -810,6 +810,13 @@ function on_stack_visible_child_changed (stack, params, data) {
 	tree_view = gtk_tree_view_new_with_model(store);
 	g_object_unref(store); 
 
+	// Change font size
+	provider = gtk_css_provider_new();
+	gtk_css_provider_load_from_data(provider, ["treeview.view { font-size: 14px; }", -1, null]);
+	context = gtk_widget_get_style_context(tree_view);
+	gtk_style_context_add_provider(context, provider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+	g_object_unref(provider);
+
 	// Spalte 1: ID (Integer) 
 	renderer = gtk_cell_renderer_text_new();
 	column = gtk_tree_view_column_new_with_attributes("ID", renderer, ["text", COL_ID, null]);
