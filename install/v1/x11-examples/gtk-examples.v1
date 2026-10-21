@@ -812,7 +812,7 @@ function on_stack_visible_child_changed (stack, params, data) {
 
 	// Change font size
 	provider = gtk_css_provider_new();
-	gtk_css_provider_load_from_data(provider, ["treeview.view { font-size: 14px; }", -1, null]);
+	gtk_css_provider_load_from_data(provider, ["treeview.view { font-size: 18px; }", -1, null]);
 	context = gtk_widget_get_style_context(tree_view);
 	gtk_style_context_add_provider(context, provider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 	g_object_unref(provider);
