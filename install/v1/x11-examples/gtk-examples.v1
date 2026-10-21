@@ -21,9 +21,10 @@ require_once (V1_LIB_PATH."/gtk_layout.inc.v1");
 require_once (V1_LIB_PATH."/cairo.inc.v1");
 require_once (V1_LIB_PATH."/math_utils.inc.v1");
 
-const WINDOW_WIDTH  = 800;
-const WINDOW_HEIGHT = 500;
+const WINDOW_WIDTH  = 1280;
+const WINDOW_HEIGHT = 800;
 const WINDOW_TITLE  = "V1 Script for GTK";
+const FAVICON_PATH = '../doc/images/favicon.ico';
 
 // Global vars
 cairoText     = "V1 Script for GTK";
@@ -40,7 +41,9 @@ menuList = array (
       "Free Layout with action" => "example_layout3",
       "Pack Layout 1" => "example_layout4",
       "Pack Layout 2" => "example_layout5",
-      "Free Layout with Input" => "example_layout6",
+      "Grid Layout" => "example_layout7",
+	  "Free Layout with Input" => "example_layout6",
+	  
     ),
     "Dialog" => array (
       "Simple Dialog" => "example_dialog1",
@@ -214,6 +217,7 @@ function example_layout6_button_pressed (instance, idx) {
   gtkMessageBox (window, 'You inserted <b>'.str.'</b> Combox selection: <b>'.str2.'</b>');
 }
 
+
 function example_layout6 (window, mainLayout) {
 	global g_controls;
 	gtk_window_set_title (window, WINDOW_TITLE.": Free Layout, Text and Message Box");
@@ -249,6 +253,67 @@ function example_layout6 (window, mainLayout) {
 	g_signal_connect (button, "clicked", "example_layout6_button_pressed", 0);  
 	gtk_container_add (mainLayout, layout);
 	return layout;
+}
+
+function example_layout7_button_pressed (instance, idx) {
+  global window, g_controls;
+  str = gtk_entry_get_text (g_controls[idx]["entry"]);
+
+  gtkMessageBox (window, 'Login as <b>'.str.'</b> ...');
+}
+
+
+function example_layout7 (window, mainLayout) {
+	global g_controls;
+	gtk_window_set_title (window, WINDOW_TITLE.": Grid Layout, input fields and button");
+
+	
+	grid = gtk_grid_new();
+	gtk_grid_set_row_spacing(grid, 10);
+	gtk_grid_set_column_spacing(grid, 10);
+	gtk_widget_set_margin_start(grid, 15);
+	gtk_widget_set_margin_end(grid, 15);
+	gtk_widget_set_margin_top(grid, 15);
+	gtk_widget_set_margin_bottom(grid, 15);
+
+	label1 = gtk_label_new("Benutzername:");
+	// Label linksbündig ausrichten
+	g_object_set(label1, ["xalign", ['f', 0.0], null]);
+	entry1 = gtk_entry_new();
+	gtk_entry_set_activates_default (entry1, true);	
+
+	// Hinzufügen zum Grid: 
+	// gtk_grid_attach(grid, widget, spalte, zeile, breite, höhe)
+	gtk_grid_attach(grid, label1, 0, 0, 1, 1); // Spalte 0, Zeile 0
+	gtk_grid_attach(grid, entry1, 1, 0, 1, 1); // Spalte 1, Zeile 0
+
+	// --- Element 2: Passwort (Zeile 1) ---
+	label2 = gtk_label_new("Passwort:");
+	g_object_set(label2, ["xalign", ['f', 0.0], null]);
+	entry2 = gtk_entry_new();
+	gtk_entry_set_activates_default (entry2, true);	
+
+	gtk_entry_set_visibility(entry2, false); // Passwort-Modus (Punkte)
+
+	gtk_grid_attach(grid, label2, 0, 1, 1, 1); // Spalte 0, Zeile 1
+	gtk_grid_attach(grid, entry2, 1, 1, 1, 1); // Spalte 1, Zeile 1
+
+
+	// --- Element 3: Ein Button über beide Spalten (Zeile 2) ---
+	button = gtk_button_new_with_label("Suchen");
+	gtk_widget_set_can_default (button, true);
+	g_signal_connect (entry1, "activate", "example_layout7_button_pressed", 0); 
+	g_signal_connect (entry2, "activate", "example_layout7_button_pressed", 0); 
+	g_signal_connect (button, "clicked", "example_layout7_button_pressed", 0);  
+	
+	g_controls[0]=array ("entry"=>entry1,"entry2"=>entry2);
+
+	
+	// Hier sagen wir: Breite = 2 Spalten, damit er sich über die gesamte Breite zieht
+	gtk_grid_attach(grid, button, 0, 2, 2, 1);	
+	
+	gtk_container_add (mainLayout, grid);
+	return grid;
 }
 
 
@@ -431,7 +496,7 @@ function example_dialog1 (window, mainLayout) {
 function example_layouter (window, mainLayout) {
   gtk_window_set_title (window, WINDOW_TITLE.": Layouter");
   d = gtk_dialog_new ();  
-  gtk_window_set_icon_from_file (d, '../doc/images/favicon.ico');
+  gtk_window_set_icon_from_file (d, FAVICON_PATH);
   gtk_window_set_transient_for (d, window);
   gtk_window_set_position (d, GTK_WIN_POS_CENTER_ON_PARENT);
   gtk_window_set_title (d, "Complex Dialog");
@@ -467,7 +532,7 @@ function example_layouter (window, mainLayout) {
         
        "hbox" => [
           "border-width"=> 0,     
-             
+
           "name" => "Tabulator 2",
 
    
@@ -863,11 +928,14 @@ function on_infobar_response (info_bar, response_id, user_data)
 		gtk_widget_destroy (lastLayout);
 		lastLayout = null;
 	}
-
 	if (infobar) {
 		gtk_widget_destroy (infobar);
 		infobar = null;
 	}
+	
+	// Default example
+	lastLayout = example_cairo3 (window, mainLayout);
+	gtk_widget_show_all (window);
 }
 
 function menu_item_pressed (instance, id) {
@@ -926,7 +994,7 @@ window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 gtk_window_set_resizable (window, true);
 gtk_widget_set_size_request (window, WINDOW_WIDTH, WINDOW_HEIGHT);
 gtk_window_set_position (window, GTK_WIN_POS_CENTER); 
-gtk_window_set_icon_from_file (window, '../doc/images/favicon.ico');
+gtk_window_set_icon_from_file (window, FAVICON_PATH);
 g_signal_connect (window, "destroy", dlsym (hDLLGTK, "gtk_main_quit"));
 
 // Main layout
