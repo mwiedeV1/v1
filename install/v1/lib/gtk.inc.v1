@@ -163,6 +163,12 @@ const GTK_ALIGN_BASELINE_FILL = 4;
 const GTK_ALIGN_BASELINE = 4;
 const GTK_ALIGN_BASELINE_CENTER = 5;
 
+const GTK_STYLE_PROVIDER_PRIORITY_FALLBACK  = 1;
+const GTK_STYLE_PROVIDER_PRIORITY_THEME  = 200;
+const GTK_STYLE_PROVIDER_PRIORITY_SETTINGS = 400;
+const GTK_STYLE_PROVIDER_PRIORITY_APPLICATION = 600;
+const GTK_STYLE_PROVIDER_PRIORITY_USER = 800;
+
 // GTK functions
 // Note: Not all GTK functions are implemented there
 // You have to call your own GTK functions with call (hDLLGTK, "gtk_xxx", ...)
@@ -449,6 +455,31 @@ function gtk_box_append (box, widget)
 	call (hDLLGTK, 'gtk_box_append', "pp:", box, widget);
 }
 
+// Grid Layout
+
+function gtk_grid_new () {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_grid_new', ":p");	
+}
+
+function gtk_grid_set_row_spacing (grid, spacing)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_grid_set_row_spacing', "pi:", grid, spacing);
+}
+
+function gtk_grid_set_column_spacing (grid, spacing)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_grid_set_column_spacing', "pi:", grid, spacing);
+}
+
+function gtk_grid_attach (grid, child, column, row, width, height) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_grid_attach', "ppiiii:", grid, child, column, row, width, height);
+}
+
+
 /* Sidebar, Stack */
 
 function gtk_stack_sidebar_new  () {
@@ -572,6 +603,11 @@ function gtk_list_store_set (store, &iter, &params) {
 	call (hDLLGTK, 'gtk_list_store_set', "prz:", store, iter, params);
 }
 
+function gtk_list_store_clear (store) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_list_store_clear', "p:", store);
+}
+
 /* Treeview, Tables */
 
 function gtk_tree_view_new_with_model (model) {
@@ -614,6 +650,10 @@ function gtk_tree_view_column_set_resizable (colmn, resizeable) {
 	call (hDLLGTK, 'gtk_tree_view_column_set_resizable', "pb:", colmn, resizeable);
 }
 
+function gtk_tree_sortable_set_sort_column_id (store, columd_id, direction) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_tree_sortable_set_sort_column_id', "pii:", store, columd_id, direction);
+}
 
 /* Widgets */
 
@@ -651,6 +691,37 @@ function gtk_widget_set_valign (widget, valign)
 {
 	global hDLLGTK;
 	call (hDLLGTK, 'gtk_widget_set_valign', "pi:", widget, valign);
+}
+
+
+function gtk_widget_set_margin_start (widget, margin)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_widget_set_margin_start', "pi:", widget, margin);
+}
+
+function gtk_widget_set_margin_end (widget, margin)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_widget_set_margin_end', "pi:", widget, margin);
+}
+
+function gtk_widget_set_margin_top (widget, margin)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_widget_set_margin_top', "pi:", widget, margin);
+}
+
+function gtk_widget_set_margin_bottom (widget, margin)
+{
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_widget_set_margin_bottom', "pi:", widget, margin);
+}
+
+function gtk_widget_get_style_context (widget)
+{
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_widget_get_style_context', "p:p", widget);
 }
 
 function gtk_widget_queue_draw (widget)
@@ -699,6 +770,12 @@ function gtk_widget_get_visible (widget)
 {
 	global hDLLGTK;
 	return call (hDLLGTK, "gtk_widget_set_visible", "p:b", widget);
+}
+
+function gtk_widget_grab_focus (widget)
+{
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_widget_grab_focus", "p:", widget);
 }
 
 function gtk_widget_get_allocation (widget, &rect)
@@ -780,6 +857,11 @@ function gtk_entry_new ()
 {
 	global hDLLGTK;
 	return call (hDLLGTK, "gtk_entry_new", [[],'p']);
+}
+
+function gtk_entry_set_visibility (entry, visible) {
+	global hDLLGTK;
+	call (hDLLGTK, "gtk_entry_set_visibility", "pb:", entry, visible);
 }
 
 function gtk_entry_new_with_buffer (buffer)
@@ -872,6 +954,23 @@ function gtk_combo_box_text_get_active_text (combo_box)
 		g_free (ptr);
 	}
 	return str;
+}
+
+/* CSS */
+
+function gtk_css_provider_new () {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_css_provider_new', ':p');	
+}
+
+function gtk_css_provider_load_from_data (provider, data) {
+	global hDLLGTK;
+	return call (hDLLGTK, 'gtk_css_provider_load_from_data', 'pz:', provider, data);	
+}
+
+function gtk_style_context_add_provider (context, provider, priority) {
+	global hDLLGTK;
+	call (hDLLGTK, 'gtk_style_context_add_provider', 'ppi:', context, provider, priority);	
 }
 
 /* Drawing area */
