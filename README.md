@@ -34,14 +34,27 @@ make
 
 **Compile GDLib**
 
+a) Note! libgd require other libraries such as libjpeg, libpng ... you have to install manually on your system.
+
+On Debian/Ubuntu:
+
+~~~
+sudo apt-get install libpng-dev
+export LIBPNG_LIBS=$(libpng-config --libs)
+export LIBPNG_CFLAGS=$(libpng-config --cflags)
+sudo apt-get install libjpeg-dev
+sudo apt-get install libtiff-dev
+sudo apt-get install libwebp-dev
+~~~
+
+b)
+
 ~~~
 cd extensions/gd/libgd-2.3.0/
 ./configure 
 make 
 sudo make install
 ~~~
-
-Note! libgd require other libraries such as libjpeg, libpng ... you have to install manually on your system.
 
 **Compile the V1 extensions**
 ~~~
